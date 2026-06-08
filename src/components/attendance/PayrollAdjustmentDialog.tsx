@@ -352,7 +352,7 @@ export function PayrollAdjustmentDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
-      <DialogContent className="max-w-md" aria-describedby={undefined}>
+      <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Add Adjustment</DialogTitle>
           <DialogDescription>

@@ -521,7 +521,7 @@ export function AttendanceManagementPage() {
 
       {/* ── Selfie lightbox ──────────────────────────────── */}
       <Dialog open={!!selfieUrl} onOpenChange={(open) => { if (!open) setSelfieUrl(null) }}>
-        <DialogContent className="max-w-sm" aria-describedby={undefined}>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Attendance Selfie</DialogTitle>
           </DialogHeader>

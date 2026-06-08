@@ -220,7 +220,7 @@ function AddRoleDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-sm" aria-describedby={undefined}>
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>New Role</DialogTitle>
           <DialogDescription>

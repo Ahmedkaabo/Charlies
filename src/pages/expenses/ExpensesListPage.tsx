@@ -113,7 +113,7 @@ function formatDate(dateStr: string) {
 function ReceiptDialog({ url, open, onOpenChange }: { url: string; open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg" aria-describedby={undefined}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Receipt</DialogTitle>
         </DialogHeader>
