@@ -61,22 +61,29 @@ async function fetchPayrollByBranch(
   if (attRes.error)      throw attRes.error
   if (payrollRes.error)  throw payrollRes.error
 
-  const activeMemberKeys = new Set(
-    (membersRes.data ?? []).map((m) => `${m.branch_id}:${m.profile_id}`),
-  )
+  // Explicitly type rows returned from Supabase
+  type StaffRow = { branch_id: string; profile_id: string }
+  type SalaryRow = { branch_id: string; profile_id: string; monthly_salary?: number | null; paid_days_off?: number | null }
+  type AttRow = { branch_id: string; profile_id: string; day_value?: number | null }
+  type PRRow = { branch_id: string; profile_id: string; total_bonuses?: number | null; total_deductions?: number | null; total_debts?: number | null }
+
+  const members = (membersRes.data ?? []) as StaffRow[]
+  const salaries = (salariesRes.data ?? []) as SalaryRow[]
+  const attLogs  = (attRes.data ?? []) as AttRow[]
+  const payrolls = (payrollRes.data ?? []) as PRRow[]
+
+  const activeMemberKeys = new Set(members.map((m) => `${m.branch_id}:${m.profile_id}`))
 
   const daysMap = new Map<string, number>()
-  for (const log of attRes.data ?? []) {
+  for (const log of attLogs) {
     const k = `${log.branch_id}:${log.profile_id}`
     daysMap.set(k, (daysMap.get(k) ?? 0) + (Number(log.day_value) || 0))
   }
 
-  const payrollMap = new Map(
-    (payrollRes.data ?? []).map((r) => [`${r.branch_id}:${r.profile_id}`, r]),
-  )
+  const payrollMap = new Map(payrolls.map((r) => [`${r.branch_id}:${r.profile_id}`, r]))
 
   const result = new Map<string, number>()
-  for (const s of salariesRes.data ?? []) {
+  for (const s of salaries) {
     const k = `${s.branch_id}:${s.profile_id}`
     if (!activeMemberKeys.has(k)) continue
     const base       = Number(s.monthly_salary) || 0
@@ -450,7 +457,7 @@ export function useAllOwnerPayouts(month: number, year: number) {
     queryFn: async () => {
       const { data, error } = await supabase.from("branches").select("id, name").eq("account_id", accountId!)
       if (error) throw error
-      return new Map((data ?? []).map((b) => [b.id as string, b.name as string]))
+      return new Map<string, string>((data ?? []).map((b) => [b.id as string, b.name as string]))
     },
     staleTime: 5 * 60_000,
   })

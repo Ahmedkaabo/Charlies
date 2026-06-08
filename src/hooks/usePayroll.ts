@@ -3,6 +3,12 @@ import { supabase } from "@/lib/supabase"
 import { calculateEarnedSalary } from "@/lib/attendance"
 import type { PayrollAdjustment, PayrollSummary, StaffPayrollRow } from "@/types/attendance"
 
+// Row types for Supabase responses
+type StaffRow = { branch_id: string; profile_id: string; profile?: any; role?: any }
+type SalaryRow = { branch_id: string; profile_id: string; monthly_salary?: number | null; paid_days_off?: number | null; currency?: string }
+type AttLogRow = { branch_id: string; profile_id: string; day_value?: number | null }
+type PayrollRecordRow = { branch_id: string; profile_id: string; total_bonuses?: number | null; total_deductions?: number | null; total_debts?: number | null; id?: string | null; is_finalized?: boolean | null }
+
 // ── Shared: month date-range strings ─────────────────────────
 
 function monthRange(month: number, year: number) {
@@ -36,9 +42,8 @@ export function usePayrollSummary(
       else if (branchIds?.length) membersQ = membersQ.in("branch_id", branchIds)
       const { data: activeMembers, error: membersErr } = await membersQ
       if (membersErr) throw membersErr
-      const activeMemberKeys = new Set(
-        (activeMembers ?? []).map((m) => `${m.branch_id}:${m.profile_id}`)
-      )
+      const activeMembersTyped = (activeMembers ?? []) as StaffRow[]
+      const activeMemberKeys = new Set(activeMembersTyped.map((m) => `${m.branch_id}:${m.profile_id}`))
 
       // 2. Salary structures (base salaries + paid leave)
       let salaryQ = supabase
@@ -48,9 +53,8 @@ export function usePayrollSummary(
       else if (branchIds?.length) salaryQ = salaryQ.in("branch_id", branchIds)
       const { data: allSalaries, error: salaryErr } = await salaryQ
       if (salaryErr) throw salaryErr
-      const salaries = (allSalaries ?? []).filter((s) =>
-        activeMemberKeys.has(`${s.branch_id}:${s.profile_id}`)
-      )
+      const salariesTyped = (allSalaries ?? []) as SalaryRow[]
+      const salaries = salariesTyped.filter((s) => activeMemberKeys.has(`${s.branch_id}:${s.profile_id}`))
 
       // 3. Attendance day_value sums for the month
       let attQ = supabase
@@ -63,6 +67,7 @@ export function usePayrollSummary(
       else if (branchIds?.length) attQ = attQ.in("branch_id", branchIds)
       const { data: attLogs, error: attErr } = await attQ
       if (attErr) throw attErr
+      const attLogsTyped = (attLogs ?? []) as AttLogRow[]
 
       // 4. Adjustment totals from payroll_records
       let payrollQ = supabase
@@ -74,39 +79,28 @@ export function usePayrollSummary(
       else if (branchIds?.length) payrollQ = payrollQ.in("branch_id", branchIds)
       const { data: records, error: payrollErr } = await payrollQ
       if (payrollErr) throw payrollErr
+      const recordsTyped = (records ?? []) as PayrollRecordRow[]
 
       // Build attendance map: "branch_id:profile_id" → total day_value
       const daysMap = new Map<string, number>()
-      for (const log of attLogs ?? []) {
+      for (const log of attLogsTyped) {
         const k = `${log.branch_id}:${log.profile_id}`
         daysMap.set(k, (daysMap.get(k) ?? 0) + (Number(log.day_value) || 0))
       }
 
-      const totalSalaryBudget = (salaries ?? []).reduce(
-        (sum, s) => sum + (Number(s.monthly_salary) || 0),
-        0
-      )
+      const totalSalaryBudget = salaries.reduce((sum, s) => sum + (Number(s.monthly_salary) || 0), 0)
 
       // totalEarned = base/30 * (days_present + paid_days_off) per staff
-      const totalEarned = (salaries ?? []).reduce((sum, s) => {
+      const totalEarned = salaries.reduce((sum, s) => {
         const k          = `${s.branch_id}:${s.profile_id}`
         const base       = Number(s.monthly_salary) || 0
         const paidDaysOff = Number(s.paid_days_off) || 0
         return sum + calculateEarnedSalary(base, (daysMap.get(k) ?? 0) + paidDaysOff)
       }, 0)
 
-      const totalBonuses = (records ?? []).reduce(
-        (sum, r) => sum + (Number(r.total_bonuses) || 0),
-        0
-      )
-      const totalDeductions = (records ?? []).reduce(
-        (sum, r) => sum + (Number(r.total_deductions) || 0),
-        0
-      )
-      const totalDebts = (records ?? []).reduce(
-        (sum, r) => sum + (Number(r.total_debts) || 0),
-        0
-      )
+      const totalBonuses = recordsTyped.reduce((sum, r) => sum + (Number(r.total_bonuses) || 0), 0)
+      const totalDeductions = recordsTyped.reduce((sum, r) => sum + (Number(r.total_deductions) || 0), 0)
+      const totalDebts = recordsTyped.reduce((sum, r) => sum + (Number(r.total_debts) || 0), 0)
 
       return {
         totalSalaryBudget,
@@ -147,6 +141,7 @@ export function usePayrollRecords(
       if (profileId) membersQ = membersQ.eq("profile_id", profileId)
       const { data: members, error: membersErr } = await membersQ
       if (membersErr) throw membersErr
+      const membersTyped = (members ?? []) as StaffRow[]
 
       // 2. Salary structures
       let salaryQ = supabase
@@ -157,6 +152,7 @@ export function usePayrollRecords(
       if (profileId) salaryQ = salaryQ.eq("profile_id", profileId)
       const { data: salaries, error: salaryErr } = await salaryQ
       if (salaryErr) throw salaryErr
+      const salariesTyped = (salaries ?? []) as SalaryRow[]
 
       // 3. Payroll records (adjustments)
       let payrollQ = supabase
@@ -169,6 +165,7 @@ export function usePayrollRecords(
       if (profileId) payrollQ = payrollQ.eq("profile_id", profileId)
       const { data: payrollRecs, error: payrollErr } = await payrollQ
       if (payrollErr) throw payrollErr
+      const payrollRecsTyped = (payrollRecs ?? []) as PayrollRecordRow[]
 
       // 4. Attendance day_value sums for the month
       let attQ = supabase
@@ -182,16 +179,13 @@ export function usePayrollRecords(
       if (profileId) attQ = attQ.eq("profile_id", profileId)
       const { data: attLogs, error: attErr } = await attQ
       if (attErr) throw attErr
+      const attLogsTyped = (attLogs ?? []) as AttLogRow[]
 
       // Build lookup maps
-      const salaryMap = new Map(
-        (salaries ?? []).map((s) => [`${s.branch_id}:${s.profile_id}`, s])
-      )
-      const payrollMap = new Map(
-        (payrollRecs ?? []).map((r) => [`${r.branch_id}:${r.profile_id}`, r])
-      )
+      const salaryMap = new Map(salariesTyped.map((s) => [`${s.branch_id}:${s.profile_id}`, s]))
+      const payrollMap = new Map(payrollRecsTyped.map((r) => [`${r.branch_id}:${r.profile_id}`, r]))
       const daysMap = new Map<string, number>()
-      for (const log of attLogs ?? []) {
+      for (const log of attLogsTyped) {
         const k = `${log.branch_id}:${log.profile_id}`
         daysMap.set(k, (daysMap.get(k) ?? 0) + (Number(log.day_value) || 0))
       }
@@ -200,7 +194,7 @@ export function usePayrollRecords(
       const seen = new Set<string>()
       const rows: StaffPayrollRow[] = []
 
-      for (const m of members ?? []) {
+      for (const m of membersTyped) {
         const key = `${m.branch_id}:${m.profile_id}`
         if (seen.has(key)) continue
         seen.add(key)

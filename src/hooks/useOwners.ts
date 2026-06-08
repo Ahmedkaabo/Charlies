@@ -29,8 +29,26 @@ export function useGetOwners() {
 
       if (ownersRes.error) throw ownersRes.error
 
-      type Row = typeof ownersRes.data extends (infer R)[] | null ? R : never
-      const rows = (ownersRes.data ?? []) as Row[]
+      // Explicitly type the rows returned by Supabase for clarity
+      type OwnersRow = {
+        id: string
+        branch_id: string
+        joined_at: string | null
+        role_id: string | null
+        is_active: boolean
+        profile: {
+          id: string
+          full_name: string | null
+          name_ar: string | null
+          avatar_url: string | null
+          phone: string | null
+          is_fee_manager: boolean
+        } | null
+        branch: { id: string; name: string; city: string | null } | null
+        role: { id: string; name: string; level: number } | null
+      }
+
+      const rows = (ownersRes.data ?? []) as OwnersRow[]
 
       const map = new Map<string, Owner>()
       for (const row of rows) {

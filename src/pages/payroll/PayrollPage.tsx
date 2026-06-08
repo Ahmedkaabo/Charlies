@@ -51,7 +51,7 @@ function initials(name: string | null) {
 function generateMonthOptions() {
   const start = new Date(2026, 5, 1) // June 2026
   const now   = new Date()
-  const opts  = []
+  const opts: { month: number; year: number; label: string; value: string }[] = []
   // Walk forward from start to current month (inclusive)
   for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d >= start; d.setMonth(d.getMonth() - 1)) {
     opts.push({

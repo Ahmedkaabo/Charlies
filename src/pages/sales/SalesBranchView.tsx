@@ -149,7 +149,7 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
                   "relative flex flex-col justify-between rounded-md border p-1.5 text-left transition-colors",
                   "h-14 md:h-[72px]",
                   isFuture && "bg-muted/30 border-transparent cursor-not-allowed",
-                  isLocked && !canEdit && !isFuture && "bg-muted/20 cursor-not-allowed",
+                  isLocked && !editable && !isFuture && "bg-muted/20 cursor-not-allowed",
                   record && !isFuture && (editable || record) && "bg-card hover:bg-accent cursor-pointer",
                   !record && editable && [
                     "border-dashed border-muted-foreground/25",
@@ -163,7 +163,7 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
                     "text-[11px] font-medium leading-none",
                     isToday && "font-bold text-primary",
                     isFuture && "text-muted-foreground/40",
-                    isLocked && !canEdit && !isFuture && "text-muted-foreground",
+                    isLocked && !editable && !isFuture && "text-muted-foreground",
                     // Orange if edited (overrides other non-primary colours)
                     hasEdits && !isFuture && !isToday && "text-orange-500 font-semibold",
                   )}
@@ -175,7 +175,7 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
                   <span
                     className={cn(
                       "text-[11px] font-semibold leading-none tabular-nums",
-                      isLocked && !canEdit ? "text-muted-foreground" : "text-foreground",
+                      isLocked && !editable ? "text-muted-foreground" : "text-foreground",
                     )}
                   >
                     {fmtRevenue(record.revenue)}

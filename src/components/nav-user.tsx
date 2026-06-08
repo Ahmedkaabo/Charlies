@@ -26,7 +26,7 @@ import { supabase } from "@/lib/supabase"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
-  const { user, profile, accountId, accountCode, signOut } = useAuth()
+  const { profile, accountId, accountCode, signOut } = useAuth()
   const [generatingInvite, setGeneratingInvite] = useState(false)
 
   const name   = profile?.full_name ?? "User"

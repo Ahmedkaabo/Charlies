@@ -219,7 +219,7 @@ export function useAllBranchBalances(month: number, year: number, enabled = true
       const { data, error } = await supabase
         .from("branches").select("id, name").eq("account_id", accountId!)
       if (error) throw error
-      return new Map((data ?? []).map((b) => [b.id as string, b.name as string]))
+      return new Map<string, string>((data ?? []).map((b) => [b.id as string, b.name as string]))
     },
     staleTime: 5 * 60_000,
   })
