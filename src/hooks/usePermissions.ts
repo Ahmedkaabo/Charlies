@@ -1,27 +1,30 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import type { Permission, Role, Resource, CrudField } from "@/types/permission"
 import { useAuth } from "@/hooks/useAuth"
 import { NAV_ITEMS, NAV_GROUPS } from "@/lib/nav"
 
-// Permission lookup is done via branch_members → roles directly,
-// not via profiles.system_role, so role assignments always reflect
-// what the manager set in branch_members regardless of the profile value.
+// Permission lookup is done via staff/owners → roles → permissions.
+// All permissions come from branch role assignments, never from profile flags.
 
 export function useGetRoles() {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["roles"],
+    queryKey: ["roles", accountId],
     queryFn: async () => {
+      if (!accountId) return []
       const { data, error } = await supabase
         .from("roles")
         .select("id, name, level, is_system, role_type")
+        .eq("account_id", accountId)
         .order("level", { ascending: true })
       if (!error) return data as Role[]
 
-      // Fallback: newer columns (is_system, role_type) may not exist yet
+      // Fallback: newer columns may not exist yet
       const { data: basic, error: basicErr } = await supabase
         .from("roles")
         .select("id, name, level")
+        .eq("account_id", accountId)
         .order("level", { ascending: true })
       if (basicErr) throw basicErr
       return (basic ?? []).map((r) => ({
@@ -30,6 +33,7 @@ export function useGetRoles() {
         role_type:  "operational" as const,
       })) as Role[]
     },
+    enabled: !!accountId,
   })
 }
 
@@ -41,18 +45,19 @@ export interface RoleInput {
 
 export function useCreateRole() {
   const qc = useQueryClient()
+  const { accountId } = useAuth()
   return useMutation({
     mutationFn: async (input: RoleInput) => {
       const { data, error } = await supabase
         .from("roles")
-        .insert(input)
+        .insert({ ...input, account_id: accountId })
         .select()
         .single()
       if (error) throw error
       return data as Role
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["roles"] })
+      qc.invalidateQueries({ queryKey: ["roles", accountId] })
       qc.invalidateQueries({ queryKey: ["permissions"] })
     },
   })
@@ -60,6 +65,7 @@ export function useCreateRole() {
 
 export function useUpdateRole(id: string) {
   const qc = useQueryClient()
+  const { accountId } = useAuth()
   return useMutation({
     mutationFn: async (input: Partial<RoleInput>) => {
       const { data, error } = await supabase
@@ -72,28 +78,30 @@ export function useUpdateRole(id: string) {
       return data as Role
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["roles"] })
+      qc.invalidateQueries({ queryKey: ["roles", accountId] })
     },
   })
 }
 
 export function useDeleteRole() {
   const qc = useQueryClient()
+  const { accountId } = useAuth()
   return useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("roles").delete().eq("id", id)
       if (error) throw error
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["roles"] })
+      qc.invalidateQueries({ queryKey: ["roles", accountId] })
       qc.invalidateQueries({ queryKey: ["permissions"] })
     },
   })
 }
 
 export function useGetPermissions() {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["permissions"],
+    queryKey: ["permissions", accountId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("permissions")
@@ -101,6 +109,8 @@ export function useGetPermissions() {
       if (error) throw error
       return data as Permission[]
     },
+    staleTime: 30_000,
+    enabled: !!accountId,
   })
 }
 
@@ -111,12 +121,11 @@ interface UpsertPermissionInput {
   can_read: boolean
   can_update: boolean
   can_delete: boolean
-  can_move_treasury: boolean
-  can_see_treasury: boolean
 }
 
 export function useUpsertPermission() {
   const qc = useQueryClient()
+  const { accountId } = useAuth()
   return useMutation({
     mutationFn: async (input: UpsertPermissionInput) => {
       const { data, error } = await supabase
@@ -127,17 +136,14 @@ export function useUpsertPermission() {
       if (error) throw error
       return data as Permission
     },
-    // Optimistic update: flip the value immediately in cache
     onMutate: async (input) => {
-      await qc.cancelQueries({ queryKey: ["permissions"] })
-      const prev = qc.getQueryData<Permission[]>(["permissions"])
-      qc.setQueryData<Permission[]>(["permissions"], (old = []) => {
+      await qc.cancelQueries({ queryKey: ["permissions", accountId] })
+      const prev = qc.getQueryData<Permission[]>(["permissions", accountId])
+      qc.setQueryData<Permission[]>(["permissions", accountId], (old = []) => {
         const idx = old.findIndex(
           (p) => p.role_id === input.role_id && p.resource === input.resource
         )
-        if (idx === -1) {
-          return [...old, { ...input, id: "optimistic", created_at: "" }]
-        }
+        if (idx === -1) return [...old, { ...input, id: "optimistic", created_at: "" }]
         const updated = [...old]
         updated[idx] = { ...updated[idx], ...input }
         return updated
@@ -145,33 +151,136 @@ export function useUpsertPermission() {
       return { prev }
     },
     onError: (_err, _input, ctx) => {
-      if (ctx?.prev) qc.setQueryData(["permissions"], ctx.prev)
+      if (ctx?.prev) qc.setQueryData(["permissions", accountId], ctx.prev)
     },
     onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["permissions"] })
+      qc.invalidateQueries({ queryKey: ["permissions", accountId] })
     },
   })
 }
 
 // ── useUserPermissions ────────────────────────────────────────
-// Reads pre-resolved permissions from AuthContext (loaded once on startup).
-// loading is always false here — AuthGuard already waited for it.
+// Resolves permissions from the user's actual branch role in
+// staff/owners (most privileged role if in multiple branches).
 
-export interface UserPermissions {
+interface UserPermissions {
   canCreate:  (resource: Resource) => boolean
   canRead:    (resource: Resource) => boolean
   canUpdate:  (resource: Resource) => boolean
   canDelete:  (resource: Resource) => boolean
-  canMoveTreasury: () => boolean
-  canSeeTreasury:  () => boolean
+  /** Level of the user's most privileged active branch role. 0 = master. */
   roleLevel:  number
+  /** True when the user has an active record in the owners table. Separate from roleLevel
+   *  so that AdminGuard / sidebar can allow owner-management access regardless of the
+   *  operational role assigned to the owner. */
   isOwner:    boolean
   loading:    boolean
 }
 
 export function useUserPermissions(): UserPermissions {
-  const { canCreate, canRead, canUpdate, canDelete, canMoveTreasury, canSeeTreasury, roleLevel, isOwner, loading } = useAuth()
-  return { canCreate, canRead, canUpdate, canDelete, canMoveTreasury, canSeeTreasury, roleLevel, isOwner, loading }
+  const { isAdmin, profile }                               = useAuth()
+  const { data: permissions, isLoading: permsLoading }    = useGetPermissions()
+
+  // Fetch the user's active role.
+  // Owners (owners table) use their assigned role_id; if none is set they get full access.
+  // Staff (staff table) use their branch role as before.
+  const { data: branchRoles, isLoading: roleLoading } = useQuery({
+    queryKey: ["my-branch-roles", profile?.id],
+    queryFn: async () => {
+      // NOTE: AuthContext registers this same queryKey with fetchBranchRoles (which
+      // handles admin users via the "Admin" system role). Since AuthContext mounts
+      // first, its queryFn is canonical — this queryFn only runs if no cached data
+      // exists yet (e.g. this hook is used outside the AuthProvider tree).
+      const [staffRes, ownerRes] = await Promise.all([
+        supabase.from("staff").select("role_id, role_ids").eq("profile_id", profile!.id).eq("is_active", true),
+        supabase.from("owners").select("role_id, role_ids").eq("profile_id", profile!.id).eq("is_active", true),
+      ])
+      if (staffRes.error) throw staffRes.error
+
+      let isOwner = !ownerRes.error && (ownerRes.data ?? []).length > 0
+      if (ownerRes.error) {
+        const { data: plain } = await supabase
+          .from("owners").select("id").eq("profile_id", profile!.id).eq("is_active", true).limit(1)
+        if ((plain ?? []).length > 0) {
+          return [{ role_id: null as string | null, role: { level: -1 }, isOwner: true }]
+        }
+      }
+
+      const ownerRoleIds = new Set<string>()
+      const staffRoleIds = new Set<string>()
+      for (const r of (ownerRes.data ?? []) as any[]) {
+        const ids: string[] = r.role_ids?.length ? r.role_ids : (r.role_id ? [r.role_id] : [])
+        ids.forEach((id: string) => ownerRoleIds.add(id))
+      }
+      for (const r of (staffRes.data ?? []) as any[]) {
+        const ids: string[] = r.role_ids?.length ? r.role_ids : (r.role_id ? [r.role_id] : [])
+        ids.forEach((id: string) => staffRoleIds.add(id))
+      }
+
+      const allIds = new Set<string>([...ownerRoleIds, ...staffRoleIds])
+      const roleLevelMap: Record<string, number> = {}
+      if (allIds.size > 0) {
+        const { data: rd } = await supabase.from("roles").select("id, level").in("id", [...allIds])
+        for (const r of rd ?? []) roleLevelMap[r.id] = r.level
+      }
+
+      if (isOwner) {
+        if (ownerRoleIds.size > 0) {
+          return [...ownerRoleIds].map(id => ({ role_id: id, role: { level: roleLevelMap[id] ?? 1 }, isOwner: true }))
+        }
+        // Owner has no roles assigned — preserve isOwner flag but grant no permissions
+        return [{ role_id: null as string | null, role: { level: 99 }, isOwner: true }]
+      }
+
+      return [...staffRoleIds].map(id => ({ role_id: id, role: { level: roleLevelMap[id] ?? 99 }, isOwner: false }))
+    },
+    enabled: !!profile?.id,
+    staleTime: 60_000,
+  })
+
+  const loading = permsLoading || roleLoading
+
+  // All users go through the roles/permissions lookup — including org admins.
+  // Admins are routed to the "Admin" system role by fetchBranchRoles in AuthContext
+  // (same queryKey, AuthContext's queryFn runs first and is cached here).
+
+  const allBranchRoles = branchRoles ?? []
+  const allRoleIds = new Set<string>(
+    allBranchRoles.map(r => r.role_id).filter((id): id is string => id !== null)
+  )
+  const levels = allBranchRoles.map(r => (r as any).role?.level ?? 99)
+  const myRoleLevel = levels.length ? Math.min(...levels) : 99
+  const isOwner = allBranchRoles.some(r => (r as any).isOwner === true)
+
+  // Sentinel: no role seeded yet — grant full access
+  if (myRoleLevel === -1) {
+    return {
+      canCreate: () => true,
+      canRead:   () => true,
+      canUpdate: () => true,
+      canDelete: () => true,
+      roleLevel: 0,
+      isOwner,
+      loading:   false,
+    }
+  }
+
+  // Grant permission if ANY of the user's roles has it
+  function anyPerm(resource: Resource, field: string): boolean {
+    return allRoleIds.size > 0 && !!permissions?.some(
+      p => allRoleIds.has(p.role_id) && p.resource === resource && (p as any)[field]
+    )
+  }
+
+  return {
+    canCreate: (r) => anyPerm(r, 'can_create'),
+    canRead:   (r) => anyPerm(r, 'can_read'),
+    canUpdate: (r) => anyPerm(r, 'can_update'),
+    canDelete: (r) => anyPerm(r, 'can_delete'),
+    roleLevel: myRoleLevel,
+    isOwner,
+    loading,
+  }
 }
 
 // ── useVisibleNavItems ────────────────────────────────────────
@@ -186,7 +295,7 @@ export function useVisibleNavItems() {
   const items = NAV_ITEMS.filter((item) => {
     if (item.adminOnly && !isAdmin) return false
     if (!item.resource) return true
-    return isAdmin || loading || canRead(item.resource)
+    return loading || canRead(item.resource)
   })
 
   return { items, loading }
@@ -204,7 +313,7 @@ export function useVisibleNavGroups() {
     items: group.items.filter((item) => {
       if (item.adminOnly && !isAdmin) return false
       if (!item.resource) return true
-      return isAdmin || loading || canRead(item.resource)
+      return loading || canRead(item.resource)
     }),
   })).filter((group) => group.items.length > 0)
 
@@ -235,8 +344,6 @@ export function buildToggled(
     can_read:   existing?.can_read   ?? false,
     can_update: existing?.can_update ?? false,
     can_delete: existing?.can_delete ?? false,
-    can_move_treasury: existing?.can_move_treasury ?? false,
-    can_see_treasury:  existing?.can_see_treasury  ?? false,
     [field]: value,
   }
 }

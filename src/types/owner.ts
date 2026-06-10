@@ -4,6 +4,7 @@ export interface OwnerBranch {
   branch_name:   string
   city:          string | null
   joined_at:     string
+  role_ids:      string[]
   role_id:       string | null
   role_name:     string | null
   role_level:    number | null
@@ -17,5 +18,6 @@ export interface Owner {
   phone:          string | null
   is_fee_manager: boolean
   is_master:      boolean
+  role_ids:       string[]
   branches:       OwnerBranch[]
 }

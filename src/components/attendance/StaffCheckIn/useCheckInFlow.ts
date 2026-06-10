@@ -22,6 +22,7 @@ export function useCheckInFlow(profileId: string | undefined) {
   const [mode, setMode] = useState<FlowMode>("checkin")
   const [step, setStep] = useState<FlowStep>("idle")
   const [locationError, setLocationError] = useState("")
+  const [locationPending, setLocationPending] = useState(false)
   const [position, setPosition] = useState<GeolocationPosition | null>(null)
   const [distanceM, setDistanceM] = useState(0)
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
@@ -54,6 +55,7 @@ export function useCheckInFlow(profileId: string | undefined) {
   function resetFlow() {
     setStep("idle")
     setLocationError("")
+    setLocationPending(false)
     setPosition(null)
     setDistanceM(0)
     setSelfieFile(null)
@@ -61,9 +63,9 @@ export function useCheckInFlow(profileId: string | undefined) {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  async function startFlow(m: FlowMode) {
-    setMode(m)
-    setStep("locating")
+  async function detectLocation() {
+    setLocationPending(true)
+    setLocationError("")
     try {
       const pos = await getGeoPosition()
       if (branch?.latitude != null && branch?.longitude != null) {
@@ -77,23 +79,31 @@ export function useCheckInFlow(profileId: string | undefined) {
         setDistanceM(rounded)
         if (dist > branch.location_radius_meters) {
           setLocationError(
-            `You are not at ${branch.name}. You are ${rounded}m away — check-in requires being within ${branch.location_radius_meters}m of the branch.`
+            `You are ${rounded} m away from the branch. Check-in requires being within ${branch.location_radius_meters} m.`
           )
-          setStep("location_error")
           return
         }
       }
       setPosition(pos)
-      setStep("selfie")
     } catch {
       setLocationError("Could not get your location. Enable location access and try again.")
-      setStep("location_error")
+    } finally {
+      setLocationPending(false)
     }
+  }
+
+  function startFlow(m: FlowMode) {
+    setMode(m)
+    setStep("selfie")
+    setLocationError("")
+    setPosition(null)
+    setDistanceM(0)
+    void detectLocation()
   }
 
   function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || step === "idle") return
     setSelfieFile(file)
     setSelfiePreview(URL.createObjectURL(file))
     setStep("reviewing")
@@ -206,6 +216,7 @@ export function useCheckInFlow(profileId: string | undefined) {
     mode,
     step,
     locationError,
+    locationPending,
     distanceM,
     selfiePreview,
     fileInputRef,

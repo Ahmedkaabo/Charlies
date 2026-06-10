@@ -7,7 +7,6 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
-import type { SystemRole } from "@/hooks/useAuth"
 import { useVisibleNavGroups, useUserPermissions } from "@/hooks/usePermissions"
 import {
   Sidebar,
@@ -54,10 +53,6 @@ function getInitials(name?: string, email?: string): string {
   return (email ?? "??").slice(0, 2).toUpperCase()
 }
 
-function formatRole(role: SystemRole): string {
-  return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
 function isPathActive(itemPath: string, pathname: string): boolean {
   return itemPath === "/" ? pathname === "/" : pathname.startsWith(itemPath)
 }
@@ -67,7 +62,7 @@ function isPathActive(itemPath: string, pathname: string): boolean {
 export function CharSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const [confirmOpen, setConfirmOpen] = React.useState(false)
   const [generatingInvite, setGeneratingInvite] = React.useState(false)
-  const { user, profile, isAdmin, systemRole, accountId, accountCode, signOut } = useAuth()
+  const { user, profile, isAdmin, accountId, accountCode, signOut } = useAuth()
   const { setOpenMobile } = useSidebar()
   const { pathname } = useLocation()
   const navigate = useNavigate()
@@ -91,7 +86,6 @@ export function CharSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const fullName = profile?.full_name ?? (user?.user_metadata?.full_name as string | undefined)
   const email = user?.email ?? ""
   const initials = getInitials(fullName, email)
-  // systemRole comes from useAuth() above
 
   const { groups: visibleNavGroups } = useVisibleNavGroups()
   const { canRead, isOwner, loading: permsLoading } = useUserPermissions()
@@ -214,7 +208,7 @@ async function handleSignOut() {
                     <div className="grid flex-1 text-start text-sm leading-tight">
                       <span className="truncate font-medium">{fullName ?? email}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {systemRole ? formatRole(systemRole) : email}
+                        {isAdmin ? "Admin" : isOwner ? "Branch Owner" : email}
                       </span>
                     </div>
                     <EllipsisVertical className="ms-auto size-4" />

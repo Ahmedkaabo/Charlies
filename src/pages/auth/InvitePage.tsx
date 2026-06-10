@@ -11,8 +11,7 @@ export function InvitePage() {
   const navigate = useNavigate()
   const { data: invite, isLoading, isError } = useGetInviteByToken(token ?? null)
 
-  // invite?.accounts is usually an object but can be inferred as array if join is many-to-one
-  const orgAccount = (Array.isArray(invite?.accounts) ? invite.accounts[0] : invite?.accounts) as { name: string; code: number } | null
+  const orgAccount = invite?.accounts as { name: string; code: number } | null
   const orgName = orgAccount?.name ?? "this organization"
   const orgCode = orgAccount?.code ?? null
   const isExpired = invite?.expires_at ? new Date(invite.expires_at) < new Date() : false

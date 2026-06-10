@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/sidebar"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/hooks/useAuth"
-import type { SystemRole } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import {
@@ -47,10 +46,6 @@ function getInitials(name?: string | null, email?: string): string {
   return (email ?? "??").slice(0, 2).toUpperCase()
 }
 
-function formatRole(role: SystemRole): string {
-  return role.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-}
-
 function usePageTitle(): string {
   const { pathname } = useLocation()
   if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname]
@@ -67,7 +62,7 @@ export function AppShell() {
   const pageTitle = usePageTitle()
   const navigate = useNavigate()
 
-  const { user, profile, systemRole, accountId, accountCode, signOut } = useAuth()
+  const { user, profile, isAdmin, accountId, accountCode, signOut } = useAuth()
 
   const [profileOpen, setProfileOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -159,7 +154,7 @@ export function AppShell() {
               <p className="truncate font-semibold text-sm">{fullName ?? email}</p>
               <p className="truncate text-xs text-muted-foreground">{email}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {systemRole ? formatRole(systemRole) : ""}
+                {isAdmin ? "Admin" : ""}
               </p>
               {accountCode !== null && (
                 <div className="flex items-center gap-2 mt-1.5">

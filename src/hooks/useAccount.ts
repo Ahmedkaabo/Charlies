@@ -10,7 +10,7 @@ export function useAccountMembers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, full_name, avatar_url, phone, system_role, is_admin, created_at")
+        .select("id, full_name, avatar_url, phone, is_admin, created_at")
         .eq("account_id", accountId!)
         .order("created_at", { ascending: true })
       if (error) throw error

@@ -71,7 +71,6 @@ CREATE POLICY "staff_select"
   );
 
 -- Writes remain admin-gated within the same account
-DROP POLICY IF EXISTS "staff_write" ON public.staff;
 CREATE POLICY "staff_write"
   ON public.staff FOR ALL
   TO authenticated
@@ -98,7 +97,6 @@ CREATE POLICY "owners_select"
     )
   );
 
-DROP POLICY IF EXISTS "owners_write" ON public.owners;
 CREATE POLICY "owners_write"
   ON public.owners FOR ALL
   TO authenticated

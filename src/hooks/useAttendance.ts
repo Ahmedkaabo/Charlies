@@ -1,164 +1,142 @@
 import { useQuery } from "@tanstack/react-query"
+import { format, subDays } from "date-fns"
 import { supabase } from "@/lib/supabase"
-import { format } from "date-fns"
 import type { AttendanceLog, AttendanceLogWithProfile } from "@/types/attendance"
 import type { BranchShift } from "@/types/branch"
+import type { Branch } from "@/types/branch"
 
-// ── StaffBranch ───────────────────────────────────────────────
+// ── Branches the current user is a member of (management scope) ─
+
+export function useMyBranches(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ["my-branches", profileId],
+    queryFn: async () => {
+      // A user may be in staff, owners, or both — union the results
+      const [staffRes, ownerRes] = await Promise.all([
+        supabase.from("staff").select("branch:branches(*)").eq("profile_id", profileId!).eq("is_active", true),
+        supabase.from("owners").select("branch:branches(*)").eq("profile_id", profileId!).eq("is_active", true),
+      ])
+      if (staffRes.error) throw staffRes.error
+      if (ownerRes.error) throw ownerRes.error
+
+      const seen = new Set<string>()
+      const branches: Branch[] = []
+      for (const row of [...(staffRes.data ?? []), ...(ownerRes.data ?? [])]) {
+        const b = row.branch as unknown as Branch
+        if (b?.id && !seen.has(b.id)) {
+          seen.add(b.id)
+          branches.push(b)
+        }
+      }
+      return branches
+    },
+    enabled: !!profileId,
+    staleTime: 60_000,
+  })
+}
+
+// ── Branch data needed for staff check-in ─────────────────────
 
 export interface StaffBranch {
   id: string
-  branch_id: string
   name: string
-  check_in_time: string | null
-  check_out_time: string | null
   latitude: number | null
   longitude: number | null
   location_radius_meters: number
+  check_in_time: string | null
+  check_out_time: string | null
   min_shift_hours: number
   max_shift_hours: number
+  role_type: "managerial" | "operational"
   shifts: BranchShift[]
-}
-
-// ── useMyBranch ───────────────────────────────────────────────
-
-const BRANCH_FIELDS = `
-  id, name, check_in_time, check_out_time,
-  latitude, longitude, location_radius_meters,
-  min_shift_hours, max_shift_hours
-`
-
-type BranchRow = {
-  id: string; name: string; check_in_time: string | null; check_out_time: string | null
-  latitude: number | null; longitude: number | null; location_radius_meters: number
-  min_shift_hours: number; max_shift_hours: number
-}
-
-async function resolveBranch(b: BranchRow, branchId: string): Promise<StaffBranch> {
-  const { data: shifts } = await supabase
-    .from("branch_shifts")
-    .select("*")
-    .eq("branch_id", b.id)
-    .eq("is_active", true)
-    .order("shift_start", { ascending: true })
-
-  return {
-    id: b.id,
-    branch_id: branchId,
-    name: b.name,
-    check_in_time: b.check_in_time,
-    check_out_time: b.check_out_time,
-    latitude: b.latitude,
-    longitude: b.longitude,
-    location_radius_meters: b.location_radius_meters,
-    min_shift_hours: b.min_shift_hours,
-    max_shift_hours: b.max_shift_hours,
-    shifts: (shifts ?? []) as BranchShift[],
-  }
 }
 
 export function useMyBranch(profileId: string | undefined) {
   return useQuery({
     queryKey: ["my-branch", profileId],
     queryFn: async () => {
-      // Check staff table first
-      const { data: staffRow, error: staffErr } = await supabase
+      const branchSelect = `
+        id, name, latitude, longitude,
+        location_radius_meters, check_in_time, check_out_time,
+        min_shift_hours, max_shift_hours,
+        shifts:branch_shifts(*)
+      `
+      // Check staff first (has role_type); then fall back to owners (always managerial)
+      const staffRes = await supabase
         .from("staff")
-        .select(`branch_id, branch:branches(${BRANCH_FIELDS})`)
-        .eq("profile_id", profileId!)
-        .eq("is_active", true)
-        .maybeSingle()
-      if (staffErr) throw staffErr
-
-      if (staffRow) {
-        const b = staffRow.branch as unknown as BranchRow
-        return resolveBranch(b, staffRow.branch_id as string)
-      }
-
-      // Fall back to owners table (branch_owner role users)
-      const { data: ownerRow, error: ownerErr } = await supabase
-        .from("owners")
-        .select(`branch_id, branch:branches(${BRANCH_FIELDS})`)
+        .select(`branch_id, role:roles(role_type), branch:branches(${branchSelect})`)
         .eq("profile_id", profileId!)
         .eq("is_active", true)
         .limit(1)
         .maybeSingle()
-      if (ownerErr) throw ownerErr
 
-      if (ownerRow) {
-        const b = ownerRow.branch as unknown as BranchRow
-        return resolveBranch(b, ownerRow.branch_id as string)
+      if (staffRes.error) throw staffRes.error
+      if (staffRes.data) {
+        const roleType = ((staffRes.data.role as { role_type?: string } | null)?.role_type ?? "operational") as StaffBranch["role_type"]
+        return { ...(staffRes.data.branch as Omit<StaffBranch, "role_type">), role_type: roleType }
       }
 
-      return null
-    },
-    enabled: !!profileId,
-  })
-}
-
-// ── useMyBranches ─────────────────────────────────────────────
-
-export function useMyBranches(profileId: string | undefined) {
-  return useQuery({
-    queryKey: ["my-branches", profileId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("staff")
-        .select("branch:branches(id, name, name_ar, address, city, phone, is_active, created_at, owner_id, latitude, longitude, location_radius_meters, shift_start, shift_end, checkin_window_minutes, min_shift_hours, max_shift_hours)")
+      // Not a staff member — check owners table
+      const ownerRes = await supabase
+        .from("owners")
+        .select(`branch_id, branch:branches(${branchSelect})`)
         .eq("profile_id", profileId!)
         .eq("is_active", true)
-      if (error) throw error
-      return (data ?? []).map((row) => row.branch as unknown as import("@/types/branch").Branch)
-    },
-    enabled: !!profileId,
-  })
-}
-
-// ── useMyAttendance ───────────────────────────────────────────
-
-export function useMyAttendance(profileId: string | undefined) {
-  return useQuery({
-    queryKey: ["attendance", "mine", profileId],
-    queryFn: async () => {
-      const today = format(new Date(), "yyyy-MM-dd")
-
-      const { data: todayData } = await supabase
-        .from("attendance_logs")
-        .select("*")
-        .eq("profile_id", profileId!)
-        .eq("date", today)
+        .limit(1)
         .maybeSingle()
 
-      const { data: history } = await supabase
-        .from("attendance_logs")
-        .select("*")
-        .eq("profile_id", profileId!)
-        .order("date", { ascending: false })
-        .limit(30)
-
-      return {
-        todayLog: (todayData ?? null) as AttendanceLog | null,
-        history:  (history ?? []) as AttendanceLog[],
-      }
+      if (ownerRes.error) throw ownerRes.error
+      if (!ownerRes.data) return null
+      return { ...(ownerRes.data.branch as Omit<StaffBranch, "role_type">), role_type: "managerial" as const }
     },
     enabled: !!profileId,
     refetchInterval: 60_000,
   })
 }
 
-// ── useAttendanceLogs ─────────────────────────────────────────
+// ── Staff's own attendance (today + last 14 days) ──────────────
 
-interface AttendanceLogsFilters {
-  branchId?:  string
-  branchIds?: string[]
-  profileId?: string
-  date?:      string
+export function useMyAttendance(profileId: string | undefined) {
+  const today = format(new Date(), "yyyy-MM-dd")
+  const from = format(subDays(new Date(), 14), "yyyy-MM-dd")
+
+  return useQuery({
+    queryKey: ["attendance", "my", profileId, today],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("attendance_logs")
+        .select("*")
+        .eq("profile_id", profileId!)
+        .gte("date", from)
+        .lte("date", today)
+        .order("date", { ascending: false })
+
+      if (error) throw error
+      const logs = (data ?? []) as AttendanceLog[]
+      return {
+        todayLog: logs.find((l) => l.date === today) ?? null,
+        history: logs,
+      }
+    },
+    enabled: !!profileId,
+    refetchInterval: 30_000,
+  })
 }
 
-export function useAttendanceLogs(filters: AttendanceLogsFilters) {
-  const { branchId, branchIds, profileId, date } = filters
+// ── Filtered attendance logs (manager view) ───────────────────
+
+export interface AttendanceFilters {
+  branchId?: string
+  branchIds?: string[]  // membership-scoped multi-branch filter
+  profileId?: string
+  date?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+export function useAttendanceLogs(filters: AttendanceFilters) {
   return useQuery({
-    queryKey: ["attendance-logs", branchId, branchIds, profileId, date],
+    queryKey: ["attendance", "logs", filters],
     queryFn: async () => {
       let q = supabase
         .from("attendance_logs")
@@ -168,16 +146,48 @@ export function useAttendanceLogs(filters: AttendanceLogsFilters) {
           branch:branches(id, name, check_in_time, check_out_time, min_shift_hours, max_shift_hours),
           shift:branch_shifts(id, name, shift_start, shift_end, full_day_hours, overtime_hours)
         `)
+        .order("date", { ascending: false })
         .order("check_in_at", { ascending: false })
 
-      if (branchId)            q = q.eq("branch_id", branchId)
-      else if (branchIds?.length) q = q.in("branch_id", branchIds)
-      if (profileId)           q = q.eq("profile_id", profileId)
-      if (date)                q = q.eq("date", date)
+      if (filters.branchId) q = q.eq("branch_id", filters.branchId)
+      else if (filters.branchIds?.length) q = q.in("branch_id", filters.branchIds)
+      if (filters.profileId) q = q.eq("profile_id", filters.profileId)
+      if (filters.date) q = q.eq("date", filters.date)
+      if (filters.dateFrom) q = q.gte("date", filters.dateFrom)
+      if (filters.dateTo) q = q.lte("date", filters.dateTo)
 
       const { data, error } = await q
       if (error) throw error
-      return (data ?? []) as unknown as AttendanceLogWithProfile[]
+      return (data ?? []) as AttendanceLogWithProfile[]
     },
+  })
+}
+
+// ── Today's attendance for all staff (manager view) ───────────
+
+export function useTodayAttendance(branchId?: string) {
+  const today = format(new Date(), "yyyy-MM-dd")
+
+  return useQuery({
+    queryKey: ["attendance", "today", branchId ?? "all", today],
+    queryFn: async () => {
+      let q = supabase
+        .from("attendance_logs")
+        .select(`
+          *,
+          profile:profiles(id, full_name, avatar_url),
+          branch:branches(id, name, check_in_time, check_out_time, min_shift_hours, max_shift_hours),
+          shift:branch_shifts(id, name, shift_start, shift_end, full_day_hours, overtime_hours)
+        `)
+        .eq("date", today)
+        .order("check_in_at", { ascending: true })
+
+      if (branchId) q = q.eq("branch_id", branchId)
+
+      const { data, error } = await q
+      if (error) throw error
+      return (data ?? []) as AttendanceLogWithProfile[]
+    },
+    refetchInterval: 60_000,
   })
 }

@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { SlidersHorizontal, Trash2 } from "lucide-react"
+import { TrendingUp, TrendingDown, Wallet, SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { usePayrollAdjustments, useStaffMonthlyAttendance } from "@/hooks/usePayroll"
 import { useDeleteAdjustment } from "@/hooks/useAttendanceMutations"
+import { useUserPermissions } from "@/hooks/usePermissions"
 import type { StaffPayrollRow, PayrollAdjustment } from "@/types/attendance"
 import { cn } from "@/lib/utils"
 
@@ -67,12 +68,14 @@ function AdjustmentList({
   loading,
   currency: curr,
   emptyText,
+  canDelete,
   onDelete,
 }: {
   items: PayrollAdjustment[]
   loading: boolean
   currency: string
   emptyText: string
+  canDelete: boolean
   onDelete: (adj: PayrollAdjustment) => void
 }) {
   if (loading) {
@@ -105,14 +108,16 @@ function AdjustmentList({
             <span className={cn("shrink-0 font-semibold tabular-nums", typeColor(adj.type))}>
               {typeSign(adj.type)}{currency(adj.amount, curr)}
             </span>
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
-              onClick={() => onDelete(adj)}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
+            {canDelete && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => onDelete(adj)}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         ))}
       </div>
@@ -144,6 +149,10 @@ interface Props {
 
 export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdjust }: Props) {
   const isMobile = useIsMobile()
+  const { canUpdate, canDelete: canDeletePerm } = useUserPermissions()
+  const canAdjust    = canUpdate("payroll")
+  const canDeleteAdj = canDeletePerm("payroll")
+
   const [deleteTarget, setDeleteTarget] = useState<PayrollAdjustment | null>(null)
   const deleteAdjustment = useDeleteAdjustment()
 
@@ -331,6 +340,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               loading={adjLoading}
               currency={row.currency}
               emptyText="No bonuses this month."
+              canDelete={canDeleteAdj}
               onDelete={setDeleteTarget}
             />
           </TabsContent>
@@ -342,6 +352,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               loading={adjLoading}
               currency={row.currency}
               emptyText="No deductions this month."
+              canDelete={canDeleteAdj}
               onDelete={setDeleteTarget}
             />
           </TabsContent>
@@ -353,6 +364,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               loading={adjLoading}
               currency={row.currency}
               emptyText="No debts this month."
+              canDelete={canDeleteAdj}
               onDelete={setDeleteTarget}
             />
           </TabsContent>
@@ -360,12 +372,14 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
         </Tabs>
 
         {/* ── Footer ─────────────────────────────────── */}
-        <div className="shrink-0 border-t bg-background px-6 py-4">
-          <Button className="w-full" onClick={onAdjust}>
-            <SlidersHorizontal className="h-4 w-4" />
-            Add Adjustment
-          </Button>
-        </div>
+        {canAdjust && (
+          <div className="shrink-0 border-t bg-background px-6 py-4">
+            <Button className="w-full" onClick={onAdjust}>
+              <SlidersHorizontal className="h-4 w-4" />
+              Add Adjustment
+            </Button>
+          </div>
+        )}
       </SheetContent>
     </Sheet>
 

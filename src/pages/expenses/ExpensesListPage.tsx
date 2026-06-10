@@ -11,10 +11,8 @@ import {
   Search,
   ChevronDown,
   CalendarDays,
-  Wallet,
 } from "lucide-react"
 import { toast } from "sonner"
-import { cn } from "@/lib/utils"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/hooks/useAuth"
@@ -29,7 +27,6 @@ import { useMyBranches } from "@/hooks/useAttendance"
 import { useQueryClient } from "@tanstack/react-query"
 import { useGetExpenses, useGetExpenseCategories } from "@/hooks/useExpenses"
 import { useDeleteExpense } from "@/hooks/useExpenseMutations"
-import { useBalanceSummary } from "@/hooks/useBalance"
 import { supabase } from "@/lib/supabase"
 import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import { AddExpenseSheet } from "@/components/expenses/AddExpenseSheet"
@@ -41,9 +38,9 @@ import type { Expense, ExpenseFilters } from "@/types/expense"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
+import { MultiSelect } from "@/components/ui/multi-select"
 import {
   Popover,
   PopoverContent,
@@ -113,7 +110,7 @@ function formatDate(dateStr: string) {
 function ReceiptDialog({ url, open, onOpenChange }: { url: string; open: boolean; onOpenChange: (o: boolean) => void }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg" aria-describedby={undefined}>
         <DialogHeader>
           <DialogTitle>Receipt</DialogTitle>
         </DialogHeader>
@@ -171,27 +168,6 @@ function CardSkeleton() {
         </div>
       ))}
     </>
-  )
-}
-
-function ExpenseRemainingCard({ branchId, month, year }: { branchId: string | undefined; month: number; year: number }) {
-  const { summary, isLoading } = useBalanceSummary(branchId, month, year)
-  const isNegative = summary.expenseBalance < 0
-
-  return (
-    <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
-      <Wallet className={cn("h-5 w-5 shrink-0", isNegative ? "text-destructive" : "text-emerald-500")} />
-      <div>
-        <p className="text-xs text-muted-foreground">Remaining (Expense Pool)</p>
-        {isLoading ? (
-          <Skeleton className="h-6 w-24 mt-1" />
-        ) : (
-          <p className={cn("text-lg font-semibold tabular-nums", isNegative && "text-destructive")}>
-            EGP {summary.expenseBalance.toLocaleString("en-US", { minimumFractionDigits: 0 })}
-          </p>
-        )}
-      </div>
-    </div>
   )
 }
 
@@ -266,7 +242,7 @@ function formatDateRangeTrigger(range: DateRange | undefined) {
 export function ExpensesListPage() {
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
-  const { canCreate, canUpdate, canDelete } = useUserPermissions()
+  const { canRead, canCreate, canUpdate, canDelete } = useUserPermissions()
 
   // can_create("expenses") = "Submit new expenses"
   const canSubmit      = isAdmin || canCreate("expenses")
@@ -283,8 +259,8 @@ export function ExpensesListPage() {
     from: startOfMonth(new Date()),
     to:   endOfMonth(new Date()),
   })
-  const [branchFilter,   setBranchFilter]   = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("")
+  const [branchFilters,  setBranchFilters]  = useState<string[]>([])
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([])
   const [search,         setSearch]         = useState("")
 
   const chartMonth = (dateRange.from ?? new Date()).getMonth() + 1
@@ -296,14 +272,15 @@ export function ExpensesListPage() {
   const branchList  = myBranches.length > 0 ? myBranches : allBranches
   const myBranchIds = myBranches.length > 0 ? myBranches.map((b) => b.id) : undefined
 
+  const singleBranchId = branchFilters.length === 1 ? branchFilters[0] : undefined
+
   const filters: ExpenseFilters = useMemo(() => ({
-    branchId:   branchFilter,
-    branchIds:  !branchFilter ? myBranchIds : undefined,
-    categoryId: categoryFilter,
+    branchIds:    branchFilters.length > 0 ? branchFilters : myBranchIds,
+    categoryIds:  categoryFilters.length > 0 ? categoryFilters : undefined,
     dateFilter: "custom",
     dateFrom:   format(dateRange.from ?? startOfMonth(new Date()), "yyyy-MM-dd"),
     dateTo:     format(dateRange.to   ?? endOfMonth(new Date()),   "yyyy-MM-dd"),
-  }), [branchFilter, myBranchIds, categoryFilter, dateRange])
+  }), [branchFilters, myBranchIds, categoryFilters, dateRange])
 
   const { data: categories = [] } = useGetExpenseCategories()
   const { data: expenses = [], isLoading, error } = useGetExpenses(filters)
@@ -321,6 +298,7 @@ export function ExpensesListPage() {
   }, [expenses, search])
 
   const totalAmount = filteredExpenses.reduce((sum, e) => sum + e.amount, 0)
+
 
   async function confirmDelete() {
     if (!deleteTarget) return
@@ -454,38 +432,22 @@ export function ExpensesListPage() {
           </div>
 
           {/* Branch */}
-          <Select value={branchFilter || "__all__"} onValueChange={(v) => setBranchFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All branches" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All branches</SelectItem>
-              {branchList.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={branchList.map(b => ({ value: b.id, label: b.name }))}
+            selected={branchFilters}
+            onChange={setBranchFilters}
+            placeholder="All branches"
+            className="w-[160px]"
+          />
 
           {/* Category */}
-          <Select value={categoryFilter || "__all__"} onValueChange={(v) => setCategoryFilter(v === "__all__" ? "" : v)}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All categories" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All categories</SelectItem>
-              {categories.map((c) => {
-                const Icon = getCategoryIcon(c.icon)
-                return (
-                  <SelectItem key={c.id} value={c.id}>
-                    <span className="flex items-center gap-2">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                      {c.name}
-                    </span>
-                  </SelectItem>
-                )
-              })}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            selected={categoryFilters}
+            onChange={setCategoryFilters}
+            placeholder="All categories"
+            className="w-[160px]"
+          />
 
           {!isMobile && canSubmit && (
             <Button onClick={() => setDrawer({ type: "create" })}>
@@ -496,24 +458,22 @@ export function ExpensesListPage() {
         </div>
       </div>
 
-      {/* ── Summary bar ────────────────────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3">
-          <TrendingDown className="h-5 w-5 text-muted-foreground shrink-0" />
-          <div>
-            <p className="text-xs text-muted-foreground">Total expenses (period)</p>
-            <p className="text-lg font-semibold tabular-nums">{formatAmount(totalAmount)}</p>
-          </div>
-          <Badge variant="secondary" className="ml-auto">
-            {filteredExpenses.length} {filteredExpenses.length === 1 ? "entry" : "entries"}
-          </Badge>
-        </div>
-
-        <ExpenseRemainingCard
-          branchId={branchFilter || undefined}
-          month={chartMonth}
-          year={chartYear}
-        />
+      {/* ── Summary cards ──────────────────────────────── */}
+      <div className="grid gap-3">
+        <Card>
+          <CardHeader className="pb-1">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <TrendingDown className="h-4 w-4" />
+              Total Expenses
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-xl font-bold tabular-nums">{formatAmount(totalAmount)}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {filteredExpenses.length} {filteredExpenses.length === 1 ? "entry" : "entries"}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* ── Charts (analytics — can_update("expenses")) ── */}
@@ -536,7 +496,7 @@ export function ExpensesListPage() {
                 <ExpenseSummaryChart
                   month={chartMonth}
                   year={chartYear}
-                  branchId={branchFilter || undefined}
+                  branchId={singleBranchId}
                 />
               </CardContent>
             </Card>
@@ -560,7 +520,7 @@ export function ExpensesListPage() {
               <ExpenseSummaryChart
                 month={chartMonth}
                 year={chartYear}
-                branchId={branchFilter || undefined}
+                branchId={singleBranchId}
               />
             </CardContent>
           </Card>
@@ -772,7 +732,7 @@ export function ExpensesListPage() {
       <AddExpenseSheet
         open={drawer.type === "create" || drawer.type === "edit"}
         onOpenChange={(o) => { if (!o) setDrawer({ type: "none" }) }}
-        defaultBranchId={filters.branchId || undefined}
+        defaultBranchId={singleBranchId}
         expense={drawer.type === "edit" ? drawer.expense : undefined}
       />
 

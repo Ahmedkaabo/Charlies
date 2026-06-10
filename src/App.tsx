@@ -8,6 +8,7 @@ import { LoginPage } from "@/pages/auth/LoginPage"
 import { RegisterPage } from "@/pages/auth/RegisterPage"
 import { ForgotPasswordPage } from "@/pages/auth/ForgotPasswordPage"
 import { OnboardingPage } from "@/pages/auth/OnboardingPage"
+import { OrgSetupPage }  from "@/pages/auth/OrgSetupPage"
 import { PendingPage }    from "@/pages/auth/PendingPage"
 import { InvitePage }         from "@/pages/auth/InvitePage"
 import { ChangePasswordPage } from "@/pages/auth/ChangePasswordPage"
@@ -39,6 +40,7 @@ export function App() {
       <Route path="/register"        element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/onboarding"      element={<OnboardingPage />} />
+      <Route path="/org-setup"       element={<OrgSetupPage />} />
       <Route path="/pending"         element={<PendingPage />} />
       <Route path="/invite/:token"    element={<InvitePage />} />
       <Route path="/change-password"  element={<ChangePasswordPage />} />

@@ -69,7 +69,7 @@ export function useUpsertPayrollRecord() {
       const debts       = input.total_debts      ?? 0
       const earned      = calculateEarnedSalary(base, days + paidDaysOff)
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from("payroll_records")
         .upsert(
           {
@@ -88,10 +88,7 @@ export function useUpsertPayrollRecord() {
           },
           { onConflict: "branch_id,profile_id,month,year" }
         )
-        .select()
-        .single()
       if (error) throw error
-      return data
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["payroll"] })

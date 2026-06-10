@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { MultiSelect } from "@/components/ui/multi-select"
 import {
   Sheet,
   SheetContent,
@@ -70,8 +71,8 @@ export function AttendanceManagementPage() {
 
   const isMobile = useIsMobile()
 
-  const [branchFilter, setBranchFilter] = useState<string>("all")
-  const [staffFilter,  setStaffFilter]  = useState<string>("all")
+  const [branchFilters, setBranchFilters] = useState<string[]>([])
+  const [staffFilters, setStaffFilters] = useState<string[]>([])
   const [selectedDate, setSelectedDate] = useState(format(today, "yyyy-MM-dd"))
   const [selfieUrl,    setSelfieUrl]    = useState<string | null>(null)
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -85,8 +86,8 @@ export function AttendanceManagementPage() {
   const { data: allBranches } = useGetBranches()
   const branchDropdownList = myBranchIds.length > 0 ? myBranches : (allBranches ?? [])
 
-  const selectedBranchId = branchFilter !== "all" ? branchFilter : undefined
-  const scopeBranchIds = myBranchIds.length > 0 && !selectedBranchId ? myBranchIds : undefined
+  const selectedBranchId = branchFilters.length === 1 ? branchFilters[0] : undefined
+  const scopeBranchIds = branchFilters.length > 1 ? branchFilters : (myBranchIds.length > 0 && !selectedBranchId ? myBranchIds : undefined)
 
   // Staff members for the staff dropdown — scoped to the same branch(es)
   const { data: members } = useGetMembers(
@@ -96,7 +97,7 @@ export function AttendanceManagementPage() {
 
   // Profile filter: own records only when user lacks can_create("attendance")
   const queryProfileId = canViewAllStaff
-    ? (staffFilter !== "all" ? staffFilter : undefined)
+    ? (staffFilters.length === 1 ? staffFilters[0] : undefined)
     : profile?.id
 
   const { data: attendanceLogs, isLoading: logsLoading } = useAttendanceLogs({
@@ -187,32 +188,24 @@ export function AttendanceManagementPage() {
           </div>
 
           {/* Branch filter — non-admins only see their assigned branches */}
-          <Select value={branchFilter} onValueChange={setBranchFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Branches" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {branchDropdownList.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={branchDropdownList.map((b) => ({ value: b.id, label: b.name }))}
+            selected={branchFilters}
+            onChange={setBranchFilters}
+            placeholder="All Branches"
+            className="w-[160px]"
+          />
 
           {/* Staff filter — only shown when user can view all staff records */}
-          {canViewAllStaff && <Select value={staffFilter} onValueChange={setStaffFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Staff" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Staff</SelectItem>
-              {members?.map((m) => (
-                <SelectItem key={m.profile_id} value={m.profile_id}>
-                  {m.profile?.full_name ?? "—"}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>}
+          {canViewAllStaff && (
+            <MultiSelect
+              options={(members ?? []).map((m) => ({ value: m.profile_id, label: m.profile?.full_name ?? "—" }))}
+              selected={staffFilters}
+              onChange={setStaffFilters}
+              placeholder="All Staff"
+              className="w-[160px]"
+            />
+          )}
 
           {canExport && (
             <Button variant="outline" onClick={handleExport}>

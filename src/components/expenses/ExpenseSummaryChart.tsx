@@ -44,7 +44,7 @@ export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryCha
 
   const pieData = useMemo(
     () =>
-      (data ?? []).map((item) => ({
+      (data ?? []).map((item, i) => ({
         ...item,
         key:  toKey(item.name),
         fill: `var(--color-${toKey(item.name)})`,

@@ -4,19 +4,15 @@ import { toast } from "sonner"
 
 import { useAuth } from "@/hooks/useAuth"
 import { useMyBranch } from "@/hooks/useAttendance"
-import type { SystemRole } from "@/hooks/useAuth"
 import { Spinner } from "@/components/ui/spinner"
 
 // ── AuthGuard ─────────────────────────────────────────────────
-// Single loading phase: waits for auth + permissions (all in AuthContext).
-// Branch check for onboarding is non-blocking: the redirect fires once the
-// branch query resolves, not before.
+// Waits for auth + permissions (all in AuthContext).
+// Non-admin users without a branch are redirected to onboarding.
 
 export function AuthGuard() {
   const { user, profile, isAdmin, mustChangePassword, loading } = useAuth()
 
-  // Non-blocking onboarding check — only needed for staff (non-admin) users.
-  // Never holds up the spinner; redirects once resolved if no branch is found.
   const { data: myBranch } = useMyBranch(
     !loading && !!user && !isAdmin ? profile?.id : undefined
   )
@@ -33,27 +29,22 @@ export function AuthGuard() {
 
   if (mustChangePassword) return <Navigate to="/change-password" replace />
 
-  // myBranch === null  → resolved, no branch assigned → onboarding
-  // myBranch === undefined → still loading → let through (rare new-user path)
   if (!isAdmin && myBranch === null) return <Navigate to="/onboarding" replace />
 
   return <Outlet />
 }
 
 // ── RoleGuard ─────────────────────────────────────────────────
+// Restricts a route to org admins only.
+// Use <AdminGuard /> for routes that also allow branch owners.
 
-interface RoleGuardProps {
-  allowedRoles: SystemRole[]
-}
-
-export function RoleGuard({ allowedRoles }: RoleGuardProps) {
-  const { systemRole, isAdmin } = useAuth()
-  const denied = !isAdmin && !allowedRoles.includes(systemRole)
+export function RoleGuard() {
+  const { isAdmin } = useAuth()
 
   useEffect(() => {
-    if (denied) toast.error("Access denied")
-  }, [denied])
+    if (!isAdmin) toast.error("Access denied")
+  }, [isAdmin])
 
-  if (denied) return <Navigate to="/" replace />
+  if (!isAdmin) return <Navigate to="/" replace />
   return <Outlet />
 }

@@ -3,10 +3,11 @@ export type SalaryCurrency = "EGP" | "USD"
 // ── Multi-branch grouped types ────────────────────────────────
 
 export interface MemberAssignment {
-  /** branch_members.id */
+  /** staff.id */
   id: string
   branch_id: string
   branch_name: string
+  role_ids: string[]
   role_id: string | null
   role: { id: string; name: string; level: number } | null
   joined_at: string

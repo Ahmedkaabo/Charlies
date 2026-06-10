@@ -1,8 +1,4 @@
-import {
-  TrendingUp,
-  CalendarCheck,
-  CalendarX,
-} from "lucide-react"
+import { TrendingUp } from "lucide-react"
 
 import { useGetBranches } from "@/hooks/useBranches"
 import { useSalesRecords, useSalesSummary } from "@/hooks/useSales"
@@ -56,7 +52,8 @@ interface SalesManagementViewProps {
   month: number
   year: number
   onSelectBranch: (branchId: string) => void
-  branchIds?: string[]  // when set, limits the view to those branches only
+  branchIds?: string[]
+  canTreasuryRead: boolean
 }
 
 // ── Component ─────────────────────────────────────────────────
@@ -66,6 +63,7 @@ export function SalesManagementView({
   year,
   onSelectBranch,
   branchIds,
+  canTreasuryRead,
 }: SalesManagementViewProps) {
   const { data: allBranches, isLoading: branchesLoading } = useGetBranches()
 
@@ -119,32 +117,17 @@ export function SalesManagementView({
   return (
     <div className="space-y-6">
       {/* ── Summary cards ─────────────────────────── */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <SummaryCard
-          icon={<TrendingUp className="h-4 w-4" />}
-          label="Total Revenue"
-          value={`EGP ${summary.totalRevenue.toLocaleString(undefined, {
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0,
-          })}`}
-          sub="All branches"
-          loading={summaryLoading}
-        />
-        <SummaryCard
-          icon={<CalendarCheck className="h-4 w-4" />}
-          label="Days Filled"
-          value={`${summary.daysFilled} / ${summary.totalDaysSoFar}`}
-          sub="Of days so far this month"
-          loading={summaryLoading}
-        />
-        <SummaryCard
-          icon={<CalendarX className="h-4 w-4" />}
-          label="Days Missing"
-          value={String(summary.daysMissing)}
-          sub="Past days with no record"
-          loading={summaryLoading}
-        />
-      </div>
+      {canTreasuryRead && (
+        <div className="grid gap-4">
+          <SummaryCard
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Total Revenue"
+            value={`EGP ${summary.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            sub="All branches"
+            loading={summaryLoading}
+          />
+        </div>
+      )}
 
       {/* ── Branch table ──────────────────────────── */}
       <div className="rounded-md border">
@@ -153,7 +136,7 @@ export function SalesManagementView({
             <TableRow>
               <TableHead>Branch</TableHead>
               <TableHead className="text-right">Days Filled</TableHead>
-              <TableHead className="text-right">Total Revenue</TableHead>
+              {canTreasuryRead && <TableHead className="text-right">Total Revenue</TableHead>}
               <TableHead className="text-right">Missing Days</TableHead>
               <TableHead className="text-right">Last Entry</TableHead>
             </TableRow>
@@ -162,7 +145,7 @@ export function SalesManagementView({
             {allLoading || branchesLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 5 }).map((_, j) => (
+                  {Array.from({ length: canTreasuryRead ? 5 : 4 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -172,7 +155,7 @@ export function SalesManagementView({
             ) : branchRows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={canTreasuryRead ? 5 : 4}
                   className="text-center text-muted-foreground py-8"
                 >
                   No branches found
@@ -187,9 +170,11 @@ export function SalesManagementView({
                 >
                   <TableCell className="font-medium">{row.name}</TableCell>
                   <TableCell className="text-right">{row.daysFilled}</TableCell>
-                  <TableCell className="text-right">
-                    EGP {row.totalRevenue.toLocaleString()}
-                  </TableCell>
+                  {canTreasuryRead && (
+                    <TableCell className="text-right tabular-nums">
+                      EGP {row.totalRevenue.toLocaleString()}
+                    </TableCell>
+                  )}
                   <TableCell className="text-right">
                     {row.missingDays > 0 ? (
                       <span className="text-destructive font-medium">

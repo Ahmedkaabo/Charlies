@@ -1,12 +1,23 @@
-export type BalancePool = 'sales' | 'expenses' | 'treasury'
-
 export interface TreasuryTransfer {
   id: string
   branch_id: string
   amount: number
+  direction: "outflow" | "inflow"
   date: string
-  source: BalancePool
-  destination: BalancePool
+  notes: string | null
+  added_by: string | null
+  created_at: string
+  branch?: { id: string; name: string } | null
+  adder?: { id: string; full_name: string | null } | null
+}
+
+export interface PoolTransfer {
+  id: string
+  branch_id: string
+  from_pool: "sales" | "expenses"
+  to_pool: "sales" | "expenses"
+  amount: number
+  date: string
   notes: string | null
   added_by: string | null
   created_at: string
@@ -19,16 +30,15 @@ export interface BranchBalance {
   branchName: string
   sales: number
   expenses: number
-  salesBalance: number
-  expenseBalance: number
+  transferred: number
   remaining: number
+  poolCredit: number
 }
 
 export interface BalanceSummary {
   totalSales: number
   totalExpenses: number
-  salesBalance: number
-  expenseBalance: number
+  totalTransferred: number
   mainTreasury: number
   totalRemaining: number
 }

@@ -25,37 +25,11 @@ export async function uploadSelfie(
     ? "webp"
     : "jpg"
   const path = `${profileId}/${todayString()}-${kind}.${ext}`
-
-  console.log("Attempting selfie upload:", { path, type: file.type, size: file.size })
-
-  // Try to remove existing first, but don't fail if it doesn't exist
-  const { error: removeError } = await supabase.storage
-    .from("attendance-selfies")
-    .remove([path])
-  
-  if (removeError) {
-    console.warn("Selfie remove attempt info:", removeError)
-  }
-
-  // Use upsert: true to allow overwriting
   const { error } = await supabase.storage
     .from("attendance-selfies")
-    .upload(path, file, { 
-      contentType: file.type || "image/jpeg",
-      upsert: true 
-    })
-
-  if (error) {
-    console.error("Selfie upload failed:", error)
-    throw error
-  }
-
-  const { data: { publicUrl } } = supabase.storage
-    .from("attendance-selfies")
-    .getPublicUrl(path)
-
-  console.log("Selfie upload successful. Public URL:", publicUrl)
-  return publicUrl
+    .upload(path, file, { upsert: true, contentType: file.type || "image/jpeg" })
+  if (error) throw error
+  return supabase.storage.from("attendance-selfies").getPublicUrl(path).data.publicUrl
 }
 
 export function statusVariant(

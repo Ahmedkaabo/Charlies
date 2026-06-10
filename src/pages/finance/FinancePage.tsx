@@ -19,6 +19,7 @@ import {
 import { toast } from "sonner"
 
 import { useAuth } from "@/hooks/useAuth"
+import { useUserPermissions } from "@/hooks/usePermissions"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useMyBranches } from "@/hooks/useAttendance"
@@ -45,6 +46,7 @@ import { Label } from "@/components/ui/label"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { MultiSelect } from "@/components/ui/multi-select"
 import {
   Select,
   SelectContent,
@@ -383,9 +385,9 @@ function PayoutRunDisplay({
   onDelete,
 }: {
   run:          PayoutRunFull
-  branchFilter?: string
-  onEdit:       () => void
-  onDelete:     () => void
+  branchFilter?: string[]
+  onEdit?:       () => void
+  onDelete?:     () => void
 }) {
   const [addMgmtFees, setAddMgmtFees] = useState(false)
   const { data: allOwners = [] } = useGetOwners()
@@ -395,12 +397,12 @@ function PayoutRunDisplay({
     [allOwners],
   )
 
-  const branches: PayoutRunBranch[] = branchFilter
-    ? run.branches.filter((b) => b.branch_id === branchFilter)
+  const branches: PayoutRunBranch[] = branchFilter?.length
+    ? run.branches.filter((b) => branchFilter.includes(b.branch_id))
     : run.branches
 
-  const filteredOwners = branchFilter
-    ? run.owners.filter((o) => o.branch_id === branchFilter)
+  const filteredOwners = branchFilter?.length
+    ? run.owners.filter((o) => branchFilter.includes(o.branch_id))
     : run.owners
 
   const ownerMap = new Map<string, { fullName: string | null; totalPayout: number }>()
@@ -436,18 +438,24 @@ function PayoutRunDisplay({
           Saved {format(new Date(run.created_at), "d MMM yyyy, HH:mm")}
           {run.notes && <span className="ml-2 italic">· {run.notes}</span>}
         </p>
-        <div className="flex items-center gap-0.5">
-          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
-            <Pencil className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            size="icon" variant="ghost"
-            className="h-7 w-7 text-muted-foreground hover:text-destructive"
-            onClick={onDelete}
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </Button>
-        </div>
+        {(onEdit || onDelete) && (
+          <div className="flex items-center gap-0.5">
+            {onEdit && (
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onEdit}>
+                <Pencil className="h-3.5 w-3.5" />
+              </Button>
+            )}
+            {onDelete && (
+              <Button
+                size="icon" variant="ghost"
+                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                onClick={onDelete}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 3-col grid: [owner payouts × 2] [gap] [totals + deductions × 1] */}
@@ -588,6 +596,7 @@ function FinanceContent({
   year,
   branches,
   isManagement,
+  canRunPayout,
 }: {
   branchId:     string | undefined
   branchIds?:   string[]
@@ -595,7 +604,12 @@ function FinanceContent({
   year:         number
   branches:     Branch[]
   isManagement: boolean
+  canRunPayout: boolean
 }) {
+  const { canCreate: canCreateFin, canDelete: canDeleteFin } = useUserPermissions()
+  const canAdjust    = canCreateFin("finance")   // "Add credit / debit adjustments"
+  const canDeleteRec = canDeleteFin("finance")   // "Delete finance adjustments"
+
   const [adjustOpen,    setAdjustOpen]    = useState(false)
   const [summaryExpanded, setSummaryExpanded] = useState(true)
   const [delRecord,     setDelRecord]     = useState<string | null>(null)
@@ -609,11 +623,12 @@ function FinanceContent({
   const deleteRec        = useDeleteFinanceRecord()
   const deletePayoutRun  = useDeletePayoutRun()
 
+  const filterBranchIds = branchId ? [branchId] : branchIds ?? []
   const visiblePayoutRuns = useMemo(
-    () => branchId
-      ? payoutRuns.filter((r) => r.branches.some((b) => b.branch_id === branchId))
+    () => filterBranchIds.length
+      ? payoutRuns.filter((r) => r.branches.some((b) => filterBranchIds.includes(b.branch_id)))
       : payoutRuns,
-    [payoutRuns, branchId],
+    [payoutRuns, filterBranchIds],
   )
 
   const wizardBranches = branchId
@@ -707,10 +722,12 @@ function FinanceContent({
             <h2 className="text-base font-semibold">Adjustments</h2>
             <p className="text-xs text-muted-foreground mt-0.5">Manual credits and debits for this period</p>
           </div>
-          <Button onClick={() => setAdjustOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Adjust
-          </Button>
+          {canAdjust && (
+            <Button onClick={() => setAdjustOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Adjust
+            </Button>
+          )}
         </div>
 
         {recordsLoading ? (
@@ -764,14 +781,16 @@ function FinanceContent({
                 )}>
                   {r.type === "credit" ? "+" : "−"}{egp(r.amount)}
                 </span>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-                  onClick={() => setDelRecord(r.id)}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
+                {canDeleteRec && (
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                    onClick={() => setDelRecord(r.id)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
+                )}
               </div>
             ))}
           </div>
@@ -790,7 +809,7 @@ function FinanceContent({
                 : "Run a payout to distribute profits to owners with custom deductions."}
             </p>
           </div>
-          {isManagement && visiblePayoutRuns.length > 0 && !payoutRunsLoading && (
+          {canRunPayout && visiblePayoutRuns.length > 0 && !payoutRunsLoading && (
             <Button onClick={() => { setEditRun(undefined); setPayoutOpen(true) }}>
               <Play className="h-4 w-4" />
               Run Payout
@@ -811,7 +830,7 @@ function FinanceContent({
                 Run a payout to distribute profits to owners with custom deductions.
               </p>
             </div>
-            {isManagement && (
+            {canRunPayout && (
               <Button size="sm" onClick={() => { setEditRun(undefined); setPayoutOpen(true) }}>
                 <Play className="h-3.5 w-3.5" />
                 Run Payout
@@ -824,9 +843,9 @@ function FinanceContent({
               <PayoutRunDisplay
                 key={run.id}
                 run={run}
-                branchFilter={branchId}
-                onEdit={() => { setEditRun(run); setPayoutOpen(true) }}
-                onDelete={() => setDelPayoutId(run.id)}
+                branchFilter={filterBranchIds.length ? filterBranchIds : undefined}
+                onEdit={canRunPayout ? () => { setEditRun(run); setPayoutOpen(true) } : undefined}
+                onDelete={canDeleteRec ? () => setDelPayoutId(run.id) : undefined}
               />
             ))}
           </div>
@@ -911,13 +930,16 @@ function FinanceContent({
 // ── Page ──────────────────────────────────────────────────────
 
 export function FinancePage() {
-  const { profile, isAdmin, systemRole } = useAuth()
+  const { profile, isAdmin } = useAuth()
+  const { isOwner, canCreate } = useUserPermissions()
 
-  const isManagement = isAdmin || systemRole === "branch_owner" || systemRole === "area_manager"
+  // isManagement controls data scope: owners/admins see all branches + multi-select.
+  // Staff-level users see only their assigned branch.
+  const isManagement  = isAdmin || isOwner
+  const canRunPayout  = canCreate("finance")
 
-  const [selectedMonth, setSelectedMonth]       = useState(MONTH_OPTIONS[0].value)
-  // "all" = aggregate all branches; a branch id = specific branch
-  const [selectedBranchId, setSelectedBranchId] = useState<string | "all">("all")
+  const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
+  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
 
   const { month, year } = useMemo(() => {
     const opt = MONTH_OPTIONS.find((o) => o.value === selectedMonth) ?? MONTH_OPTIONS[0]
@@ -937,8 +959,11 @@ export function FinancePage() {
   //   - management + specific → that branch id
   //   - branch-level user → their branch id
   const activeBranchId: string | undefined = isManagement
-    ? (selectedBranchId === "all" ? undefined : selectedBranchId)
+    ? (selectedBranchIds.length === 1 ? selectedBranchIds[0] : undefined)
     : primaryBranchId
+  const activeMultiBranchIds: string[] | undefined = isManagement && selectedBranchIds.length > 1
+    ? selectedBranchIds
+    : undefined
 
   const monthSelect = (
     <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -984,28 +1009,25 @@ export function FinancePage() {
 
         {/* Branch filter — management users only, scoped to assigned branches */}
         {isManagement && (
-          <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="All Branches" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {((myBranches?.length ?? 0) > 0 ? myBranches! : allBranches).map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={((myBranches?.length ?? 0) > 0 ? myBranches! : allBranches).map((b) => ({ value: b.id, label: b.name }))}
+            selected={selectedBranchIds}
+            onChange={setSelectedBranchIds}
+            placeholder="All Branches"
+            className="w-[180px]"
+          />
         )}
       </div>
 
       {/* ── Content ────────────────────────────────── */}
       <FinanceContent
         branchId={activeBranchId}
-        branchIds={(myBranches?.length ?? 0) > 0 && !activeBranchId ? myBranches!.map((b) => b.id) : undefined}
+        branchIds={activeMultiBranchIds ?? ((myBranches?.length ?? 0) > 0 && !activeBranchId ? myBranches!.map((b) => b.id) : undefined)}
         month={month}
         year={year}
         branches={(myBranches?.length ?? 0) > 0 ? myBranches! : allBranches}
         isManagement={isManagement}
+        canRunPayout={canRunPayout}
       />
     </div>
   )

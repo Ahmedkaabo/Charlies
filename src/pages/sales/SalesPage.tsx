@@ -5,6 +5,7 @@ import { ChevronLeft, TrendingUp } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useMyBranches } from "@/hooks/useAttendance"
+import { useUserPermissions } from "@/hooks/usePermissions"
 import { SalesManagementView } from "@/pages/sales/SalesManagementView"
 import { SalesBranchView } from "@/pages/sales/SalesBranchView"
 import { Button } from "@/components/ui/button"
@@ -55,6 +56,8 @@ export function SalesPage() {
 
   const { data: allBranches = [], isLoading: allBranchesLoading } = useGetBranches()
   const { data: myBranches  = [], isLoading: myBranchesLoading  } = useMyBranches(profile?.id)
+  const { canRead } = useUserPermissions()
+  const canTreasuryRead = canRead("treasury_transfers")
 
   // The branches this user can access: their assignments, or all branches if none (admin/owner)
   const branchList = myBranches.length > 0 ? myBranches : allBranches
@@ -153,6 +156,7 @@ export function SalesPage() {
         year={year}
         onSelectBranch={setDrillBranchId}
         branchIds={myBranchIds}
+        canTreasuryRead={canTreasuryRead}
       />
     </div>
   )

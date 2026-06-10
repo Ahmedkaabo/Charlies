@@ -19,7 +19,7 @@ import {
 import { useGetBranches } from "@/hooks/useBranches"
 import { useGetRoles, useUserPermissions } from "@/hooks/usePermissions"
 import { useAuth } from "@/hooks/useAuth"
-import type { GroupedMember, MemberAssignment, SalaryCurrency } from "@/types/member"
+import type { GroupedMember, SalaryCurrency } from "@/types/member"
 import { salaryRequired } from "@/types/member"
 
 import { Button } from "@/components/ui/button"
@@ -43,13 +43,6 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -63,18 +56,27 @@ function getInitials(name?: string | null) {
   return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : p[0].slice(0, 2).toUpperCase()
 }
 
+function roleVariant(level: number): "default" | "secondary" | "outline" {
+  if (level <= 1) return "default"
+  if (level <= 3) return "secondary"
+  return "outline"
+}
 
 // Creates a new auth user without touching the current session
 async function createAuthUser(
-  phone: string,
+  email: string,
   password: string,
   fullName: string,
+  phone: string
 ): Promise<string> {
-  const email = `${phone.replace(/\D/g, "")}@charlies.internal`
+  // Use a noop storage so this temp client never shares the auth storage key
+  // with the main client. Without this, GoTrueClient fires storage events that
+  // contaminate the main session (causing the current admin to appear signed out).
+  const noopStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} }
   const tempClient = createClient(
     import.meta.env.VITE_SUPABASE_URL as string,
     import.meta.env.VITE_SUPABASE_ANON_KEY as string,
-    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } }
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storage: noopStorage } }
   )
   const { data, error } = await tempClient.auth.signUp({
     email,
@@ -84,6 +86,73 @@ async function createAuthUser(
   if (error) throw new Error(error.message)
   if (!data.user) throw new Error("Failed to create account")
   return data.user.id
+}
+
+// ── Multi-role select ─────────────────────────────────────────
+
+function MultiRoleSelect({
+  roles,
+  selectedIds,
+  onChange,
+}: {
+  roles: { id: string; name: string; level: number }[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  const selected = roles.filter((r) => selectedIds.includes(r.id))
+  const label =
+    selected.length === 0
+      ? "Select roles…"
+      : selected.length === 1
+      ? selected[0].name.replace(/_/g, " ")
+      : `${selected.length} roles`
+
+  function toggle(id: string) {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="w-full justify-between font-normal">
+          <span className={selected.length === 0 ? "text-muted-foreground capitalize" : "capitalize"}>{label}</span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+        align="start"
+      >
+        <div className="max-h-52 overflow-y-auto py-1">
+          {roles.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">No roles available</p>
+          )}
+          {roles.map((r) => {
+            const checked = selectedIds.includes(r.id)
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => toggle(r.id)}
+                className="flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-sm hover:bg-muted"
+              >
+                <div className={cn(
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                  checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
+                )}>
+                  {checked && <Check className="h-3 w-3" />}
+                </div>
+                <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
+              </button>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // ── Multi-branch dropdown ─────────────────────────────────────
@@ -107,8 +176,8 @@ function MultiBranchSelect({
     selectedIds.length === 0
       ? placeholder
       : selectedIds.length === 1
-        ? (branches.find((b) => b.id === selectedIds[0])?.name ?? placeholder)
-        : `${selectedIds.length} branches selected`
+      ? (branches.find((b) => b.id === selectedIds[0])?.name ?? placeholder)
+      : `${selectedIds.length} branches selected`
 
   function toggle(id: string) {
     if (singleOnly) {
@@ -293,33 +362,35 @@ function SalarySection({
 // ── Schemas ───────────────────────────────────────────────────
 
 const baseSchema = z.object({
-  role_id: z.string().min(1, "Role is required"),
+  role_ids:       z.array(z.string()).min(1, "Select at least one role"),
   monthly_salary: z.number().nullable(),
-  currency: z.string(),
+  currency:       z.string(),
   effective_from: z.date().nullable(),
-  paid_days_off: z.number().int().min(0).max(30),
+  paid_days_off:  z.number().int().min(0).max(30),
 })
 
 const createSchema = z.object({
-  full_name: z.string().min(2, "Name must be at least 2 characters"),
-  name_ar: z.string(),
-  phone: z.string().min(7, "Enter a valid phone number"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  role_id: z.string().min(1, "Role is required"),
+  full_name:      z.string().min(2, "Name must be at least 2 characters"),
+  name_ar:        z.string(),
+  email:          z.string().email("Enter a valid email"),
+  phone:          z.string().min(7, "Enter a valid phone number"),
+  password:       z.string().min(8, "Password must be at least 8 characters"),
+  role_ids:       z.array(z.string()).min(1, "Select at least one role"),
   monthly_salary: z.number().nullable(),
-  currency: z.string(),
+  currency:       z.string(),
   effective_from: z.date().nullable(),
-  paid_days_off: z.number().int().min(0).max(30),
+  paid_days_off:  z.number().int().min(0).max(30),
 })
 
 const editSchema = baseSchema.extend({
-  full_name: z.string().min(2, "Name must be at least 2 characters"),
-  phone: z.string(),
+  full_name:    z.string().min(2, "Name must be at least 2 characters"),
+  email:        z.string().email("Enter a valid email"),
+  phone:        z.string(),
   new_password: z.string().min(8, "Minimum 8 characters").or(z.literal("")),
 })
 
 type CreateValues = z.infer<typeof createSchema>
-type EditValues = z.infer<typeof editSchema>
+type EditValues   = z.infer<typeof editSchema>
 
 // ── Create content ────────────────────────────────────────────
 
@@ -332,27 +403,26 @@ function CreateContent({
   roles: { id: string; name: string; level: number }[]
   branches: { id: string; name: string }[]
 }) {
-  const createMulti = useCreateMemberMultiBranch()
   const { accountId } = useAuth()
+  const createMulti = useCreateMemberMultiBranch()
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [selectedRoleLevel, setSelectedRoleLevel] = useState<number | null>(null)
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
-  const [branchError, setBranchError] = useState("")
+  const [branchError, setBranchError]             = useState("")
 
   const form = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
-      full_name: "", name_ar: "", phone: "", password: "",
-      role_id: "", monthly_salary: null, currency: "EGP",
+      full_name: "", name_ar: "", email: "", phone: "", password: "",
+      role_ids: [], monthly_salary: null, currency: "EGP",
       effective_from: new Date(), paid_days_off: 4,
     },
   })
 
-  const watchedRoleId = form.watch("role_id")
-  const currentLevel = roles.find((r) => r.id === watchedRoleId)?.level ?? null
-  // Salary required only for operational roles (level ≥ 3)
-  const needsSalary = currentLevel !== null && currentLevel > 2
-  const isSingleBranch = selectedRoleLevel !== null && selectedRoleLevel >= 3
+  const watchedRoleIds = form.watch("role_ids")
+  const selectedRoles  = roles.filter((r) => watchedRoleIds.includes(r.id))
+  const minLevel       = selectedRoles.length > 0 ? Math.min(...selectedRoles.map((r) => r.level)) : null
+  const needsSalary    = minLevel !== null && minLevel > 2
+  const isSingleBranch = minLevel !== null && minLevel >= 3
 
   async function onSubmit(values: CreateValues) {
     if (selectedBranchIds.length === 0) {
@@ -365,24 +435,24 @@ function CreateContent({
     }
     try {
       const profileId = await createAuthUser(
-        values.phone.trim(),
+        values.email.trim(),
         values.password,
         values.full_name.trim(),
+        values.phone.trim()
       )
 
-      const client = supabaseAdmin ?? supabase
-      const profilePatch: Record<string, unknown> = { account_id: accountId }
-      if (values.name_ar?.trim()) profilePatch.name_ar = values.name_ar.trim()
-      await client.from("profiles").update(profilePatch).eq("id", profileId)
+      const profileUpdates: Record<string, unknown> = { account_id: accountId }
+      if (values.name_ar?.trim()) profileUpdates.name_ar = values.name_ar.trim()
+      await supabase.from("profiles").update(profileUpdates).eq("id", profileId)
 
       await createMulti.mutateAsync({
-        branchIds: selectedBranchIds,
+        branchIds:      selectedBranchIds,
         profileId,
-        roleId: values.role_id,
+        roleIds:        values.role_ids,
         monthly_salary: needsSalary ? values.monthly_salary : null,
-        currency: values.currency as SalaryCurrency,
+        currency:       values.currency as SalaryCurrency,
         effective_from: (values.effective_from ?? new Date()).toISOString().slice(0, 10),
-        paid_days_off: needsSalary ? values.paid_days_off : 0,
+        paid_days_off:  needsSalary ? values.paid_days_off : 0,
       })
 
       toast.success("Staff created")
@@ -447,19 +517,34 @@ function CreateContent({
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="you@example.com" autoComplete="off" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -487,32 +572,23 @@ function CreateContent({
 
               <FormField
                 control={form.control}
-                name="role_id"
+                name="role_ids"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(v) => {
-                        field.onChange(v)
-                        const level = roles.find((r) => r.id === v)?.level ?? null
-                        setSelectedRoleLevel(level)
-                        if (level !== null && level >= 3 && selectedBranchIds.length > 1) {
-                          setSelectedBranchIds(selectedBranchIds.slice(0, 1))
-                        }
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <MultiRoleSelect
+                        roles={roles}
+                        selectedIds={field.value}
+                        onChange={(ids) => {
+                          field.onChange(ids)
+                          const lvl = ids.length > 0 ? Math.min(...roles.filter(r => ids.includes(r.id)).map(r => r.level)) : null
+                          if (lvl !== null && lvl >= 3 && selectedBranchIds.length > 1) {
+                            setSelectedBranchIds(selectedBranchIds.slice(0, 1))
+                          }
+                        }}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -571,11 +647,11 @@ function EditContent({
   roles: { id: string; name: string; level: number }[]
   branches: { id: string; name: string }[]
 }) {
-  const updateMember = useUpdateMember()
-  const removeMember = useRemoveMember()
-  const createMulti = useCreateMemberMultiBranch()
-  const [calendarOpen, setCalendarOpen] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  const updateMember  = useUpdateMember()
+  const removeMember  = useRemoveMember()
+  const createMulti   = useCreateMemberMultiBranch()
+  const [calendarOpen,   setCalendarOpen]   = useState(false)
+  const [showPassword,   setShowPassword]   = useState(false)
 
   const primary = groupedMember.assignments[0]
 
@@ -586,24 +662,26 @@ function EditContent({
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
     defaultValues: {
-      full_name: groupedMember.full_name ?? "",
-      phone: groupedMember.phone ?? "",
-      new_password: "",
-      role_id: primary?.role_id ?? "",
+      full_name:      groupedMember.full_name ?? "",
+      email:          groupedMember.email     ?? "",
+      phone:          groupedMember.phone     ?? "",
+      new_password:   "",
+      role_ids:       primary?.role_ids?.length ? primary.role_ids : (primary?.role_id ? [primary.role_id] : []),
       monthly_salary: primary?.salary?.monthly_salary ?? null,
-      currency: primary?.salary?.currency ?? "EGP",
+      currency:       primary?.salary?.currency       ?? "EGP",
       effective_from: new Date(),
-      paid_days_off: primary?.salary?.paid_days_off ?? 4,
+      paid_days_off:  primary?.salary?.paid_days_off  ?? 4,
     },
   })
 
-  const watchedRoleId = form.watch("role_id")
-  const currentRoleLevel = roles.find((r) => r.id === watchedRoleId)?.level
-  const needsSalary = salaryRequired({
+  const watchedRoleIds   = form.watch("role_ids")
+  const selectedRoles    = roles.filter((r) => watchedRoleIds.includes(r.id))
+  const minLevel         = selectedRoles.length > 0 ? Math.min(...selectedRoles.map((r) => r.level)) : null
+  const needsSalary      = minLevel !== null ? minLevel > 2 : salaryRequired({
     profile: { is_admin: groupedMember.is_admin } as never,
-    role: currentRoleLevel != null ? { level: currentRoleLevel } as never : (primary?.role ?? null),
+    role:    primary?.role ?? null,
   })
-  const isSingleBranch = currentRoleLevel !== undefined && currentRoleLevel >= 3
+  const isSingleBranch = minLevel !== null && minLevel >= 3
   const isSaving = updateMember.isPending || removeMember.isPending || createMulti.isPending
 
   async function onSubmit(values: EditValues) {
@@ -620,50 +698,54 @@ function EditContent({
         .update({ full_name: values.full_name.trim(), phone: values.phone.trim() || null })
         .eq("id", groupedMember.profile_id)
 
-      // 2. Update password via admin API if provided (requires service role key)
-      if (values.new_password) {
+      // 2. Update email / password via admin API (requires service role key)
+      const authChanges: { email?: string; password?: string } = {}
+      if (values.email.trim() !== groupedMember.email) authChanges.email = values.email.trim()
+      if (values.new_password) authChanges.password = values.new_password
+
+      if (Object.keys(authChanges).length > 0) {
         if (!supabaseAdmin) {
-          toast.error("Add VITE_SUPABASE_SERVICE_ROLE_KEY to .env to update password")
+          toast.error("Add VITE_SUPABASE_SERVICE_ROLE_KEY to .env to update email/password")
           return
         }
         const { error: authErr } = await supabaseAdmin.auth.admin.updateUserById(
           groupedMember.profile_id,
-          { password: values.new_password }
+          authChanges
         )
         if (authErr) throw authErr
       }
 
       // 3. Branch / role / salary mutations
-      const oldIds = groupedMember.assignments.map((a) => a.branch_id)
-      const toAdd = selectedBranchIds.filter((id) => !oldIds.includes(id))
-      const toRemove = groupedMember.assignments.filter((a) => !selectedBranchIds.includes(a.branch_id))
-      const toUpdate = groupedMember.assignments.filter((a) => selectedBranchIds.includes(a.branch_id))
+      const oldIds    = groupedMember.assignments.map((a) => a.branch_id)
+      const toAdd     = selectedBranchIds.filter((id) => !oldIds.includes(id))
+      const toRemove  = groupedMember.assignments.filter((a) => !selectedBranchIds.includes(a.branch_id))
+      const toUpdate  = groupedMember.assignments.filter((a) =>  selectedBranchIds.includes(a.branch_id))
       const effectiveFrom = (values.effective_from ?? new Date()).toISOString().slice(0, 10)
 
       for (const a of toRemove) await removeMember.mutateAsync(a.id)
 
       if (toAdd.length > 0) {
         await createMulti.mutateAsync({
-          branchIds: toAdd,
-          profileId: groupedMember.profile_id,
-          roleId: values.role_id,
+          branchIds:      toAdd,
+          profileId:      groupedMember.profile_id,
+          roleIds:        values.role_ids,
           monthly_salary: needsSalary ? values.monthly_salary : null,
-          currency: values.currency as SalaryCurrency,
+          currency:       values.currency as SalaryCurrency,
           effective_from: effectiveFrom,
-          paid_days_off: needsSalary ? values.paid_days_off : 0,
+          paid_days_off:  needsSalary ? values.paid_days_off : 0,
         })
       }
 
       for (const a of toUpdate) {
         await updateMember.mutateAsync({
-          memberId: a.id,
-          branchId: a.branch_id,
-          profileId: groupedMember.profile_id,
-          roleId: values.role_id,
+          memberId:       a.id,
+          branchId:       a.branch_id,
+          profileId:      groupedMember.profile_id,
+          roleIds:        values.role_ids,
           monthly_salary: needsSalary ? values.monthly_salary : null,
-          currency: values.currency as SalaryCurrency,
+          currency:       values.currency as SalaryCurrency,
           effective_from: effectiveFrom,
-          paid_days_off: needsSalary ? values.paid_days_off : 0,
+          paid_days_off:  needsSalary ? values.paid_days_off : 0,
         })
       }
 
@@ -689,6 +771,9 @@ function EditContent({
                   <Shield className="h-3 w-3" />Owner
                 </Badge>
               )}
+              {groupedMember.email && (
+                <span className="text-xs text-muted-foreground truncate">{groupedMember.email}</span>
+              )}
               {groupedMember.phone && (
                 <span className="text-xs text-muted-foreground">{groupedMember.phone}</span>
               )}
@@ -705,7 +790,7 @@ function EditContent({
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold">Personal Info</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Name and phone update instantly · password requires service role key</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Name updates instantly · email/password require service role key</p>
               </div>
 
               <FormField
@@ -722,19 +807,34 @@ function EditContent({
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input type="email" placeholder="you@example.com" autoComplete="off" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone</FormLabel>
+                      <FormControl>
+                        <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
@@ -759,7 +859,7 @@ function EditContent({
                         >
                           {showPassword
                             ? <EyeOff className="h-4 w-4" />
-                            : <Eye className="h-4 w-4" />
+                            : <Eye    className="h-4 w-4" />
                           }
                         </button>
                       </div>
@@ -781,31 +881,23 @@ function EditContent({
 
               <FormField
                 control={form.control}
-                name="role_id"
+                name="role_ids"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Role</FormLabel>
-                    <Select
-                      value={field.value}
-                      onValueChange={(v) => {
-                        field.onChange(v)
-                        const level = roles.find((r) => r.id === v)?.level ?? null
-                        if (level !== null && level >= 3 && selectedBranchIds.length > 1) {
-                          setSelectedBranchIds(selectedBranchIds.slice(0, 1))
-                        }
-                      }}
-                    >
-                      <FormControl>
-                        <SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roles.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <FormControl>
+                      <MultiRoleSelect
+                        roles={roles}
+                        selectedIds={field.value}
+                        onChange={(ids) => {
+                          field.onChange(ids)
+                          const lvl = ids.length > 0 ? Math.min(...roles.filter(r => ids.includes(r.id)).map(r => r.level)) : null
+                          if (lvl !== null && lvl >= 3 && selectedBranchIds.length > 1) {
+                            setSelectedBranchIds(selectedBranchIds.slice(0, 1))
+                          }
+                        }}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -859,17 +951,15 @@ export type MemberSheetMode =
 export function MemberSheet({
   mode,
   onClose,
-  onRemoveAssignment: _onRemoveAssignment,
 }: {
   mode: MemberSheetMode | null
   onClose: () => void
-  onRemoveAssignment?: (assignment: MemberAssignment, groupedMember: GroupedMember) => void
 }) {
   const isMobile = useIsMobile()
   const { isAdmin } = useAuth()
   const { roleLevel } = useUserPermissions()
-  const { data: branches = [] } = useGetBranches()
-  const { data: allRoles = [] } = useGetRoles()
+  const { data: branches  = [] } = useGetBranches()
+  const { data: allRoles  = [] } = useGetRoles()
 
   // System roles (is_system=true, e.g. Owner) are never shown in selectors.
   // Non-admins can only assign roles with higher level numbers than their own.

@@ -2,7 +2,6 @@ import { useState, useEffect } from "react"
 import { format, parseISO } from "date-fns"
 import { cn } from "@/lib/utils"
 import {
-  Camera,
   MapPin,
   Clock,
   CheckCircle2,
@@ -18,7 +17,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   Card,
   CardContent,
@@ -48,6 +46,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
     mode,
     step,
     locationError,
+    locationPending,
     distanceM,
     selfiePreview,
     fileInputRef,
@@ -62,32 +61,6 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
     const id = setInterval(() => setNow(new Date()), 1_000)
     return () => clearInterval(id)
   }, [])
-
-  // Auto-open camera when location is verified
-  useEffect(() => {
-    if (step !== "selfie") return
-
-    // Small delay so the DOM is ready
-    const timer = setTimeout(() => {
-      fileInputRef.current?.click()
-    }, 100)
-
-    // If user cancels the camera / file picker, reset to idle
-    const handleFocus = () => {
-      // Wait a tick — the change event fires before focus on some browsers
-      setTimeout(() => {
-        if (!fileInputRef.current?.files?.length) {
-          resetFlow()
-        }
-      }, 500)
-    }
-    window.addEventListener("focus", handleFocus)
-
-    return () => {
-      clearTimeout(timer)
-      window.removeEventListener("focus", handleFocus)
-    }
-  }, [step])
 
   const firstName = profile?.full_name?.split(" ")[0] ?? "there"
   const activeShift = getActiveShift(now)
@@ -117,16 +90,6 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
   return (
     <div className="p-4 md:p-6 md:max-w-lg md:mx-auto space-y-5">
 
-      {/* Hidden camera input — always rendered so it can be triggered programmatically */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        capture="user"
-        className="hidden"
-        onChange={handleSelfieCapture}
-      />
-
       {/* Greeting + clock */}
       <div className="space-y-3 pt-1">
         <div>
@@ -148,41 +111,20 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
       {/* Shifts panel */}
       {branch && <ShiftsPanel branch={branch} now={now} />}
 
-      {/* Flow: Locating */}
-      {step === "locating" && (
-        <Card className="py-4">
-          <CardContent className="flex flex-col items-center gap-3 py-10">
-            <MapPin className="h-8 w-8 text-muted-foreground animate-pulse" />
-            <p className="text-sm text-muted-foreground">Getting your location…</p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Hidden camera input — always mounted so buttons can trigger it directly */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={handleSelfieCapture}
+      />
 
-      {/* Flow: Location error */}
-      {step === "location_error" && (
-        <div className="space-y-3">
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Location check failed</AlertTitle>
-            <AlertDescription>{locationError}</AlertDescription>
-          </Alert>
-          <Button variant="outline" onClick={resetFlow}>Try Again</Button>
-        </div>
-      )}
-
-      {/* Flow: Selfie — camera opens automatically */}
-      {step === "selfie" && (
-        <Card className="py-4">
-          <CardContent className="flex flex-col items-center gap-3 py-10">
-            <Camera className="h-8 w-8 text-muted-foreground animate-pulse" />
-            <p className="text-sm text-muted-foreground">Opening camera…</p>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Flow: Reviewing */}
       {step === "reviewing" && (
-        <Card className="py-4">
+        <Card className="py-0">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
               Confirm {mode === "checkin" ? "Check In" : "Check Out"}
@@ -197,10 +139,22 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
               />
             )}
             <div className="space-y-1.5 text-sm">
-              <p className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-primary" />
-                Location verified ({distanceM} m from branch)
-              </p>
+              {locationPending ? (
+                <p className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin className="h-4 w-4 animate-pulse" />
+                  Verifying location…
+                </p>
+              ) : locationError ? (
+                <p className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  {locationError}
+                </p>
+              ) : (
+                <p className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-primary" />
+                  Location verified ({distanceM} m from branch)
+                </p>
+              )}
               <p className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
                 {format(now, "h:mm a")}
@@ -208,7 +162,10 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
             </div>
             <div className="flex gap-2">
               <Button variant="outline" onClick={resetFlow}>Cancel</Button>
-              <Button onClick={() => handleConfirm(now)}>
+              <Button
+                onClick={() => handleConfirm(now)}
+                disabled={locationPending || !!locationError}
+              >
                 Confirm {mode === "checkin" ? "Check In" : "Check Out"}
               </Button>
             </div>
@@ -218,7 +175,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
 
       {/* Flow: Submitting */}
       {step === "submitting" && (
-        <Card className="py-4">
+        <Card className="py-0">
           <CardContent className="flex flex-col items-center gap-3 py-10">
             <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <p className="text-sm text-muted-foreground">Saving…</p>
@@ -254,12 +211,12 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
                     {withinWindow
                       ? "Your location and photo will be verified"
                       : shiftStartTime
-                        ? `Next window opens at ${formatShiftTime(shiftStartTime)} (±${windowMins} min)`
-                        : "Check the shifts above for today's schedule"}
+                      ? `Next window opens at ${formatShiftTime(shiftStartTime)} (±${windowMins} min)`
+                      : "Check the shifts above for today's schedule"}
                   </p>
                 </div>
                 <Button
-                  onClick={() => startFlow("checkin")}
+                  onClick={() => { startFlow("checkin"); fileInputRef.current?.click() }}
                   disabled={!withinWindow}
                   className="w-full"
                 >
@@ -271,7 +228,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
 
           {/* Checked in, working */}
           {checkedIn && !checkedOut && todayLog && (
-            <Card className="py-4">
+            <Card className="py-0">
               <CardContent className="flex flex-col items-center gap-5 py-8 text-center">
                 <div className="rounded-full bg-primary/10 p-4">
                   <Clock className="h-7 w-7 text-primary" />
@@ -297,7 +254,10 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
                     )}
                   </p>
                 </div>
-                <Button onClick={() => startFlow("checkout")} className="w-full">
+                <Button
+                  onClick={() => { startFlow("checkout"); fileInputRef.current?.click() }}
+                  className="w-full"
+                >
                   <LogOut className="h-4 w-4" />
                   Check Out
                 </Button>
@@ -307,7 +267,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
 
           {/* Shift complete */}
           {checkedIn && checkedOut && todayLog && (
-            <Card className="py-4">
+            <Card className="py-0">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-primary" />

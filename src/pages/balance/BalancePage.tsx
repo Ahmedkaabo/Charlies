@@ -1,44 +1,62 @@
 import { useState, useMemo } from "react"
 import { format, parseISO, isValid } from "date-fns"
 import {
-  ArrowRightLeft,
-  ArrowUpDown,
   TrendingUp,
   TrendingDown,
-  Vault,
+  ArrowUpFromLine,
+  ArrowDownToLine,
+  ArrowRight,
+  ArrowLeft,
+  ArrowLeftRight,
   Wallet,
+  Landmark,
   Plus,
-  Trash2,
   Pencil,
+  Trash2,
   CalendarIcon,
-  Building2,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { useAuth } from "@/hooks/useAuth"
 import { useIsMobile } from "@/hooks/use-mobile"
-import { useUserPermissions } from "@/hooks/usePermissions"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useMyBranches } from "@/hooks/useAttendance"
+import { useUserPermissions } from "@/hooks/usePermissions"
 import {
+  useTreasuryTransfers,
+  usePoolTransfers,
+  useExpensesPoolCredit,
   useBalanceSummary,
   useAllBranchBalances,
-  useTreasuryTransfers,
+  useBalanceRealtime,
   useCreateTreasuryTransfer,
   useUpdateTreasuryTransfer,
   useDeleteTreasuryTransfer,
+  useCreatePoolTransfer,
+  useUpdatePoolTransfer,
+  useDeletePoolTransfer,
 } from "@/hooks/useBalance"
 import { cn } from "@/lib/utils"
-import type { TreasuryTransfer } from "@/types/balance"
+import { MultiSelect } from "@/components/ui/multi-select"
+import type { Branch } from "@/types/branch"
+import type { TreasuryTransfer, PoolTransfer, BalanceSummary, BranchBalance } from "@/types/balance"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
 import {
   Select,
   SelectContent,
@@ -64,16 +82,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 
-// ── Types ──────────────────────────────────────────────────────
-
-type BalancePool = "sales" | "expenses" | "treasury"
-
-type TransferDrawerState =
-  | { type: "none" }
-  | { type: "create" }
-  | { type: "edit"; transfer: TreasuryTransfer }
-
-// ── Helpers ────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────
 
 function generateMonthOptions() {
   const start = new Date(2026, 5, 1)
@@ -100,225 +109,241 @@ function egp(n: number) {
   return `EGP ${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
 }
 
-const POOL_LABELS: Record<BalancePool, string> = {
-  sales:    "Sales Pool",
-  expenses: "Expense Pool",
-  treasury: "Main Treasury",
+// ── Balance overview cards ────────────────────────────────────
+
+interface OverviewRow {
+  label: string
+  value: number
+  bold?: boolean
+  red?: boolean
+  separator?: boolean
+  hidden?: boolean
 }
 
-const POOLS: BalancePool[] = ["sales", "expenses", "treasury"]
-
-// ── Summary card ───────────────────────────────────────────────
-
-function SummaryCard({
-  label,
-  value,
+function OverviewCard({
   icon: Icon,
-  highlight,
+  title,
+  rows,
   loading,
 }: {
-  label:      string
-  value:      string
-  icon:       React.ElementType
-  highlight?: "positive" | "negative" | "neutral"
-  loading?:   boolean
+  icon: React.ElementType
+  title: string
+  rows: OverviewRow[]
+  loading: boolean
 }) {
   return (
     <Card>
-      <CardHeader className="pb-1">
+      <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <Icon className="h-4 w-4" />
-          {label}
+          {title}
         </CardTitle>
       </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-7 w-28" />
-        ) : (
-          <p className={cn(
-            "text-xl font-bold",
-            highlight === "positive" && "text-emerald-600 dark:text-emerald-400",
-            highlight === "negative" && "text-destructive",
-          )}>
-            {value}
-          </p>
-        )}
+      <CardContent className="space-y-2">
+        {rows.map((row, i) => (
+          <div key={i}>
+            {row.separator && <div className="border-t my-1" />}
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">{row.label}</span>
+              {loading ? (
+                <Skeleton className="h-4 w-20" />
+              ) : row.hidden ? (
+                <span className="text-sm text-muted-foreground select-none">—</span>
+              ) : (
+                <span className={cn(
+                  "tabular-nums text-sm",
+                  row.bold ? "font-bold text-base" : "font-semibold",
+                  (row.red || row.value < 0) ? "text-destructive" : "text-foreground",
+                )}>
+                  {egp(row.value)}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
       </CardContent>
     </Card>
   )
 }
 
-// ── Transfer sheet (create / edit) ─────────────────────────────
+function BalanceOverview({
+  summary,
+  poolCredit,
+  canTreasuryRead,
+  canPoolRead,
+  loading,
+}: {
+  summary: BalanceSummary
+  poolCredit: number
+  canTreasuryRead: boolean
+  canPoolRead: boolean
+  loading: boolean
+}) {
+  const { totalSales, totalExpenses, totalTransferred, totalRemaining } = summary
+  const poolRemaining = poolCredit - totalExpenses
+
+  return (
+    <div className="grid gap-3 sm:grid-cols-2">
+      {/* Sales group — treasury row always shown, value hidden if no permission */}
+      <OverviewCard
+        icon={TrendingUp}
+        title="Sales"
+        loading={loading}
+        rows={[
+          { label: "Total Revenue",           value: totalSales,       hidden: !canTreasuryRead },
+          { label: "Transferred to Treasury", value: totalTransferred, hidden: !canTreasuryRead },
+          { label: "Remaining in Sales",      value: totalRemaining,   bold: true, separator: true },
+        ]}
+      />
+
+      {/* Expenses group */}
+      <OverviewCard
+        icon={TrendingDown}
+        title="Expenses"
+        loading={loading}
+        rows={[
+          ...(canPoolRead ? [{ label: "Budget",            value: poolCredit }] : []),
+          {                  label: "Spent",               value: totalExpenses, red: true },
+          ...(canPoolRead ? [{ label: "Remaining in Pool", value: poolRemaining, separator: true, bold: true }] : []),
+        ]}
+      />
+    </div>
+  )
+}
+
+// ── Treasury transfer sheet ───────────────────────────────────
 
 function TransferSheet({
   open,
   onOpenChange,
-  state,
-  branchId: defaultBranchId,
+  selectedBranchId,
+  selectedBranchName,
+  branches,
   month,
   year,
-  canUseTreasury,
+  editTransfer,
 }: {
-  open:            boolean
-  onOpenChange:    (v: boolean) => void
-  state:           TransferDrawerState
-  branchId:        string | undefined
-  month:           number
-  year:            number
-  canUseTreasury:  boolean
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  selectedBranchId: string | undefined
+  selectedBranchName: string | undefined
+  branches: Branch[]
+  month: number
+  year: number
+  editTransfer: TreasuryTransfer | null
 }) {
-  const isMobile  = useIsMobile()
+  const isMobile = useIsMobile()
   const { profile } = useAuth()
-  const { data: allBranches = [] } = useGetBranches()
-  const { data: myBranches  = [] } = useMyBranches(profile?.id)
-  const branches = myBranches.length > 0 ? myBranches : allBranches
-
-  const isEdit = state.type === "edit"
-
-  const defaultDate = format(
-    new Date(Math.min(
-      new Date(year, month - 1, new Date().getDate()).getTime(),
-      new Date(year, month, 0).getTime(),
-    )),
-    "yyyy-MM-dd",
-  )
-
-  const [branchId,     setBranchId]     = useState(isEdit ? state.transfer.branch_id : defaultBranchId ?? "")
-  const [amount,       setAmount]       = useState(isEdit ? String(state.transfer.amount) : "")
-  const [date,         setDate]         = useState(isEdit ? state.transfer.date : defaultDate)
-  const availablePools: BalancePool[] = canUseTreasury ? POOLS : ["sales", "expenses"]
-
-  const [source,       setSource]       = useState<BalancePool>(isEdit ? state.transfer.source as BalancePool : "sales")
-  const [destination,  setDestination]  = useState<BalancePool>(isEdit ? state.transfer.destination as BalancePool : (canUseTreasury ? "treasury" : "expenses"))
-  const [notes,        setNotes]        = useState(isEdit ? (state.transfer.notes ?? "") : "")
-
   const create = useCreateTreasuryTransfer()
   const update = useUpdateTreasuryTransfer()
 
+  const isEditing = !!editTransfer
+
+  const defaultDate = format(
+    new Date(Math.min(new Date(year, month - 1, new Date().getDate()).getTime(), new Date(year, month, 0).getTime())),
+    "yyyy-MM-dd",
+  )
+
+  const [branchId,  setBranchId]  = useState(selectedBranchId ?? "")
+  const [direction, setDirection] = useState<"outflow" | "inflow">("outflow")
+  const [amount,    setAmount]    = useState("")
+  const [date,      setDate]      = useState(defaultDate)
+  const [notes,     setNotes]     = useState("")
+
+  const { summary: branchSummary } = useBalanceSummary(branchId || undefined, month, year)
+
+  const [lastEditId, setLastEditId] = useState(editTransfer?.id)
+  if (editTransfer?.id !== lastEditId) {
+    setLastEditId(editTransfer?.id)
+    if (editTransfer) {
+      setAmount(String(editTransfer.amount))
+      setDate(editTransfer.date)
+      setNotes(editTransfer.notes ?? "")
+      setDirection(editTransfer.direction ?? "outflow")
+      setBranchId((editTransfer.branch as { id: string } | null)?.id ?? editTransfer.branch_id)
+    }
+  }
+
+  const [lastSelected, setLastSelected] = useState(selectedBranchId)
+  if (selectedBranchId !== lastSelected) {
+    setLastSelected(selectedBranchId)
+    if (!isEditing) setBranchId(selectedBranchId ?? "")
+  }
+
   function reset() {
-    setBranchId(defaultBranchId ?? "")
-    setAmount("")
-    setDate(defaultDate)
-    setSource("sales")
-    setDestination("treasury")
-    setNotes("")
+    setAmount(""); setNotes(""); setDate(defaultDate)
+    setBranchId(selectedBranchId ?? ""); setDirection("outflow")
   }
 
   async function handleSave() {
     if (!branchId) { toast.error("Select a branch"); return }
     const amt = parseFloat(amount)
     if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return }
-    if (source === destination) { toast.error("Source and destination must differ"); return }
     try {
-      if (isEdit) {
-        await update.mutateAsync({
-          id:          state.transfer.id,
-          amount:      amt,
-          date,
-          source,
-          destination,
-          notes:       notes.trim() || null,
-        })
+      if (isEditing && editTransfer) {
+        await update.mutateAsync({ id: editTransfer.id, amount: amt, direction, date, notes: notes.trim() || null })
         toast.success("Transfer updated")
       } else {
-        await create.mutateAsync({
-          branch_id:   branchId,
-          amount:      amt,
-          date,
-          source,
-          destination,
-          notes:       notes.trim() || null,
-          added_by:    profile?.id ?? null,
-        })
-        toast.success("Transfer recorded")
+        await create.mutateAsync({ branch_id: branchId, amount: amt, direction, date, notes: notes.trim() || null, added_by: profile?.id ?? null })
+        toast.success("Transfer added")
       }
-      reset()
-      onOpenChange(false)
-    } catch {
-      toast.error("Failed to save")
-    }
+      reset(); onOpenChange(false)
+    } catch { toast.error("Failed to save") }
   }
 
   const isPending = create.isPending || update.isPending
+
+  const activeBranchName = selectedBranchName
+    ?? branches.find(b => b.id === branchId)?.name
+    ?? (editTransfer?.branch as { id: string; name: string } | null)?.name
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) { reset(); onOpenChange(false) } }}>
       <SheetContent
         side={isMobile ? "bottom" : "right"}
-        className={cn(
-          "flex flex-col gap-0 overflow-hidden p-0",
-          isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-md",
-        )}
+        className={cn("flex flex-col gap-0 overflow-hidden p-0", isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-md")}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>{isEdit ? "Edit Transfer" : "Record Transfer"}</SheetTitle>
-          <SheetDescription>Move funds between pools for a branch</SheetDescription>
+          <SheetTitle>{isEditing ? "Edit Transfer" : "Add Treasury Transfer"}</SheetTitle>
+          <SheetDescription>
+            {activeBranchName
+              ? `Branch: ${activeBranchName}`
+              : "Select a branch to record a treasury transfer"}
+          </SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
-
-          {/* Branch — only when not already scoped */}
-          {!defaultBranchId && (
+          {/* Branch selector — only when no branch is pre-selected */}
+          {!selectedBranchId && !isEditing && (
             <div className="space-y-2">
               <p className="text-sm font-medium">Branch</p>
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger><SelectValue placeholder="Select branch…" /></SelectTrigger>
-                <SelectContent>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           )}
 
-          {/* Source → swap → Destination */}
-          <div className="space-y-1.5">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">From</p>
-              <Select
-                value={source}
-                onValueChange={(v) => {
-                  const s = v as BalancePool
-                  setSource(s)
-                  // expenses always pairs with sales
-                  if (s === "expenses") setDestination("sales")
-                  // prevent same source/destination
-                  else if (s === destination) setDestination(source)
-                }}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {availablePools.map((p) => (
-                    <SelectItem key={p} value={p}>{POOL_LABELS[p]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-center py-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7 rounded-full text-muted-foreground hover:text-foreground"
-                onClick={() => { const tmp = source; setSource(destination); setDestination(tmp) }}
-              >
-                <ArrowUpDown className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-sm font-medium">To</p>
-              <Select value={destination} onValueChange={(v) => setDestination(v as BalancePool)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {availablePools.map((p) => (
-                    <SelectItem key={p} value={p}>{POOL_LABELS[p]}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          {/* Direction */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Direction</p>
+            <Select value={direction} onValueChange={(v) => setDirection(v as "outflow" | "inflow")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="outflow">
+                  <span className="flex items-center gap-2">
+                    <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600" />
+                    Branch → Treasury (outflow)
+                  </span>
+                </SelectItem>
+                <SelectItem value="inflow">
+                  <span className="flex items-center gap-2">
+                    <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" />
+                    Treasury → Branch (inflow)
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Amount */}
@@ -326,16 +351,13 @@ function TransferSheet({
             <p className="text-sm font-medium">Amount</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
-              <Input
-                type="number"
-                min={0}
-                step="0.01"
-                placeholder="0.00"
-                className="pl-12"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-              />
+              <Input type="number" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
+            {branchId && direction === "outflow" && (
+              <p className={cn("text-xs pl-1", branchSummary.totalRemaining <= 0 ? "text-destructive" : "text-muted-foreground")}>
+                Branch balance: <span className="font-medium">{egp(branchSummary.totalRemaining)}</span>
+              </p>
+            )}
           </div>
 
           {/* Date */}
@@ -349,347 +371,634 @@ function TransferSheet({
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date && isValid(parseISO(date)) ? parseISO(date) : undefined}
-                  onSelect={(d) => d && setDate(format(d, "yyyy-MM-dd"))}
-                />
+                <Calendar mode="single" selected={date && isValid(parseISO(date)) ? parseISO(date) : undefined} onSelect={(d) => d && setDate(format(d, "yyyy-MM-dd"))} />
               </PopoverContent>
             </Popover>
           </div>
 
           {/* Notes */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">
-              Notes <span className="font-normal text-muted-foreground">(optional)</span>
-            </p>
-            <Textarea
-              placeholder="What is this transfer for?"
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
+            <p className="text-sm font-medium">Notes <span className="font-normal text-muted-foreground">(optional)</span></p>
+            <Textarea placeholder={direction === "outflow" ? "Why was this transferred?" : "What is this money for?"} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
-          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isPending}>
-            {isPending ? "Saving…" : "Save"}
-          </Button>
+          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isPending}>{isPending ? "Saving…" : "Save"}</Button>
         </div>
       </SheetContent>
     </Sheet>
   )
 }
 
-// ── Balance page content ───────────────────────────────────────
+// ── Pool transfer sheet ───────────────────────────────────────
+
+function PoolTransferSheet({
+  open,
+  onOpenChange,
+  selectedBranchId,
+  selectedBranchName,
+  branches,
+  month,
+  year,
+  editTransfer,
+}: {
+  open: boolean
+  onOpenChange: (v: boolean) => void
+  selectedBranchId: string | undefined
+  selectedBranchName: string | undefined
+  branches: Branch[]
+  month: number
+  year: number
+  editTransfer: PoolTransfer | null
+}) {
+  const isMobile = useIsMobile()
+  const { profile } = useAuth()
+  const create = useCreatePoolTransfer()
+  const update = useUpdatePoolTransfer()
+
+  const isEditing = !!editTransfer
+
+  const defaultDate = format(
+    new Date(Math.min(new Date(year, month - 1, new Date().getDate()).getTime(), new Date(year, month, 0).getTime())),
+    "yyyy-MM-dd",
+  )
+
+  const [branchId,  setBranchId]  = useState(selectedBranchId ?? "")
+  const [direction, setDirection] = useState<"sales_to_expenses" | "expenses_to_sales">("sales_to_expenses")
+  const [amount,    setAmount]    = useState("")
+  const [date,      setDate]      = useState(defaultDate)
+  const [notes,     setNotes]     = useState("")
+
+  const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
+  const to   = format(new Date(year, month, 0), "yyyy-MM-dd")
+  const { summary: branchSummary } = useBalanceSummary(branchId || undefined, month, year)
+  const { data: poolCredit = 0 }   = useExpensesPoolCredit(branchId || undefined, from, to)
+
+  const [lastEditId, setLastEditId] = useState(editTransfer?.id)
+  if (editTransfer?.id !== lastEditId) {
+    setLastEditId(editTransfer?.id)
+    if (editTransfer) {
+      setAmount(String(editTransfer.amount))
+      setDate(editTransfer.date)
+      setNotes(editTransfer.notes ?? "")
+      setBranchId((editTransfer.branch as { id: string } | null)?.id ?? editTransfer.branch_id)
+      setDirection(editTransfer.from_pool === "sales" ? "sales_to_expenses" : "expenses_to_sales")
+    }
+  }
+
+  const [lastSelected, setLastSelected] = useState(selectedBranchId)
+  if (selectedBranchId !== lastSelected) {
+    setLastSelected(selectedBranchId)
+    if (!isEditing) setBranchId(selectedBranchId ?? "")
+  }
+
+  function reset() {
+    setAmount(""); setNotes(""); setDate(defaultDate)
+    setBranchId(selectedBranchId ?? ""); setDirection("sales_to_expenses")
+  }
+
+  async function handleSave() {
+    if (!branchId) { toast.error("Select a branch"); return }
+    const amt = parseFloat(amount)
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return }
+
+    // For edits, the original amount is already reflected in the current balances,
+    // so add it back to get the true available headroom.
+    const originalAmt = isEditing && editTransfer && editTransfer.from_pool === (direction === "sales_to_expenses" ? "sales" : "expenses")
+      ? editTransfer.amount
+      : 0
+    const limit = availableBalance + originalAmt
+    if (amt > limit) {
+      const label = direction === "sales_to_expenses" ? "branch balance" : "pool credit"
+      toast.error(`Amount exceeds available ${label} (${egp(limit)})`)
+      return
+    }
+
+    const from_pool: "sales" | "expenses" = direction === "sales_to_expenses" ? "sales" : "expenses"
+    const to_pool:   "sales" | "expenses" = direction === "sales_to_expenses" ? "expenses" : "sales"
+    try {
+      if (isEditing && editTransfer) {
+        await update.mutateAsync({ id: editTransfer.id, amount: amt, from_pool, to_pool, date, notes: notes.trim() || null })
+        toast.success("Pool transfer updated")
+      } else {
+        await create.mutateAsync({ branch_id: branchId, amount: amt, from_pool, to_pool, date, notes: notes.trim() || null, added_by: profile?.id ?? null })
+        toast.success("Pool transfer added")
+      }
+      reset(); onOpenChange(false)
+    } catch { toast.error("Failed to save") }
+  }
+
+  const isPending = create.isPending || update.isPending
+
+  const activeBranchName = selectedBranchName
+    ?? branches.find(b => b.id === branchId)?.name
+    ?? (editTransfer?.branch as { id: string; name: string } | null)?.name
+
+  const availableBalance  = direction === "sales_to_expenses" ? branchSummary.totalRemaining : poolCredit
+  const availableLabel    = direction === "sales_to_expenses" ? "Branch balance" : "Expenses pool credit"
+  const enteredAmt        = parseFloat(amount) || 0
+  const exceedsLimit      = !!branchId && enteredAmt > 0 && enteredAmt > availableBalance
+
+  return (
+    <Sheet open={open} onOpenChange={(v) => { if (!v) { reset(); onOpenChange(false) } }}>
+      <SheetContent
+        side={isMobile ? "bottom" : "right"}
+        className={cn("flex flex-col gap-0 overflow-hidden p-0", isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-md")}
+      >
+        <SheetHeader className="shrink-0 border-b px-6 py-4">
+          <SheetTitle>{isEditing ? "Edit Pool Transfer" : "Add Pool Transfer"}</SheetTitle>
+          <SheetDescription>
+            {activeBranchName
+              ? `Branch: ${activeBranchName}`
+              : "Select a branch to record a pool transfer"}
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          {/* Branch */}
+          {!selectedBranchId && !isEditing && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Branch</p>
+              <Select value={branchId} onValueChange={setBranchId}>
+                <SelectTrigger><SelectValue placeholder="Select branch…" /></SelectTrigger>
+                <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Direction */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Direction</p>
+            <Select value={direction} onValueChange={(v) => setDirection(v as "sales_to_expenses" | "expenses_to_sales")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="sales_to_expenses">
+                  <span className="flex items-center gap-2">
+                    <ArrowRight className="h-3.5 w-3.5 text-indigo-500" />
+                    Sales → Expenses (allocate)
+                  </span>
+                </SelectItem>
+                <SelectItem value="expenses_to_sales">
+                  <span className="flex items-center gap-2">
+                    <ArrowLeft className="h-3.5 w-3.5 text-amber-500" />
+                    Expenses → Sales (return)
+                  </span>
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Amount */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Amount</p>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
+              <Input type="number" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+            {branchId && (
+              <p className={cn("text-xs pl-1", exceedsLimit ? "text-destructive" : availableBalance <= 0 ? "text-destructive" : "text-muted-foreground")}>
+                {availableLabel}: <span className="font-medium">{egp(availableBalance)}</span>
+                {exceedsLimit && <span className="ml-1 font-semibold"> — exceeds limit</span>}
+              </p>
+            )}
+          </div>
+
+          {/* Date */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Date</p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-start text-left font-normal">
+                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : "Pick a date"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar mode="single" selected={date && isValid(parseISO(date)) ? parseISO(date) : undefined} onSelect={(d) => d && setDate(format(d, "yyyy-MM-dd"))} />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Notes */}
+          <div className="space-y-2">
+            <p className="text-sm font-medium">Notes <span className="font-normal text-muted-foreground">(optional)</span></p>
+            <Textarea placeholder="Reason for this transfer…" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
+          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>Cancel</Button>
+          <Button onClick={handleSave} disabled={isPending || exceedsLimit}>{isPending ? "Saving…" : "Save"}</Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+// ── Shared table sticky-column classes ───────────────────────
+
+const STICKY_HEAD = "sticky left-0 z-10 bg-muted/40"
+const STICKY_CELL = "sticky left-0 z-10 bg-background"
+
+// ── Branch breakdown section ──────────────────────────────────
+
+
+function BranchBreakdownSection({
+  balances,
+  summary,
+  isLoading,
+  canPoolRead,
+}: {
+  balances: BranchBalance[]
+  summary: BalanceSummary
+  isLoading: boolean
+  canPoolRead: boolean
+}) {
+  if (isLoading) {
+    return (
+      <div className="rounded-lg border overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/40">
+            <TableRow>
+              <TableHead className={STICKY_HEAD}>Branch</TableHead>
+              <TableHead className="text-right">Sales</TableHead>
+              <TableHead className="text-right">Expenses</TableHead>
+              <TableHead className="text-right">Transferred</TableHead>
+              {canPoolRead && <TableHead className="text-right">Pool Credit</TableHead>}
+              <TableHead className="text-right">Remaining</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <TableRow key={i}>
+                <TableCell className={STICKY_CELL}><Skeleton className="h-4 w-28" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+                {canPoolRead && <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>}
+                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+    )
+  }
+
+  if (!balances.length) return null
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h2 className="text-base font-semibold">Branch Breakdown</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">Per-branch summary for the selected period</p>
+      </div>
+      <div className="rounded-lg border overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-muted/40">
+            <TableRow>
+              <TableHead className={STICKY_HEAD}>Branch</TableHead>
+              <TableHead className="text-right">Sales</TableHead>
+              <TableHead className="text-right">Expenses</TableHead>
+              <TableHead className="text-right">Transferred</TableHead>
+              {canPoolRead && <TableHead className="text-right">Pool Credit</TableHead>}
+              <TableHead className="text-right">Remaining</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {balances.map((b) => (
+              <TableRow key={b.branchId}>
+                <TableCell className={cn(STICKY_CELL, "font-medium whitespace-nowrap")}>{b.branchName}</TableCell>
+                <TableCell className="text-right tabular-nums">{egp(b.sales)}</TableCell>
+                <TableCell className="text-right tabular-nums text-destructive">{egp(b.expenses)}</TableCell>
+                <TableCell className="text-right tabular-nums">{egp(b.transferred)}</TableCell>
+                {canPoolRead && <TableCell className="text-right tabular-nums">{egp(b.poolCredit)}</TableCell>}
+                <TableCell className={cn("text-right tabular-nums font-semibold", b.remaining < 0 && "text-destructive")}>{egp(b.remaining)}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow className="border-t-2 font-bold bg-muted/20">
+              <TableCell className={cn(STICKY_CELL, "font-bold bg-muted/20")}>Total</TableCell>
+              <TableCell className="text-right tabular-nums">{egp(summary.totalSales)}</TableCell>
+              <TableCell className="text-right tabular-nums text-destructive">{egp(summary.totalExpenses)}</TableCell>
+              <TableCell className="text-right tabular-nums">{egp(summary.totalTransferred)}</TableCell>
+              {canPoolRead && <TableCell className="text-right tabular-nums">—</TableCell>}
+              <TableCell className={cn("text-right tabular-nums font-bold", summary.totalRemaining < 0 && "text-destructive")}>{egp(summary.totalRemaining)}</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  )
+}
+
+// ── Balance content ───────────────────────────────────────────
 
 function BalanceContent({
   branchId,
+  branchName,
   branchIds,
   month,
   year,
-  isManagement,
+  branches,
+  canTreasuryRead,
+  canTreasuryCreate,
+  canTreasuryUpdate,
+  canTreasuryDelete,
+  canPoolRead,
+  canPoolCreate,
+  canPoolUpdate,
+  canPoolDelete,
+  canBreakdownRead,
 }: {
-  branchId:     string | undefined
-  branchIds?:   string[]
-  month:        number
-  year:         number
-  isManagement: boolean
+  branchId: string | undefined
+  branchName: string | undefined
+  branchIds: string[]
+  month: number
+  year: number
+  branches: Branch[]
+  canTreasuryRead: boolean
+  canTreasuryCreate: boolean
+  canTreasuryUpdate: boolean
+  canTreasuryDelete: boolean
+  canPoolRead: boolean
+  canPoolCreate: boolean
+  canPoolUpdate: boolean
+  canPoolDelete: boolean
+  canBreakdownRead: boolean
 }) {
-  const [drawer,    setDrawer]    = useState<TransferDrawerState>({ type: "none" })
-  const [deleteId,  setDeleteId]  = useState<string | null>(null)
+  const [transferOpen,  setTransferOpen]  = useState(false)
+  const [editTransfer,  setEditTransfer]  = useState<TreasuryTransfer | null>(null)
+  const [delTransferId, setDelTransferId] = useState<string | null>(null)
+  const [poolOpen,      setPoolOpen]      = useState(false)
+  const [editPool,      setEditPool]      = useState<PoolTransfer | null>(null)
+  const [delPoolId,     setDelPoolId]     = useState<string | null>(null)
 
-  const { isAdmin } = useAuth()
-  const { canCreate, canUpdate, canDelete, canMoveTreasury, canSeeTreasury } = useUserPermissions()
-  const canCreateTransfer = isAdmin || canCreate("balance")
-  const canEditTransfer   = isAdmin || canUpdate("balance")
-  const canDeleteTransfer = isAdmin || canDelete("balance")
-  const canUseTreasury    = isAdmin || canMoveTreasury()
-  const canViewTreasury   = isAdmin || canSeeTreasury()
+  useBalanceRealtime()
 
-  const { summary, isLoading: summaryLoading } = useBalanceSummary(branchId, month, year, branchIds)
-  const { balances, isLoading: balancesLoading } = useAllBranchBalances(month, year, isManagement && !branchId, branchIds)
-  const { data: transfers = [], isLoading: transfersLoading } = useTreasuryTransfers(branchId, month, year, branchIds)
-  const deleteTransfer = useDeleteTreasuryTransfer()
+  const isAllBranches = !branchId
+  const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
+  const to   = format(new Date(year, month, 0), "yyyy-MM-dd")
 
-  const filteredBalances = branchId
-    ? balances.filter((b) => b.branchId === branchId)
-    : balances
+  const { summary, isLoading: summaryLoading }   = useBalanceSummary(branchId, month, year, branchIds)
+  const { balances, isLoading: balancesLoading } = useAllBranchBalances(month, year, canBreakdownRead, branchIds)
+  const { data: transfers = [], isPending: transfersLoading }         = useTreasuryTransfers(branchId, month, year)
+  const { data: poolTransfers = [], isPending: poolTransfersLoading } = usePoolTransfers(branchId, from, to)
+  const { data: poolCredit = 0, isPending: poolCreditLoading }        = useExpensesPoolCredit(branchId, from, to)
+
+  const poolRemaining = poolCredit - summary.totalExpenses
+
+  const deleteTreasuryTransfer = useDeleteTreasuryTransfer()
+  const deletePoolTransfer     = useDeletePoolTransfer()
+
+  function handleTreasurySheetClose(v: boolean) {
+    if (!v) { setTransferOpen(false); setTimeout(() => setEditTransfer(null), 300) }
+  }
+  function handlePoolSheetClose(v: boolean) {
+    if (!v) { setPoolOpen(false); setTimeout(() => setEditPool(null), 300) }
+  }
+
+  const showBreakdown = canBreakdownRead
 
   return (
     <div className="space-y-8">
 
-      {/* ── Summary — mobile collapsible card ─────────── */}
-      <Card className="sm:hidden py-0">
-        <CardContent className="divide-y p-0">
-          {summaryLoading ? (
-            Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="flex items-center justify-between px-4 py-3">
-                <Skeleton className="h-3 w-24" />
-                <Skeleton className="h-3 w-20" />
-              </div>
-            ))
-          ) : (
-            <>
-              {([
-                { label: "Total Sales",    value: egp(summary.totalSales),    positive: true  },
-                { label: "Total Expenses", value: egp(summary.totalExpenses), positive: false },
-                { label: "Sales Pool",     value: egp(summary.salesBalance),  positive: summary.salesBalance   >= 0 },
-                { label: "Expense Pool",   value: egp(summary.expenseBalance), positive: summary.expenseBalance >= 0 },
-                ...(canViewTreasury ? [{ label: "Main Treasury", value: egp(summary.mainTreasury), positive: summary.mainTreasury >= 0 }] : []),
-              ] as { label: string; value: string; positive: boolean }[]).map(({ label, value, positive }) => (
-                <div key={label} className="flex items-center justify-between px-4 py-3">
-                  <span className="text-sm text-muted-foreground">{label}</span>
-                  <span className={cn(
-                    "tabular-nums text-sm font-medium",
-                    positive ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
-                  )}>
-                    {value}
-                  </span>
-                </div>
-              ))}
-              <div className="flex items-center justify-between bg-muted/40 px-4 py-3">
-                <span className="text-sm font-semibold">Total Remaining</span>
-                <span className={cn(
-                  "text-base font-bold tabular-nums",
-                  summary.totalRemaining >= 0
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-destructive",
-                )}>
-                  {egp(summary.totalRemaining)}
-                </span>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {/* ── Overview cards ───────────────────────────────── */}
+      <BalanceOverview
+        summary={summary}
+        poolCredit={poolCredit}
+        canTreasuryRead={canTreasuryRead}
+        canPoolRead={canPoolRead}
+        loading={summaryLoading || poolCreditLoading}
+      />
 
-      {/* ── Summary — desktop grid ─────────────────────── */}
-      {/* 5 cards (no treasury): 2-col → last spans both → lg: 5-col single row */}
-      {/* 6 cards (treasury):    2-col → lg: 3-col → xl: 6-col single row       */}
-      <div className={cn(
-        "hidden sm:grid gap-4",
-        canViewTreasury
-          ? "sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
-          : "sm:grid-cols-2 lg:grid-cols-5",
-      )}>
-        <SummaryCard label="Total Sales"    value={egp(summary.totalSales)}    icon={TrendingUp}   highlight="positive" loading={summaryLoading} />
-        <SummaryCard label="Total Expenses" value={egp(summary.totalExpenses)} icon={TrendingDown} highlight="negative" loading={summaryLoading} />
-        <SummaryCard label="Sales Pool"     value={egp(summary.salesBalance)}  icon={Wallet}
-          highlight={summary.salesBalance   >= 0 ? "positive" : "negative"} loading={summaryLoading} />
-        <SummaryCard label="Expense Pool"   value={egp(summary.expenseBalance)} icon={Wallet}
-          highlight={summary.expenseBalance >= 0 ? "positive" : "negative"} loading={summaryLoading} />
-        {canViewTreasury && (
-          <SummaryCard label="Main Treasury" value={egp(summary.mainTreasury)} icon={Vault}
-            highlight={summary.mainTreasury >= 0 ? "positive" : "negative"} loading={summaryLoading} />
-        )}
-        {/* Last card: span 2 at sm so it fills the row when treasury is hidden */}
-        <div className={cn(!canViewTreasury && "sm:col-span-2 lg:col-span-1")}>
-          <SummaryCard label="Total Remaining" value={egp(summary.totalRemaining)} icon={Wallet}
-            highlight={summary.totalRemaining >= 0 ? "positive" : "negative"} loading={summaryLoading} />
-        </div>
-      </div>
+      {/* ── Branch breakdown ─────────────────────────────── */}
+      
 
-      {/* ── Per-branch breakdown (management + all-branches view) ── */}
-      {isManagement && !branchId && (
+      {/* ── Treasury transfers ────────────────────────────── */}
+      {canTreasuryRead && (
         <>
           <Separator />
           <div className="space-y-4">
-            <div>
-              <h2 className="text-base font-semibold">Branch Breakdown</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Balance by branch for this period</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold">Treasury Transfers</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Money moved between branches and main treasury</p>
+              </div>
+              {canTreasuryCreate && transfers.length > 0 && !transfersLoading && (
+                <Button onClick={() => { setEditTransfer(null); setTransferOpen(true) }}>
+                  <Plus className="h-4 w-4" /> Add Transfer
+                </Button>
+              )}
             </div>
 
-            {balancesLoading ? (
-              <div className="space-y-2">
-                {[1, 2, 3].map((i) => <Skeleton key={i} className="h-12 w-full rounded-lg" />)}
+            {transfersLoading ? (
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/40"><TableRow><TableHead className={STICKY_HEAD}>Date</TableHead>{isAllBranches && <TableHead>Branch</TableHead>}<TableHead className="text-right">Amount</TableHead><TableHead>Notes</TableHead><TableHead>Added by</TableHead></TableRow></TableHeader>
+                  <TableBody>{Array.from({ length: 4 }).map((_, i) => <TableRow key={i}><TableCell className={STICKY_CELL}><Skeleton className="h-4 w-24" /></TableCell>{isAllBranches && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}<TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-4 w-24" /></TableCell></TableRow>)}</TableBody>
+                </Table>
               </div>
-            ) : filteredBalances.length === 0 ? (
-              <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
-                No branch data for this period
+            ) : transfers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
+                <Landmark className="h-8 w-8 text-muted-foreground/40" />
+                <div>
+                  <p className="text-sm font-medium">No treasury transfers this period</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Record money moved between branches and the main treasury</p>
+                </div>
+                {canTreasuryCreate && (
+                  <Button onClick={() => { setEditTransfer(null); setTransferOpen(true) }}>
+                    <Plus className="h-4 w-4" /> Add Transfer
+                  </Button>
+                )}
               </div>
             ) : (
-              <div className="rounded-lg border overflow-hidden">
-                {/* Desktop header */}
-                <div className="hidden sm:grid grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground border-b">
-                  <span>Branch</span>
-                  <span className="text-right">Sales</span>
-                  <span className="text-right">Expenses</span>
-                  <span className="text-right">Sales Pool</span>
-                  <span className="text-right">Expense Pool</span>
-                  <span className="text-right">Remaining</span>
-                </div>
-                <div className="divide-y">
-                  {filteredBalances.map((b) => (
-                    <div key={b.branchId} className="grid grid-cols-2 sm:grid-cols-[1fr_repeat(5,_minmax(0,_1fr))] gap-2 px-4 py-3 items-center">
-                      <div className="flex items-center gap-2 col-span-2 sm:col-span-1">
-                        <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="text-sm font-medium truncate">{b.branchName}</span>
-                      </div>
-                      <div className="sm:text-right">
-                        <span className="sm:hidden text-xs text-muted-foreground mr-1">Sales:</span>
-                        <span className="text-sm tabular-nums text-emerald-600 dark:text-emerald-400">{egp(b.sales)}</span>
-                      </div>
-                      <div className="sm:text-right">
-                        <span className="sm:hidden text-xs text-muted-foreground mr-1">Expenses:</span>
-                        <span className="text-sm tabular-nums text-destructive">{egp(b.expenses)}</span>
-                      </div>
-                      <div className="sm:text-right">
-                        <span className="sm:hidden text-xs text-muted-foreground mr-1">Sales Pool:</span>
-                        <span className={cn("text-sm tabular-nums font-medium", b.salesBalance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-                          {egp(b.salesBalance)}
-                        </span>
-                      </div>
-                      <div className="sm:text-right">
-                        <span className="sm:hidden text-xs text-muted-foreground mr-1">Expense Pool:</span>
-                        <span className={cn("text-sm tabular-nums font-medium", b.expenseBalance >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-                          {egp(b.expenseBalance)}
-                        </span>
-                      </div>
-                      <div className="sm:text-right">
-                        <span className="sm:hidden text-xs text-muted-foreground mr-1">Remaining:</span>
-                        <span className={cn("text-sm tabular-nums font-bold", b.remaining >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive")}>
-                          {egp(b.remaining)}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/40">
+                    <TableRow>
+                      <TableHead className={STICKY_HEAD}>Date</TableHead>
+                      {isAllBranches && <TableHead>Branch</TableHead>}
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Notes</TableHead><TableHead>Added by</TableHead>
+                      {(canTreasuryUpdate || canTreasuryDelete) && <TableHead className="w-10" />}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transfers.map((t) => {
+                      const branchObj = t.branch as { id: string; name: string } | null
+                      const adderObj  = t.adder  as { id: string; full_name: string | null } | null
+                      const isInflow  = t.direction === "inflow"
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</TableCell>
+                          {isAllBranches && <TableCell className="font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</TableCell>}
+                          <TableCell className="text-right whitespace-nowrap">
+                            <div className="flex items-center justify-end gap-1">
+                              {isInflow ? <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" /> : <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
+                              <span className={cn("tabular-nums font-medium", isInflow ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400")}>{egp(t.amount)}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground max-w-xs truncate">{t.notes || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</TableCell>
+                          {(canTreasuryUpdate || canTreasuryDelete) && (
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                {canTreasuryUpdate && <Button size="icon" variant="ghost" onClick={() => { setEditTransfer(t); setTransferOpen(true) }}><Pencil className="h-4 w-4" /></Button>}
+                                {canTreasuryDelete && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDelTransferId(t.id)}><Trash2 className="h-4 w-4" /></Button>}
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
               </div>
             )}
           </div>
         </>
       )}
 
-      {/* ── Treasury transfers ─────────────────────────── */}
-      <Separator />
-      <div className="space-y-4">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h2 className="text-base font-semibold">Treasury Transfers</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Funds moved between pools this period</p>
-          </div>
-          {canCreateTransfer && (
-            <Button onClick={() => setDrawer({ type: "create" })}>
-              <Plus className="h-4 w-4" />
-              Add Transfer
-            </Button>
-          )}
-        </div>
-
-        {transfersLoading ? (
-          <div className="space-y-2">
-            {[1, 2].map((i) => <Skeleton key={i} className="h-14 w-full rounded-lg" />)}
-          </div>
-        ) : transfers.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-10 text-center">
-            <ArrowRightLeft className="h-8 w-8 text-muted-foreground/40" />
-            <div>
-              <p className="text-sm font-medium">No transfers this period</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Record a transfer to move funds between the sales pool, expense pool, and main treasury.
-              </p>
+      {/* ── Pool transfers ────────────────────────────────── */}
+      {canPoolRead && (
+        <>
+          <Separator />
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-semibold">Pool Transfers</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">Money moved between sales and expenses pools</p>
+              </div>
+              {canPoolCreate && poolTransfers.length > 0 && !poolTransfersLoading && (
+                <Button onClick={() => { setEditPool(null); setPoolOpen(true) }}>
+                  <Plus className="h-4 w-4" /> Add Pool Transfer
+                </Button>
+              )}
             </div>
-            {canCreateTransfer && (
-              <Button onClick={() => setDrawer({ type: "create" })}>
-                <Plus className="h-4 w-4" />
-                Add Transfer
-              </Button>
-            )}
-          </div>
-        ) : (
-          <div className="rounded-lg border divide-y">
-            {transfers.map((t) => (
-              <div key={t.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
-                  <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
+
+            {poolTransfersLoading ? (
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/40"><TableRow><TableHead className={STICKY_HEAD}>Date</TableHead>{isAllBranches && <TableHead>Branch</TableHead>}<TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Notes</TableHead><TableHead>Added by</TableHead></TableRow></TableHeader>
+                  <TableBody>{Array.from({ length: 3 }).map((_, i) => <TableRow key={i}><TableCell className={STICKY_CELL}><Skeleton className="h-4 w-24" /></TableCell>{isAllBranches && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}<TableCell><Skeleton className="h-5 w-28 rounded-full" /></TableCell><TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-4 w-24" /></TableCell></TableRow>)}</TableBody>
+                </Table>
+              </div>
+            ) : poolTransfers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
+                <ArrowLeftRight className="h-8 w-8 text-muted-foreground/40" />
+                <div>
+                  <p className="text-sm font-medium">No pool transfers this period</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">Pool transfers allocate money between sales and expenses pools</p>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">
-                    {POOL_LABELS[t.source as BalancePool] ?? t.source}
-                    {" → "}
-                    {POOL_LABELS[t.destination as BalancePool] ?? t.destination}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t.date}
-                    {(t.branch as { name?: string } | null)?.name && !branchId
-                      ? ` · ${(t.branch as { name: string }).name}`
-                      : ""}
-                    {" · "}{(t.adder as { full_name?: string | null } | null)?.full_name ?? "—"}
-                    {t.notes && <span className="italic"> · {t.notes}</span>}
-                  </p>
-                </div>
-                <span className="tabular-nums font-semibold text-sm shrink-0">
-                  {egp(t.amount)}
-                </span>
-                {(canEditTransfer || canDeleteTransfer) && (
-                  <div className="flex items-center gap-0.5 shrink-0">
-                    {canEditTransfer && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground"
-                        onClick={() => setDrawer({ type: "edit", transfer: t })}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                    {canDeleteTransfer && (
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteId(t.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
+                {canPoolCreate && (
+                  <Button onClick={() => { setEditPool(null); setPoolOpen(true) }}>
+                    <Plus className="h-4 w-4" /> Add Pool Transfer
+                  </Button>
                 )}
               </div>
-            ))}
+            ) : (
+              <div className="rounded-lg border overflow-x-auto">
+                <Table>
+                  <TableHeader className="bg-muted/40">
+                    <TableRow>
+                      <TableHead className={STICKY_HEAD}>Date</TableHead>
+                      {isAllBranches && <TableHead>Branch</TableHead>}
+                      <TableHead>Type</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                      <TableHead>Notes</TableHead><TableHead>Added by</TableHead>
+                      {(canPoolUpdate || canPoolDelete) && <TableHead className="w-10" />}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {poolTransfers.map((t) => {
+                      const branchObj  = t.branch as { id: string; name: string } | null
+                      const adderObj   = t.adder  as { id: string; full_name: string | null } | null
+                      const toExpenses = t.from_pool === "sales"
+                      return (
+                        <TableRow key={t.id}>
+                          <TableCell className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</TableCell>
+                          {isAllBranches && <TableCell className="font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</TableCell>}
+                          <TableCell>
+                            <span className={cn(
+                              "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+                              toExpenses ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400",
+                            )}>
+                              {toExpenses ? <><ArrowRight className="h-3 w-3" />Sales → Exp.</> : <><ArrowLeft className="h-3 w-3" />Exp. → Sales</>}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums font-medium whitespace-nowrap">{egp(t.amount)}</TableCell>
+                          <TableCell className="text-muted-foreground max-w-xs truncate">{t.notes || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</TableCell>
+                          {(canPoolUpdate || canPoolDelete) && (
+                            <TableCell>
+                              <div className="flex items-center justify-end gap-1">
+                                {canPoolUpdate && <Button size="icon" variant="ghost" onClick={() => { setEditPool(t); setPoolOpen(true) }}><Pencil className="h-4 w-4" /></Button>}
+                                {canPoolDelete && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDelPoolId(t.id)}><Trash2 className="h-4 w-4" /></Button>}
+                              </div>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
 
-      {/* ── Transfer sheet ─────────────────────────────── */}
+      {/* ── Sheets ────────────────────────────────────────── */}
       <TransferSheet
-        open={
-          (drawer.type === "create" && canCreateTransfer) ||
-          (drawer.type === "edit"   && canEditTransfer)
-        }
-        onOpenChange={(v) => { if (!v) setDrawer({ type: "none" }) }}
-        state={drawer}
-        branchId={branchId}
-        month={month}
-        year={year}
-        canUseTreasury={canUseTreasury}
+        open={transferOpen} onOpenChange={handleTreasurySheetClose}
+        selectedBranchId={branchId} selectedBranchName={branchName}
+        branches={branches} month={month} year={year}
+        editTransfer={editTransfer}
+      />
+      <PoolTransferSheet
+        open={poolOpen} onOpenChange={handlePoolSheetClose}
+        selectedBranchId={branchId} selectedBranchName={branchName}
+        branches={branches} month={month} year={year}
+        editTransfer={editPool}
       />
 
-      {/* ── Delete confirmation ────────────────────────── */}
-      <AlertDialog open={!!deleteId} onOpenChange={(v) => { if (!v) setDeleteId(null) }}>
+      {/* ── Delete dialogs ────────────────────────────────── */}
+      <AlertDialog open={!!delTransferId} onOpenChange={(v) => { if (!v) setDelTransferId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete transfer?</AlertDialogTitle>
+            <AlertDialogTitle>Delete treasury transfer?</AlertDialogTitle>
             <AlertDialogDescription>This transfer record will be permanently removed.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-white hover:bg-destructive/90"
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
-                if (!deleteId) return
-                try { await deleteTransfer.mutateAsync(deleteId); toast.success("Transfer deleted") }
+                if (!delTransferId) return
+                try { await deleteTreasuryTransfer.mutateAsync(delTransferId); toast.success("Deleted") }
                 catch { toast.error("Failed to delete") }
-                finally { setDeleteId(null) }
-              }}
-            >
-              Delete
-            </AlertDialogAction>
+                finally { setDelTransferId(null) }
+              }}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!delPoolId} onOpenChange={(v) => { if (!v) setDelPoolId(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete pool transfer?</AlertDialogTitle>
+            <AlertDialogDescription>This pool transfer record will be permanently removed.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={async () => {
+                if (!delPoolId) return
+                try { await deletePoolTransfer.mutateAsync(delPoolId); toast.success("Deleted") }
+                catch { toast.error("Failed to delete") }
+                finally { setDelPoolId(null) }
+              }}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -697,42 +1006,43 @@ function BalanceContent({
   )
 }
 
-// ── Page ───────────────────────────────────────────────────────
+// ── Page ──────────────────────────────────────────────────────
 
 export function BalancePage() {
-  const { profile } = useAuth()
+  const { profile, isAdmin, isOwner } = useAuth()
+  const { canRead, canCreate, canUpdate, canDelete } = useUserPermissions()
 
-  const [selectedMonth,    setSelectedMonth]    = useState(MONTH_OPTIONS[0].value)
-  const [selectedBranchId, setSelectedBranchId] = useState<string | "all">("all")
+  const isManagement = isAdmin || isOwner
+
+  const [selectedMonth,     setSelectedMonth]     = useState(MONTH_OPTIONS[0]?.value ?? "")
+  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
 
   const { month, year } = useMemo(() => {
     const opt = MONTH_OPTIONS.find((o) => o.value === selectedMonth) ?? MONTH_OPTIONS[0]
-    return { month: opt.month, year: opt.year }
+    return { month: opt?.month ?? new Date().getMonth() + 1, year: opt?.year ?? new Date().getFullYear() }
   }, [selectedMonth])
 
-  const { data: allBranches = [], isLoading: allBranchesLoading } = useGetBranches()
-  const { data: myBranches  = [], isLoading: myBranchesLoading  } = useMyBranches(profile?.id)
+  const { data: allBranches = [] }                       = useGetBranches()
+  const { data: myBranches = [], isLoading: branchLoad } = useMyBranches(profile?.id)
 
-  const branchList    = myBranches.length > 0 ? myBranches : allBranches
-  const isMultiBranch = branchList.length > 1
+  const branchList = isManagement ? allBranches : myBranches
 
-  // "all" → aggregate all accessible branches; specific id → that branch only
-  const activeBranchId: string | undefined =
-    selectedBranchId === "all" ? undefined : selectedBranchId || undefined
+  const activeBranchId   = selectedBranchIds.length === 1 ? selectedBranchIds[0] : undefined
+  const activeBranchName = activeBranchId ? branchList.find(b => b.id === activeBranchId)?.name : undefined
+  const activeBranchIds  = selectedBranchIds.length > 0 ? selectedBranchIds : branchList.map(b => b.id)
 
-  if (myBranchesLoading || allBranchesLoading) {
+  if (!isManagement && branchLoad) {
     return (
       <div className="p-4 md:p-6 space-y-4">
-        <Skeleton className="h-8 w-56" />
-        <Skeleton className="h-64 w-full" />
+        <Skeleton className="h-8 w-56" /><Skeleton className="h-64 w-full" />
       </div>
     )
   }
 
-  if (branchList.length === 0) {
+  if (!isManagement && myBranches.length === 0) {
     return (
       <div className="p-4 md:p-6 flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
-        <Vault className="h-10 w-10 text-muted-foreground/40" />
+        <Landmark className="h-10 w-10 text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">Not assigned to any branch yet.</p>
       </div>
     )
@@ -740,45 +1050,42 @@ export function BalancePage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
+      {/* ── Header ──────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center gap-2">
+        <h1 className="text-xl font-semibold mr-1">Balance</h1>
 
-      {/* ── Header ─────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Balance</h1>
-          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-            <SelectTrigger className="w-[150px] h-8 text-sm">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MONTH_OPTIONS.map((o) => (
-                <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+          <SelectTrigger className="w-[150px] h-8 text-sm"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {MONTH_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
 
-        {isMultiBranch && (
-          <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
-            <SelectTrigger className="w-full sm:w-[200px]">
-              <SelectValue placeholder="All Branches" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {branchList.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <MultiSelect
+          options={branchList.map(b => ({ value: b.id, label: b.name }))}
+          selected={selectedBranchIds}
+          onChange={setSelectedBranchIds}
+          placeholder="All Branches"
+          className="h-8 text-sm w-[160px]"
+        />
       </div>
 
-      {/* ── Content ────────────────────────────────────── */}
       <BalanceContent
         branchId={activeBranchId}
-        branchIds={myBranches.length > 0 && !activeBranchId ? myBranches.map((b) => b.id) : undefined}
+        branchName={activeBranchName}
+        branchIds={activeBranchIds}
         month={month}
         year={year}
-        isManagement={isMultiBranch}
+        branches={branchList}
+        canTreasuryRead={canRead("treasury")}
+        canTreasuryCreate={canCreate("treasury")}
+        canTreasuryUpdate={canUpdate("treasury")}
+        canTreasuryDelete={canDelete("treasury")}
+        canPoolRead={canRead("pool_transfers")}
+        canPoolCreate={canCreate("pool_transfers")}
+        canPoolUpdate={canUpdate("pool_transfers")}
+        canPoolDelete={canDelete("pool_transfers")}
+        canBreakdownRead={canRead("branch_breakdown")}
       />
     </div>
   )

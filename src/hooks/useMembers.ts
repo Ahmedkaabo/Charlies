@@ -19,22 +19,26 @@ export function useGetMembers(branchId?: string, branchIds?: string[]) {
       : ["members", accountId],
     queryFn: async () => {
       if (!accountId) return []
-      let q = supabase
-        .from("staff")
-        .select(`
-          id, branch_id, profile_id, role_id, joined_at, is_active,
-          profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, system_role, last_login_at),
-          role:roles(id, name, level),
-          branch:branches(id, name)
-        `)
-        .eq("is_active", true)
-        .eq("account_id", accountId)
-        .order("joined_at", { ascending: false })
 
-      if (branchId) q = q.eq("branch_id", branchId)
-      else if (branchIds?.length) q = q.in("branch_id", branchIds)
+      function buildQuery(withRoleIds: boolean) {
+        const cols = withRoleIds
+          ? "id, branch_id, profile_id, role_id, role_ids, joined_at, is_active, profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, last_login_at), role:roles(id, name, level), branch:branches(id, name)"
+          : "id, branch_id, profile_id, role_id, joined_at, is_active, profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, last_login_at), role:roles(id, name, level), branch:branches(id, name)"
+        let q = supabase
+          .from("staff")
+          .select(cols)
+          .eq("is_active", true)
+          .eq("account_id", accountId)
+          .order("joined_at", { ascending: false })
+        if (branchId) q = q.eq("branch_id", branchId)
+        else if (branchIds?.length) q = q.in("branch_id", branchIds)
+        return q
+      }
 
-      const { data: members, error: membersError } = await q
+      let result = await buildQuery(true)
+      // Fall back to query without role_ids if migration hasn't been applied yet
+      if (result.error) result = await buildQuery(false)
+      const { data: members, error: membersError } = result
       if (membersError) throw membersError
 
       let sq = supabase
@@ -82,7 +86,7 @@ export function useSearchProfiles(query: string) {
 export interface CreateMemberInput {
   branchId: string
   profileId: string
-  roleId: string | null
+  roleIds: string[]
   monthly_salary: number | null
   currency: SalaryCurrency
   effective_from: string
@@ -94,12 +98,9 @@ export function useCreateMember() {
   const { accountId } = useAuth()
   return useMutation({
     mutationFn: async (input: CreateMemberInput) => {
-      const { data, error } = await db
+      let { data, error } = await db
         .from("staff")
-        .upsert(
-          { branch_id: input.branchId, profile_id: input.profileId, role_id: input.roleId, is_active: true, account_id: accountId ?? undefined },
-          { onConflict: "branch_id,profile_id" }
-        )
+        .upsert({ branch_id: input.branchId, profile_id: input.profileId, role_id: null, role_ids: input.roleIds, is_active: true, account_id: accountId ?? undefined }, { onConflict: "branch_id,profile_id" })
       if (error) throw error
 
       if (input.monthly_salary != null) {
@@ -136,7 +137,7 @@ export interface UpdateMemberInput {
   memberId: string
   branchId: string
   profileId: string
-  roleId: string | null
+  roleIds: string[]
   monthly_salary: number | null
   currency: SalaryCurrency
   effective_from: string
@@ -149,7 +150,7 @@ export function useUpdateMember() {
     mutationFn: async (input: UpdateMemberInput) => {
       const { error } = await db
         .from("staff")
-        .update({ role_id: input.roleId })
+        .update({ role_id: null, role_ids: input.roleIds })
         .eq("id", input.memberId)
       if (error) throw error
 
@@ -170,14 +171,15 @@ export function useUpdateMember() {
         if (se) throw se
       }
     },
-    onSuccess: () => {
+    onSuccess: (_, input) => {
       qc.invalidateQueries({ queryKey: ["members"] })
       qc.invalidateQueries({ queryKey: ["my-branch"] })
+      qc.invalidateQueries({ queryKey: ["my-branch-roles", input.profileId] })
     },
   })
 }
 
-// ── Remove ────────────────────────────────────────────────────
+// ── Remove (single assignment, used when editing branch list) ─
 
 export function useRemoveMember() {
   const qc = useQueryClient()
@@ -185,8 +187,34 @@ export function useRemoveMember() {
     mutationFn: async (memberId: string) => {
       const { error } = await db
         .from("staff")
-        .update({ is_active: false })
+        .delete()
         .eq("id", memberId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["members"] })
+      qc.invalidateQueries({ queryKey: ["branches"] })
+      qc.invalidateQueries({ queryKey: ["my-branch"] })
+    },
+  })
+}
+
+// ── Delete entirely across all branches ──────────────────────
+
+export function useDeleteMember() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      const { error: se } = await db
+        .from("salary_structures")
+        .delete()
+        .eq("profile_id", profileId)
+      if (se) throw se
+
+      const { error } = await db
+        .from("staff")
+        .delete()
+        .eq("profile_id", profileId)
       if (error) throw error
     },
     onSuccess: () => {
@@ -221,10 +249,12 @@ export function useGetMembersGrouped(branchId?: string, branchIds?: string[]) {
           assignments: [],
         })
       }
+      const roleIds = ((m as unknown as { role_ids?: string[] | null }).role_ids ?? [])
       map.get(m.profile_id)!.assignments.push({
         id:          m.id,
         branch_id:   m.branch_id,
         branch_name: m.branch?.name ?? "Unknown",
+        role_ids:    roleIds.length > 0 ? roleIds : (m.role_id ? [m.role_id] : []),
         role_id:     m.role_id,
         role:        m.role  ?? null,
         joined_at:   m.joined_at,
@@ -245,7 +275,7 @@ export function useGetMembersGrouped(branchId?: string, branchIds?: string[]) {
 export interface CreateMemberMultiBranchInput {
   branchIds:      string[]
   profileId:      string
-  roleId:         string | null
+  roleIds:        string[]
   monthly_salary: number | null
   currency:       SalaryCurrency
   effective_from: string
@@ -260,10 +290,7 @@ export function useCreateMemberMultiBranch() {
       for (const branchId of input.branchIds) {
         const { error: bme } = await db
           .from("staff")
-          .upsert(
-            { branch_id: branchId, profile_id: input.profileId, role_id: input.roleId, is_active: true, account_id: accountId ?? undefined },
-            { onConflict: "branch_id,profile_id" }
-          )
+          .upsert({ branch_id: branchId, profile_id: input.profileId, role_id: null, role_ids: input.roleIds, is_active: true, account_id: accountId ?? undefined }, { onConflict: "branch_id,profile_id" })
         if (bme) throw bme
 
         if (input.monthly_salary != null) {

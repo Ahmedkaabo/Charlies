@@ -3,12 +3,13 @@ import { Users, Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
-import { useGetMembersGrouped, useRemoveMember } from "@/hooks/useMembers"
+import { useGetMembersGrouped, useDeleteMember } from "@/hooks/useMembers"
 import { useGetRoles } from "@/hooks/usePermissions"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useMyBranches } from "@/hooks/useAttendance"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserPermissions } from "@/hooks/usePermissions"
+import type { GroupedMember } from "@/types/member"
 import { MemberSheet } from "@/components/members/MemberSheet"
 import type { MemberSheetMode } from "@/components/members/MemberSheet"
 
@@ -23,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { MultiSelect } from "@/components/ui/multi-select"
 import {
   Table,
   TableBody,
@@ -128,25 +130,27 @@ function EmptyState({ canAdd, onAdd }: { canAdd: boolean; onAdd: () => void }) {
 
 export function MembersPage() {
   const { isAdmin, profile } = useAuth()
-  const { canCreate, canUpdate, isOwner } = useUserPermissions()
+  const { canCreate, canUpdate, canDelete: canDeletePerm, isOwner } = useUserPermissions()
   const { data: allRolesRaw = [] } = useGetRoles()
   const roles = allRolesRaw.filter((r) => !r.is_system)
   const { data: allBranches = [] } = useGetBranches()
-  const { data: myBranches = [] } = useMyBranches(profile?.id)
-  const branches = myBranches.length > 0 ? myBranches : allBranches
+  const { data: myBranches  = [] } = useMyBranches(profile?.id)
+  const branches    = myBranches.length > 0 ? myBranches : allBranches
   const myBranchIds = myBranches.length > 0 ? myBranches.map((b) => b.id) : undefined
   const { data: groupedMembers, isLoading, isError } = useGetMembersGrouped(undefined, myBranchIds)
-  const removeMember = useRemoveMember()
+  const deleteMember = useDeleteMember()
 
-  const [sheet, setSheet] = useState<MemberSheetMode | null>(null)
-  const [removeTarget, setRemoveTarget] = useState<{ assignmentId: string; name: string; branchName: string } | null>(null)
-  const [search, setSearch] = useState("")
-  const [roleFilter, setRoleFilter] = useState("all")
-  const [branchFilter, setBranchFilter] = useState("all")
+  const [sheet, setSheet]               = useState<MemberSheetMode | null>(null)
+  const [removeTarget, setRemoveTarget] = useState<{ profileId: string; name: string } | null>(null)
+  const [search, setSearch]             = useState("")
+  const [roleFilters, setRoleFilters]   = useState<string[]>([])
+  const [branchFilters, setBranchFilters] = useState<string[]>([])
 
-  const canSeeAll = isAdmin || isOwner
-  const canAdd = isAdmin || canCreate("staff")
-  const canEdit = isAdmin || canUpdate("staff")
+  const canSeeAll  = isAdmin || isOwner
+  const canAdd     = canCreate("staff")
+  const canEdit    = canUpdate("staff")
+  const canRemove  = canDeletePerm("staff")
+  const hasActions = canEdit || canRemove
 
   // Filter and visibility
   const visible = groupedMembers?.filter((gm) => {
@@ -160,16 +164,16 @@ export function MembersPage() {
   const filtered = visible?.filter((gm) => {
     const name = gm.full_name?.toLowerCase() ?? ""
     if (search && !name.includes(search.toLowerCase())) return false
-    if (roleFilter !== "all" && !gm.assignments.some((a) => a.role_id === roleFilter)) return false
-    if (branchFilter !== "all" && !gm.assignments.some((a) => a.branch_id === branchFilter)) return false
+    if (roleFilters.length > 0 && !gm.assignments.some((a) => roleFilters.includes(a.role_id))) return false
+    if (branchFilters.length > 0 && !gm.assignments.some((a) => branchFilters.includes(a.branch_id))) return false
     return true
   })
 
   async function confirmRemove() {
     if (!removeTarget) return
     try {
-      await removeMember.mutateAsync(removeTarget.assignmentId)
-      toast.success(`${removeTarget.name} removed from ${removeTarget.branchName}`)
+      await deleteMember.mutateAsync(removeTarget.profileId)
+      toast.success(`${removeTarget.name} removed`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to remove")
     } finally {
@@ -206,26 +210,20 @@ export function MembersPage() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-52"
         />
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All roles</SelectItem>
-            {roles.map((r) => (
-              <SelectItem key={r.id} value={r.id}>
-                <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={branchFilter} onValueChange={setBranchFilter}>
-          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All branches</SelectItem>
-            {branches.map((b) => (
-              <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <MultiSelect
+          options={roles.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
+          selected={roleFilters}
+          onChange={setRoleFilters}
+          placeholder="All roles"
+          className="w-40"
+        />
+        <MultiSelect
+          options={branches.map((b) => ({ value: b.id, label: b.name }))}
+          selected={branchFilters}
+          onChange={setBranchFilters}
+          placeholder="All branches"
+          className="w-44"
+        />
       </div>
 
       {/* ── Error ─────────────────────────────────────── */}
@@ -256,7 +254,7 @@ export function MembersPage() {
                 <TableHead>Salary</TableHead>
                 <TableHead>Since</TableHead>
                 <TableHead>Last Login</TableHead>
-                {canEdit && <TableHead className="w-10" />}
+                {hasActions && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -271,7 +269,7 @@ export function MembersPage() {
                   const primarySalary = gm.assignments.find((a) => a.salary?.monthly_salary)?.salary
 
                   return (
-                    <TableRow key={gm.profile_id} className={canEdit ? "cursor-pointer group" : undefined} onClick={canEdit ? () => setSheet({ type: "edit", groupedMember: gm }) : undefined}>
+                    <TableRow key={gm.profile_id} className={hasActions ? "cursor-pointer group" : undefined} onClick={canEdit ? () => setSheet({ type: "edit", groupedMember: gm }) : undefined}>
                       {/* Member */}
                       <TableCell className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/50 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         <div className="flex items-center gap-2.5">
@@ -351,7 +349,7 @@ export function MembersPage() {
                       </TableCell>
 
                       {/* Actions */}
-                      {canEdit && (
+                      {hasActions && (
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end">
                             <DropdownMenu>
@@ -361,23 +359,26 @@ export function MembersPage() {
                                 </Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
-                                <DropdownMenuItem
-                                  onClick={() => setSheet({ type: "edit", groupedMember: gm })}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                  Edit
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => {
-                                    const first = gm.assignments[0]
-                                    if (first) setRemoveTarget({ assignmentId: first.id, name: gm.full_name ?? "Staff", branchName: first.branch_name })
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                  Remove
-                                </DropdownMenuItem>
+                                {canEdit && (
+                                  <DropdownMenuItem
+                                    onClick={() => setSheet({ type: "edit", groupedMember: gm })}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                )}
+                                {canRemove && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => setRemoveTarget({ profileId: gm.profile_id, name: gm.full_name ?? "Staff" })}
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                      Remove
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
@@ -389,7 +390,7 @@ export function MembersPage() {
               ) : (
                 <TableRow>
                   <TableCell
-                    colSpan={canEdit ? 8 : 7}
+                    colSpan={hasActions ? 8 : 7}
                     className="py-10 text-center text-sm text-muted-foreground"
                   >
                     No staff match the current filters
@@ -405,19 +406,15 @@ export function MembersPage() {
       <MemberSheet
         mode={sheet}
         onClose={() => setSheet(null)}
-        onRemoveAssignment={(a, gm) =>
-          setRemoveTarget({ assignmentId: a.id, name: gm.full_name ?? "Staff", branchName: a.branch_name })
-        }
       />
 
       {/* ── Remove confirmation ────────────────────────── */}
       <AlertDialog open={!!removeTarget} onOpenChange={(v) => { if (!v) setRemoveTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove from branch?</AlertDialogTitle>
+            <AlertDialogTitle>Remove staff member?</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{removeTarget?.name}</strong> will be removed from{" "}
-              <strong>{removeTarget?.branchName}</strong>. They can be re-added later.
+              <strong>{removeTarget?.name}</strong> will be permanently removed from all branches.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

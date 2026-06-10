@@ -142,12 +142,31 @@ const RESOURCE_META: Record<Resource, ResourceMeta> = {
   balance: {
     label: "Balance",
     actions: {
-      can_read:          "View balance summary pools",
-      can_see_treasury:  "See main treasury details & cards",
-      can_move_treasury: "Move money to/from main treasury",
-      can_create:        "Add internal pool transfers (Sales/Exp)",
-      can_update:        "Edit existing transfers",
-      can_delete:        "Delete transfers",
+      can_read: "View balance summary (sales, expenses & remaining)",
+    },
+  },
+  branch_breakdown: {
+    label: "Branch Breakdown",
+    actions: {
+      can_read: "View per-branch balance breakdown table",
+    },
+  },
+  treasury: {
+    label: "Main Treasury",
+    actions: {
+      can_read:   "View Main Treasury card & total",
+      can_create: "Move money to / from main treasury",
+      can_update: "Edit treasury transfers",
+      can_delete: "Delete treasury transfers",
+    },
+  },
+  pool_transfers: {
+    label: "Pool Transfers",
+    actions: {
+      can_read:   "View transfers between sales & expenses pools",
+      can_create: "Move money between sales and expenses pools",
+      can_update: "Edit pool transfer records",
+      can_delete: "Delete pool transfer records",
     },
   },
   settings: {
@@ -177,8 +196,23 @@ const RESOURCE_META: Record<Resource, ResourceMeta> = {
   },
 }
 
-const RESOURCE_ORDER: Resource[] = [
-  "branches", "staff", "checkin", "attendance", "payroll", "expenses", "sales", "finance", "balance", "settings", "permissions", "owners",
+const RESOURCE_GROUPS: { label: string; resources: Resource[] }[] = [
+  {
+    label: "Staff & Operations",
+    resources: ["branches", "staff", "checkin", "attendance", "payroll"],
+  },
+  {
+    label: "Financial",
+    resources: ["expenses", "sales", "finance"],
+  },
+  {
+    label: "Balance & Treasury",
+    resources: ["balance", "branch_breakdown", "treasury", "pool_transfers"],
+  },
+  {
+    label: "System",
+    resources: ["settings", "permissions", "owners"],
+  },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -310,11 +344,6 @@ function RenameField({
     )
   }
 
-  // System roles cannot be renamed
-  if (role.is_system) {
-    return <SheetTitle className="text-left">{formatRoleName(role.name)}</SheetTitle>
-  }
-
   return (
     <div className="flex items-center gap-1.5">
       <SheetTitle className="text-left">{formatRoleName(role.name)}</SheetTitle>
@@ -363,8 +392,6 @@ function ResourceSection({ role, resource }: { role: Role; resource: Resource })
         can_create: value && "can_create" in meta.actions,
         can_update: value && "can_update" in meta.actions,
         can_delete: value && "can_delete" in meta.actions,
-        can_move_treasury: value && "can_move_treasury" in meta.actions,
-        can_see_treasury:  value && "can_see_treasury"  in meta.actions,
       })
     } catch {
       toast.error("Failed to save permissions")
@@ -451,28 +478,29 @@ function RoleDrawer({
 
               {/* Scrollable content */}
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
-                {RESOURCE_ORDER.map((resource, i) => (
-                  <div key={resource}>
-                    {i > 0 && <Separator className="mb-6" />}
-                    <ResourceSection role={role} resource={resource} />
+                {RESOURCE_GROUPS.map((group, gi) => (
+                  <div key={group.label} className="space-y-3">
+                    {gi > 0 && <Separator className="mb-3" />}
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
+                      {group.label}
+                    </p>
+                    {group.resources.map((resource) => (
+                      <ResourceSection key={resource} role={role} resource={resource} />
+                    ))}
                   </div>
                 ))}
               </div>
 
               {/* Footer */}
               <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-3">
-                {role?.is_system ? (
-                  <span className="text-xs text-muted-foreground">System role — cannot be deleted</span>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setConfirmDelete(true)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete Role
-                  </Button>
-                )}
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setConfirmDelete(true)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Role
+                </Button>
                 <Button variant="outline" onClick={() => { onClose(); setLocalName(null) }}>
                   Close
                 </Button>
@@ -579,7 +607,7 @@ export function PermissionsPage() {
           <RolesListSkeleton />
         ) : (
           <div className="space-y-2">
-            {roles?.filter((r) => !r.is_system || r.name === "Branch Owner").map((role) => (
+            {roles?.map((role) => (
               <RoleCard
                 key={role.id}
                 role={role}

@@ -32,6 +32,7 @@ export function isDayEditable(
   const currentSalesDate = getCurrentSalesDate()
   const dayStart = startOfDay(date)
   if (isAfter(dayStart, currentSalesDate)) return false
+  if (!record && !canEdit) return false
   if (record?.status === 'locked' && !canEdit) return false
   return true
 }

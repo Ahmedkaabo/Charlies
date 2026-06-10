@@ -19,7 +19,8 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 
-const schema = z.object({
+// Zod schema is derived at runtime depending on whether an invite token is present.
+const baseSchema = z.object({
   fullName: z.string().min(2, "Name must be at least 2 characters"),
   phone:    z.string().min(7, "Please enter a valid phone number"),
   password: z
@@ -28,30 +29,53 @@ const schema = z.object({
     .regex(/[A-Z]/, "Must contain an uppercase letter")
     .regex(/[0-9]/, "Must contain a number"),
   confirmPassword: z.string(),
+})
+
+const newOrgSchema = baseSchema.extend({
+  orgName: z.string().min(2, "Organization name must be at least 2 characters"),
 }).refine((d) => d.password === d.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
 })
 
-type FormValues = z.infer<typeof schema>
+const inviteSchema = baseSchema.refine((d) => d.password === d.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+})
+
+type NewOrgValues    = z.infer<typeof newOrgSchema>
+type InviteValues    = z.infer<typeof inviteSchema>
+type FormValues      = NewOrgValues | InviteValues
 
 export function RegisterPage() {
   const navigate         = useNavigate()
   const [searchParams]   = useSearchParams()
   const inviteToken      = searchParams.get("invite") ?? undefined
+  const isInvite         = !!inviteToken
   const { signUp }       = useAuth()
   const [submitting, setSubmitting] = useState(false)
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: { fullName: "", phone: "", password: "", confirmPassword: "" },
+  const form = useForm<any>({
+    resolver: zodResolver(isInvite ? inviteSchema : newOrgSchema),
+    defaultValues: {
+      orgName:         "",
+      fullName:        "",
+      phone:           "",
+      password:        "",
+      confirmPassword: "",
+    },
   })
 
   async function onSubmit(values: FormValues) {
     setSubmitting(true)
-    const phone = values.phone.trim()
+    const phone         = values.phone.trim()
     const internalEmail = `${phone.replace(/\D/g, "")}@charlies.internal`
-    const { error } = await signUp(internalEmail, values.password, values.fullName, phone, inviteToken)
+    const orgName       = !isInvite ? (values as NewOrgValues).orgName : undefined
+
+    const { error } = await signUp(internalEmail, values.password, values.fullName, phone, {
+      inviteToken,
+      orgName,
+    })
     setSubmitting(false)
 
     if (error) {
@@ -60,9 +84,9 @@ export function RegisterPage() {
     }
 
     toast.success("Account created!")
-    // New org admin → go to dashboard (AuthGuard admits them because isAdmin=true)
-    // Invite staff → go to onboarding to pick their branch
-    navigate(inviteToken ? "/onboarding" : "/", { replace: true })
+    // Invited staff → pick their branch.
+    // New org owner → set up their first branch.
+    navigate(isInvite ? "/onboarding" : "/org-setup", { replace: true })
   }
 
   return (
@@ -78,9 +102,9 @@ export function RegisterPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{inviteToken ? "Join your team" : "Create your organization"}</CardTitle>
+            <CardTitle>{isInvite ? "Join your team" : "Create your organization"}</CardTitle>
             <CardDescription>
-              {inviteToken
+              {isInvite
                 ? "Fill in the details below to join the team"
                 : "Set up your CHARLIES account — you'll be the admin"}
             </CardDescription>
@@ -89,14 +113,32 @@ export function RegisterPage() {
           <CardContent>
             <div className="mb-4 flex items-start gap-2 rounded-lg bg-muted/60 px-3 py-2.5 text-xs text-muted-foreground">
               <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              {inviteToken
+              {isInvite
                 ? <p>You're joining via an invite link. Select your branch after signing up to get instant access.</p>
-                : <p>A new organization will be created for you. You'll have <strong>full admin access</strong> to add branches, staff, and owners.</p>
+                : <p>A new organization will be created for you. Next, you'll add your first branch to get started.</p>
               }
             </div>
 
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4">
+
+                {/* Org name — only for new org signup */}
+                {!isInvite && (
+                  <FormField
+                    control={form.control}
+                    name="orgName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Organization name</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Charlies Cafe" autoComplete="organization" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
                 <FormField
                   control={form.control}
                   name="fullName"

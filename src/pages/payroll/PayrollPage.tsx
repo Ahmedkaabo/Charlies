@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { MultiSelect } from "@/components/ui/multi-select"
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -100,18 +101,20 @@ function SummaryCard({
 
 export function PayrollPage() {
   const { isAdmin, profile } = useAuth()
-  const { canCreate, canUpdate } = useUserPermissions()
+  const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
 
   // can_create("payroll") = "View all staff payroll & financial analytics"
   // Without it, the user only sees their own payroll record and no analytics cards.
-  const canViewAllStaff  = isAdmin || canCreate("payroll")
+  const canViewAllStaff  = canCreate("payroll")
   const canViewAnalytics = canViewAllStaff
   // can_update("payroll") = "Add bonuses, deductions & adjustments"
-  const canAdjust        = isAdmin || canUpdate("payroll")
+  const canAdjust        = canUpdate("payroll")
+  // can_delete("payroll") = "Delete payroll adjustments"
+  const canDeleteAdj     = canDeletePerm("payroll")
 
   // ── Filters ───────────────────────────────────────────────
-  const [branchFilter,  setBranchFilter]  = useState<string>("all")
-  const [roleFilter,    setRoleFilter]    = useState<string>("all")
+  const [branchFilters, setBranchFilters] = useState<string[]>([])
+  const [roleFilters,   setRoleFilters]   = useState<string[]>([])
   const [search,        setSearch]        = useState<string>("")
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
 
@@ -136,8 +139,8 @@ export function PayrollPage() {
   const { data: allBranches } = useGetBranches()
   const branchDropdownList = myBranchIds.length > 0 ? myBranches : (allBranches ?? [])
 
-  const selectedBranchId = branchFilter !== "all" ? branchFilter : undefined
-  const scopeBranchIds   = myBranchIds.length > 0 && !selectedBranchId ? myBranchIds : undefined
+  const selectedBranchId = branchFilters.length === 1 ? branchFilters[0] : undefined
+  const scopeBranchIds   = branchFilters.length > 1 ? branchFilters : (myBranchIds.length > 0 && !selectedBranchId ? myBranchIds : undefined)
 
   // Profile filter: own record only when user lacks can_create("payroll")
   const queryProfileId = canViewAllStaff ? undefined : profile?.id
@@ -157,13 +160,13 @@ export function PayrollPage() {
   // ── Filtered rows ─────────────────────────────────────────
   const filteredRows = useMemo(() => {
     let rows = payrollRows ?? []
-    if (roleFilter !== "all") rows = rows.filter((r) => r.role?.id === roleFilter)
+    if (roleFilters.length > 0) rows = rows.filter((r) => r.role?.id && roleFilters.includes(r.role.id))
     if (search.trim()) {
       const q = search.trim().toLowerCase()
       rows = rows.filter((r) => r.full_name?.toLowerCase().includes(q))
     }
     return rows
-  }, [payrollRows, roleFilter, search])
+  }, [payrollRows, roleFilters, search])
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -200,36 +203,22 @@ export function PayrollPage() {
           </div>
 
           {/* Branch */}
-          <Select value={branchFilter} onValueChange={setBranchFilter}>
-            <SelectTrigger className="w-[160px]">
-              <SelectValue placeholder="All Branches" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Branches</SelectItem>
-              {branchDropdownList.map((b) => (
-                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={branchDropdownList.map((b) => ({ value: b.id, label: b.name }))}
+            selected={branchFilters}
+            onChange={setBranchFilters}
+            placeholder="All Branches"
+            className="w-[160px]"
+          />
 
           {/* Role */}
-          <Select
-            value={roleFilter}
-            onValueChange={setRoleFilter}
-            disabled={roleOptions.length === 0}
-          >
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="All Roles" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Roles</SelectItem>
-              {roleOptions.map((r) => (
-                <SelectItem key={r.id} value={r.id} className="capitalize">
-                  {r.name.replace(/_/g, " ")}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiSelect
+            options={roleOptions.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
+            selected={roleFilters}
+            onChange={setRoleFilters}
+            placeholder="All Roles"
+            className="w-[140px]"
+          />
         </div>
       </div>
 

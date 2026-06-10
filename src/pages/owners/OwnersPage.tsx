@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Minus, Pencil, Trash2, Check, ChevronsUpDown, MoreHorizontal, Users, ShieldCheck, Crown } from "lucide-react"
+import { Plus, Minus, Pencil, Trash2, Check, ChevronsUpDown, MoreHorizontal, Users, ShieldCheck, Crown, Phone, Languages } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -14,9 +14,11 @@ import {
   useRemoveOwnerFromBranch,
   useDeleteOwner,
   useSetOwnerManagerStatus,
+  useUpdateOwnerRoles,
 } from "@/hooks/useOwners"
 import { useOwnershipByProfile, useUpsertOwnership } from "@/hooks/useBranchOwnership"
 import { useGetBranches } from "@/hooks/useBranches"
+import { useGetRoles, useUserPermissions } from "@/hooks/usePermissions"
 import type { Owner } from "@/types/owner"
 
 import { Button } from "@/components/ui/button"
@@ -76,6 +78,73 @@ function getInitials(name?: string | null) {
   if (!name) return "??"
   const p = name.trim().split(/\s+/)
   return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : p[0].slice(0, 2).toUpperCase()
+}
+
+// ── Multi-role select ─────────────────────────────────────────
+
+function MultiRoleSelect({
+  roles,
+  selectedIds,
+  onChange,
+}: {
+  roles: { id: string; name: string; level: number }[]
+  selectedIds: string[]
+  onChange: (ids: string[]) => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  const selected = roles.filter((r) => selectedIds.includes(r.id))
+  const label =
+    selected.length === 0
+      ? "Select roles…"
+      : selected.length === 1
+      ? selected[0].name.replace(/_/g, " ")
+      : `${selected.length} roles`
+
+  function toggle(id: string) {
+    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button type="button" variant="outline" className="w-full justify-between font-normal">
+          <span className={cn("capitalize", selected.length === 0 && "text-muted-foreground")}>{label}</span>
+          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent
+        className="p-0"
+        style={{ width: "var(--radix-popover-trigger-width)" }}
+        align="start"
+      >
+        <div className="max-h-52 overflow-y-auto py-1">
+          {roles.length === 0 && (
+            <p className="px-3 py-2 text-xs text-muted-foreground">No roles available</p>
+          )}
+          {roles.map((r) => {
+            const checked = selectedIds.includes(r.id)
+            return (
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => toggle(r.id)}
+                className="flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-sm hover:bg-muted"
+              >
+                <div className={cn(
+                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
+                  checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
+                )}>
+                  {checked && <Check className="h-3 w-3" />}
+                </div>
+                <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
+              </button>
+            )
+          })}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
 }
 
 // ── Multi-branch select ───────────────────────────────────────
@@ -151,19 +220,21 @@ const createSchema = z.object({
   name_ar:   z.string(),
   phone:     z.string().min(7, "Enter a valid phone number"),
   password:  z.string().min(8, "Password must be at least 8 characters"),
+  role_ids:  z.array(z.string()).min(1, "Select at least one role"),
 })
 type CreateValues = z.infer<typeof createSchema>
 
 function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const isMobile = useIsMobile()
   const { data: branches = [] } = useGetBranches()
+  const { data: allRoles = [] } = useGetRoles()
   const createOwner = useCreateOwner()
 
   const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
 
   const form = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
-    defaultValues: { full_name: "", name_ar: "", phone: "", password: "" },
+    defaultValues: { full_name: "", name_ar: "", phone: "", password: "", role_ids: [] },
   })
 
   async function onSubmit(values: CreateValues) {
@@ -174,7 +245,7 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
         phone:      values.phone,
         password:   values.password,
         branchIds:  selectedBranchIds,
-        systemRole: "branch_owner",
+        roleIds:    values.role_ids,
       })
       toast.success("Owner created")
       form.reset()
@@ -233,10 +304,27 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
 
               <div className="space-y-4">
                 <div>
+                  <h3 className="text-sm font-semibold">Role</h3>
+                </div>
+                <FormField control={form.control} name="role_ids" render={({ field }) => (
+                  <FormItem>
+                    <FormControl>
+                      <MultiRoleSelect
+                        roles={allRoles}
+                        selectedIds={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+              </div>
+
+              <Separator />
+
+              <div className="space-y-4">
+                <div>
                   <h3 className="text-sm font-semibold">Branch Access</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Role is automatically set to <strong>Branch Owner</strong> — edit permissions in the Roles &amp; Permissions page.
-                  </p>
                 </div>
 
                 {/* Branch multi-select */}
@@ -270,24 +358,28 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
   )
 }
 
-// ── Edit Owner sheet ──────────────────────────────────────────
+// ── Owner sheet (details + roles + branches) ──────────────────
 
-function EditOwnerSheet({
+function OwnerSheet({
   profileId,
   open,
   onClose,
+  canEdit,
 }: {
   profileId: string
   open: boolean
   onClose: () => void
+  canEdit: boolean
 }) {
   const isMobile = useIsMobile()
   const { data: owners = [] }      = useGetOwners()
   const { data: allBranches = [] } = useGetBranches()
   const { data: ownerships = [] }  = useOwnershipByProfile(profileId)
+  const { data: allRoles = [] }    = useGetRoles()
   const addBranch    = useAddOwnerToBranch()
   const removeBranch = useRemoveOwnerFromBranch()
   const updateStocks = useUpsertOwnership()
+  const updateRoles  = useUpdateOwnerRoles()
 
   const [pendingBranchId, setPendingBranchId] = useState<string | null>(null)
   const [pendingStocks,   setPendingStocks]   = useState("")
@@ -296,6 +388,24 @@ function EditOwnerSheet({
   const user            = owners.find((u) => u.profile_id === profileId)
   const assignedIds     = new Set(user?.branches.map((b) => b.branch_id) ?? [])
   const availableBranches = allBranches.filter((b) => !assignedIds.has(b.id))
+  const assignableRoles = allRoles
+
+  // Current roles from the owner record
+  const [selectedRoleIds, setSelectedRoleIds] = useState<string[]>(() => user?.role_ids ?? [])
+
+  // Sync when user data loads
+  if (user && JSON.stringify(user.role_ids) !== JSON.stringify(selectedRoleIds) && !updateRoles.isPending) {
+    setSelectedRoleIds(user.role_ids ?? [])
+  }
+
+  async function handleRoleChange(ids: string[]) {
+    setSelectedRoleIds(ids)
+    try {
+      await updateRoles.mutateAsync({ profileId, roleIds: ids })
+    } catch {
+      toast.error("Failed to update roles")
+    }
+  }
 
   function ownershipFor(branchId: string) {
     return ownerships.find((o) => o.branch_id === branchId)
@@ -332,7 +442,7 @@ function EditOwnerSheet({
     const n = parseFloat(pendingStocks)
     if (!pendingBranchId || isNaN(n) || n <= 0) return
     try {
-      await addBranch.mutateAsync({ profileId, branchId: pendingBranchId, stocks: n })
+      await addBranch.mutateAsync({ profileId, branchId: pendingBranchId, stocks: n, roleIds: selectedRoleIds })
       toast.success("Branch added")
       setPendingBranchId(null)
       setPendingStocks("")
@@ -356,139 +466,195 @@ function EditOwnerSheet({
         side={isMobile ? "bottom" : "right"}
         className={cn("flex flex-col gap-0 overflow-hidden p-0", isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-lg")}
       >
+        {/* ── Header ────────────────────────────── */}
         <SheetHeader className="border-b px-6 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-bold">
               {getInitials(user?.full_name)}
             </div>
-            <div>
-              <SheetTitle className="text-left">{user?.full_name ?? "Owner"}</SheetTitle>
-              {user?.phone && (
-                <SheetDescription className="text-left">{user.phone}</SheetDescription>
-              )}
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <SheetTitle className="text-left">{user?.full_name ?? "Owner"}</SheetTitle>
+                {user?.is_master && (
+                  <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">
+                    <Crown className="h-2.5 w-2.5" />
+                    Master
+                  </span>
+                )}
+              </div>
+              <SheetDescription className="text-left space-y-0.5 mt-0.5">
+                {user?.phone && (
+                  <span className="flex items-center gap-1.5 text-xs">
+                    <Phone className="h-3 w-3 shrink-0" />
+                    {user.phone}
+                  </span>
+                )}
+                {user?.name_ar && (
+                  <span className="flex items-center gap-1.5 text-xs" dir="rtl" lang="ar">
+                    <Languages className="h-3 w-3 shrink-0" style={{ direction: "ltr" }} />
+                    {user.name_ar}
+                  </span>
+                )}
+              </SheetDescription>
             </div>
           </div>
         </SheetHeader>
 
         <div className="flex flex-col flex-1 overflow-hidden">
-          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+
+            {/* ── Roles ─────────────────────────────── */}
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Roles</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Determines permissions across all branches</p>
+              </div>
+
+              {canEdit ? (
+                <MultiRoleSelect
+                  roles={assignableRoles}
+                  selectedIds={selectedRoleIds}
+                  onChange={handleRoleChange}
+                />
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedRoleIds.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No roles assigned</p>
+                  ) : (
+                    assignableRoles
+                      .filter((r) => selectedRoleIds.includes(r.id))
+                      .map((r) => (
+                        <span key={r.id} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium capitalize">
+                          {r.name.replace(/_/g, " ")}
+                        </span>
+                      ))
+                  )}
+                </div>
+              )}
+            </div>
+
+            <Separator />
 
             {/* ── Assigned branches ─────────────────── */}
-            <div>
-              <h3 className="text-sm font-semibold">Branch Access & Equity</h3>
-              <p className="text-xs text-muted-foreground mt-0.5">Changes are applied immediately</p>
-            </div>
-
-            {user?.branches.length === 0 && (
-              <p className="text-sm text-muted-foreground py-2">No branches assigned yet.</p>
-            )}
-
-            <div className="space-y-2">
-              {user?.branches.map((b) => {
-                const draft   = stockDraft(b.branch_id)
-                const current = ownershipFor(b.branch_id)?.stocks ?? 0
-                const dirty   = draft !== "" && parseFloat(draft) !== current
-                return (
-                  <div key={b.assignment_id} className="flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                    <span className="flex-1 text-sm font-medium truncate">{b.branch_name}</span>
-                    <div className="flex items-center shrink-0 rounded-md border overflow-hidden h-8">
-                      <button
-                        type="button"
-                        className="px-2 h-full flex items-center border-r text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
-                        disabled={updateStocks.isPending}
-                        onClick={() => adjustStocks(b.branch_id, -1)}
-                      >
-                        <Minus className="h-3 w-3" />
-                      </button>
-                      <input
-                        type="number"
-                        min={1}
-                        className="w-10 text-center text-sm bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                        value={draft}
-                        onChange={(e) => setStockDrafts((d) => ({ ...d, [b.branch_id]: e.target.value }))}
-                        onBlur={() => dirty && handleSaveStocks(b.branch_id)}
-                        onKeyDown={(e) => e.key === "Enter" && dirty && handleSaveStocks(b.branch_id)}
-                      />
-                      <button
-                        type="button"
-                        className="px-2 h-full flex items-center border-l text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
-                        disabled={updateStocks.isPending}
-                        onClick={() => adjustStocks(b.branch_id, 1)}
-                      >
-                        <Plus className="h-3 w-3" />
-                      </button>
-                    </div>
-                    <Button
-                      size="icon" variant="ghost"
-                      className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
-                      disabled={removeBranch.isPending}
-                      onClick={() => handleRemove(b.assignment_id, b.branch_id, b.branch_name)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )
-              })}
-            </div>
-
-            {/* ── Add branch ────────────────────────── */}
-            {availableBranches.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-sm font-medium">Add Branch</p>
-
-                {availableBranches.map((b) => (
-                  pendingBranchId === b.id ? (
-                    <div key={b.id} className="rounded-lg border p-3 space-y-2">
-                      <p className="text-sm font-medium">{b.name}</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center rounded-md border overflow-hidden h-8">
-                          <button
-                            type="button"
-                            className="px-2 h-full flex items-center border-r text-muted-foreground hover:bg-muted transition-colors"
-                            onClick={() => setPendingStocks((v) => String(Math.max(1, (parseInt(v) || 1) - 1)))}
-                          >
-                            <Minus className="h-3 w-3" />
-                          </button>
-                          <input
-                            type="number"
-                            min={1}
-                            autoFocus
-                            className="w-10 text-center text-sm bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
-                            value={pendingStocks}
-                            onChange={(e) => setPendingStocks(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-                          />
-                          <button
-                            type="button"
-                            className="px-2 h-full flex items-center border-l text-muted-foreground hover:bg-muted transition-colors"
-                            onClick={() => setPendingStocks((v) => String((parseInt(v) || 0) + 1))}
-                          >
-                            <Plus className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <Button size="sm" onClick={handleAdd} disabled={!pendingStocks || addBranch.isPending}>
-                          Add
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { setPendingBranchId(null); setPendingStocks("1") }}>
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
-                    <button
-                      key={b.id}
-                      type="button"
-                      disabled={addBranch.isPending || !!pendingBranchId}
-                      onClick={() => { setPendingBranchId(b.id); setPendingStocks("1") }}
-                      className="flex w-full items-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground transition-colors disabled:opacity-50"
-                    >
-                      <Plus className="h-3.5 w-3.5 shrink-0" />
-                      {b.name}
-                    </button>
-                  )
-                ))}
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold">Branch Access & Equity</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">Stocks represent ownership share per branch</p>
               </div>
-            )}
+
+              {user?.branches.length === 0 && (
+                <p className="text-sm text-muted-foreground">No branches assigned yet.</p>
+              )}
+
+              <div className="space-y-2">
+                {user?.branches.map((b) => {
+                  const draft   = stockDraft(b.branch_id)
+                  const current = ownershipFor(b.branch_id)?.stocks ?? 0
+                  const dirty   = draft !== "" && parseFloat(draft) !== current
+                  return (
+                    <div key={b.assignment_id} className="flex items-center gap-3 rounded-lg border px-4 py-2.5">
+                      <span className="flex-1 text-sm font-medium truncate">{b.branch_name}</span>
+                      {canEdit && (
+                        <>
+                          <div className="flex items-center shrink-0 rounded-md border overflow-hidden h-8">
+                            <button
+                              type="button"
+                              className="px-2 h-full flex items-center border-r text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                              disabled={updateStocks.isPending}
+                              onClick={() => adjustStocks(b.branch_id, -1)}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              className="w-10 text-center text-sm bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                              value={draft}
+                              onChange={(e) => setStockDrafts((d) => ({ ...d, [b.branch_id]: e.target.value }))}
+                              onBlur={() => dirty && handleSaveStocks(b.branch_id)}
+                              onKeyDown={(e) => e.key === "Enter" && dirty && handleSaveStocks(b.branch_id)}
+                            />
+                            <button
+                              type="button"
+                              className="px-2 h-full flex items-center border-l text-muted-foreground hover:bg-muted transition-colors disabled:opacity-40"
+                              disabled={updateStocks.isPending}
+                              onClick={() => adjustStocks(b.branch_id, 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <Button
+                            size="icon" variant="ghost"
+                            className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
+                            disabled={removeBranch.isPending}
+                            onClick={() => handleRemove(b.assignment_id, b.branch_id, b.branch_name)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* ── Add branch ──────────────────────── */}
+              {canEdit && availableBranches.length > 0 && (
+                <div className="space-y-2">
+                  {availableBranches.map((b) => (
+                    pendingBranchId === b.id ? (
+                      <div key={b.id} className="rounded-lg border p-3 space-y-2">
+                        <p className="text-sm font-medium">{b.name}</p>
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center rounded-md border overflow-hidden h-8">
+                            <button
+                              type="button"
+                              className="px-2 h-full flex items-center border-r text-muted-foreground hover:bg-muted transition-colors"
+                              onClick={() => setPendingStocks((v) => String(Math.max(1, (parseInt(v) || 1) - 1)))}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </button>
+                            <input
+                              type="number"
+                              min={1}
+                              autoFocus
+                              className="w-10 text-center text-sm bg-transparent outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+                              value={pendingStocks}
+                              onChange={(e) => setPendingStocks(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+                            />
+                            <button
+                              type="button"
+                              className="px-2 h-full flex items-center border-l text-muted-foreground hover:bg-muted transition-colors"
+                              onClick={() => setPendingStocks((v) => String((parseInt(v) || 0) + 1))}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </button>
+                          </div>
+                          <Button size="sm" onClick={handleAdd} disabled={!pendingStocks || addBranch.isPending}>
+                            Add
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={() => { setPendingBranchId(null); setPendingStocks("1") }}>
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button
+                        key={b.id}
+                        type="button"
+                        disabled={addBranch.isPending || !!pendingBranchId}
+                        onClick={() => { setPendingBranchId(b.id); setPendingStocks("1") }}
+                        className="flex w-full items-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground transition-colors disabled:opacity-50"
+                      >
+                        <Plus className="h-3.5 w-3.5 shrink-0" />
+                        {b.name}
+                      </button>
+                    )
+                  ))}
+                </div>
+              )}
+            </div>
 
           </div>
 
@@ -504,7 +670,13 @@ function EditOwnerSheet({
 // ── Main page ─────────────────────────────────────────────────
 
 export function OwnersPage() {
+  const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
+  const canAddOwner    = canCreate("owners")
+  const canEditOwner   = canUpdate("owners")
+  const canDeleteOwner = canDeletePerm("owners")
+
   const { data: users, isLoading, isError } = useGetOwners()
+  const { data: allRoles = [] }             = useGetRoles()
   const deleteUser     = useDeleteOwner()
   const setManagerStatus = useSetOwnerManagerStatus()
 
@@ -537,10 +709,12 @@ export function OwnersPage() {
             </p>
           )}
         </div>
-        <Button onClick={() => setAddOpen(true)}>
-          <Plus className="h-4 w-4" />
-          Add Owner
-        </Button>
+        {canAddOwner && (
+          <Button onClick={() => setAddOpen(true)}>
+            <Plus className="h-4 w-4" />
+            Add Owner
+          </Button>
+        )}
       </div>
 
       {/* ── Error ────────────────────────────────────── */}
@@ -591,10 +765,12 @@ export function OwnersPage() {
                       <p className="text-sm font-medium">No owners found</p>
                       <p className="text-xs text-muted-foreground mt-0.5">Add your first owner to get started</p>
                     </div>
-                    <Button onClick={() => setAddOpen(true)}>
-                      <Plus className="h-4 w-4" />
-                      Add Owner
-                    </Button>
+                    {canAddOwner && (
+                      <Button onClick={() => setAddOpen(true)}>
+                        <Plus className="h-4 w-4" />
+                        Add Owner
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>
@@ -645,18 +821,14 @@ export function OwnersPage() {
 
                   {/* Role */}
                   <TableCell>
-                    {user.is_master ? (
-                      <span className="text-xs text-muted-foreground">Full access</span>
-                    ) : (() => {
-                      const roleNames = [...new Set(user.branches.map((b) => b.role_name).filter(Boolean))]
-                      if (roleNames.length === 0) {
-                        return <span className="text-xs text-muted-foreground">Full access</span>
-                      }
+                    {(() => {
+                      const roles = allRoles.filter((r) => user.role_ids.includes(r.id))
+                      if (roles.length === 0) return <span className="text-xs text-muted-foreground">—</span>
                       return (
                         <div className="flex flex-wrap gap-1">
-                          {roleNames.map((name) => (
-                            <span key={name} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium">
-                              {name}
+                          {roles.map((r) => (
+                            <span key={r.id} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium capitalize">
+                              {r.name.replace(/_/g, " ")}
                             </span>
                           ))}
                         </div>
@@ -668,43 +840,47 @@ export function OwnersPage() {
                   <TableCell onClick={(e) => e.stopPropagation()}>
                     <Switch
                       checked={user.is_fee_manager}
-                      disabled={setManagerStatus.isPending}
+                      disabled={setManagerStatus.isPending || !canEditOwner}
                       onCheckedChange={(checked) =>
-                        setManagerStatus.mutate({ profileId: user.profile_id, isFeeManager: checked })
+                        canEditOwner && setManagerStatus.mutate({ profileId: user.profile_id, isFeeManager: checked })
                       }
                     />
                   </TableCell>
 
                   {/* Actions */}
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="icon" variant="ghost" className="h-7 w-7">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEditTarget(user)}>
-                            <Pencil className="h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          {!user.is_master && (
-                            <>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={() => setDeleteTarget(user)}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
+                  {(canEditOwner || canDeleteOwner) && (
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-end">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button size="icon" variant="ghost" className="h-7 w-7">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            {canEditOwner && (
+                              <DropdownMenuItem onClick={() => setEditTarget(user)}>
+                                <Pencil className="h-4 w-4" />
+                                Edit
                               </DropdownMenuItem>
-                            </>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </TableCell>
+                            )}
+                            {canDeleteOwner && !user.is_master && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => setDeleteTarget(user)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  )}
                 </TableRow>
               )
             })}
@@ -715,12 +891,13 @@ export function OwnersPage() {
       {/* ── Add sheet ────────────────────────────────── */}
       <AddOwnerSheet open={addOpen} onClose={() => setAddOpen(false)} />
 
-      {/* ── Edit sheet ───────────────────────────────── */}
+      {/* ── Owner sheet ──────────────────────────────── */}
       {editTarget && (
-        <EditOwnerSheet
+        <OwnerSheet
           profileId={editTarget.profile_id}
           open={!!editTarget}
           onClose={() => setEditTarget(null)}
+          canEdit={canEditOwner}
         />
       )}
 

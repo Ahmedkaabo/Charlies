@@ -48,7 +48,9 @@ export function useGetExpenses(filters: ExpenseFilters) {
       } else if (filters.branchIds?.length) {
         query = query.in("branch_id", filters.branchIds)
       }
-      if (filters.categoryId) {
+      if (filters.categoryIds?.length) {
+        query = query.in("category_id", filters.categoryIds)
+      } else if (filters.categoryId) {
         query = query.eq("category_id", filters.categoryId)
       }
 

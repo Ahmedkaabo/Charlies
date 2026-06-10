@@ -62,15 +62,12 @@ export interface PayoutSettingsRow {
 }
 
 export function usePayoutSettings() {
-  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["payout-settings", accountId],
-    enabled: !!accountId,
+    queryKey: ["payout-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("payout_settings")
         .select("branch_id, rent_type, rent_value, favor_type, favor_value, company_share_type, company_share_value, mgmt_fee_type, mgmt_fee_value, updated_at")
-        .eq("account_id", accountId!)
       if (error) throw error
       const m = new Map<string, PayoutSettingsRow>()
       for (const r of (data ?? []) as unknown as PayoutSettingsRow[]) m.set(r.branch_id, r)
@@ -81,11 +78,10 @@ export function usePayoutSettings() {
 
 // ── Shared helper: upsert last-used settings ──────────────────
 
-async function upsertPayoutSettings(branches: PayoutRunInput["branches"], accountId: string | null) {
+async function upsertPayoutSettings(branches: PayoutRunInput["branches"]) {
   const { error } = await supabase.from("payout_settings").upsert(
     branches.map((b) => ({
       branch_id:           b.branch_id,
-      account_id:          accountId ?? undefined,
       rent_type:           b.rent_type,
       rent_value:          b.rent_value,
       favor_type:          b.favor_type,
@@ -133,7 +129,7 @@ export function useCreatePayoutRun() {
       if (brErr) throw brErr
       if (owErr) throw owErr
 
-      await upsertPayoutSettings(input.branches, accountId)
+      await upsertPayoutSettings(input.branches)
       return runId
     },
     onSuccess: (_id, vars) => {
@@ -145,7 +141,6 @@ export function useCreatePayoutRun() {
 
 export function useUpdatePayoutRun() {
   const qc = useQueryClient()
-  const { accountId } = useAuth()
   return useMutation({
     mutationFn: async ({ id, input }: { id: string; input: PayoutRunInput }) => {
       const { error: runErr } = await supabase
@@ -164,7 +159,7 @@ export function useUpdatePayoutRun() {
       if (brErr) throw brErr
       if (owErr) throw owErr
 
-      await upsertPayoutSettings(input.branches, accountId)
+      await upsertPayoutSettings(input.branches)
     },
     onSuccess: (_v, { input }) => {
       qc.invalidateQueries({ queryKey: ["payout-runs", input.month, input.year] })

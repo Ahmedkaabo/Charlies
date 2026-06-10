@@ -1,265 +1,290 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { createClient } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
-import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import { useAuth } from "@/hooks/useAuth"
 import type { Owner } from "@/types/owner"
+
+// ── Read — queries the `owners` table ────────────────────────
 
 export function useGetOwners() {
   const { accountId } = useAuth()
   return useQuery({
     queryKey: ["owners", accountId],
     queryFn: async () => {
-      const [ownersRes, accountRes] = await Promise.all([
-        supabase
+      if (!accountId) return []
+
+      // All owners are tracked in the owners table.
+      const ownersRes = await supabase
+        .from("owners")
+        .select(`
+          id, profile_id, branch_id, is_active, joined_at,
+          role_id, role_ids,
+          role:roles(id, name, level),
+          profile:profiles(id, full_name, name_ar, avatar_url, phone, is_fee_manager),
+          branch:branches(id, name, city)
+        `)
+        .order("joined_at", { ascending: false })
+
+      let ownerRows = ownersRes.data ?? []
+      if (ownersRes.error) {
+        const plain = await supabase
           .from("owners")
           .select(`
-            id, branch_id, joined_at, role_id, is_active,
+            id, profile_id, branch_id, is_active, joined_at,
             profile:profiles(id, full_name, name_ar, avatar_url, phone, is_fee_manager),
-            branch:branches(id, name, city),
-            role:roles(id, name, level)
+            branch:branches(id, name, city)
           `)
-          .eq("account_id", accountId!)
-          .eq("is_active", true),
-        supabase
-          .from("accounts")
-          .select("owner_id")
-          .eq("id", accountId!)
-          .single(),
-      ])
-
-      if (ownersRes.error) throw ownersRes.error
-
-      // Explicitly type the rows returned by Supabase for clarity
-      type OwnersRow = {
-        id: string
-        branch_id: string
-        joined_at: string | null
-        role_id: string | null
-        is_active: boolean
-        profile: {
-          id: string
-          full_name: string | null
-          name_ar: string | null
-          avatar_url: string | null
-          phone: string | null
-          is_fee_manager: boolean
-        } | null
-        branch: { id: string; name: string; city: string | null } | null
-        role: { id: string; name: string; level: number } | null
+          .order("joined_at", { ascending: false })
+        if (plain.error) throw plain.error
+        ownerRows = (plain.data ?? []).map((r) => ({ ...r, role_id: null, role_ids: [], role: null })) as typeof ownerRows
       }
-
-      const rows = (ownersRes.data ?? []) as OwnersRow[]
 
       const map = new Map<string, Owner>()
-      for (const row of rows) {
-        const p = row.profile as unknown as { id: string; full_name: string | null; name_ar: string | null; avatar_url: string | null; phone: string | null; is_fee_manager: boolean } | null
-        const b = row.branch as unknown as { id: string; name: string; city: string | null } | null
-        const r = row.role as unknown as { id: string; name: string; level: number } | null
-        if (!p || !b) continue
 
-        if (!map.has(p.id)) {
-          map.set(p.id, {
-            profile_id:     p.id,
-            full_name:      p.full_name,
-            name_ar:        p.name_ar,
-            avatar_url:     p.avatar_url,
-            phone:          p.phone,
-            is_fee_manager: p.is_fee_manager ?? false,
+      for (const row of ownerRows) {
+        const profile = (row as { profile?: unknown }).profile as {
+          id: string; full_name: string | null; name_ar: string | null
+          avatar_url: string | null; phone: string | null; is_fee_manager: boolean | null
+        } | null
+        const role    = (row as { role?: unknown }).role   as { id: string; name: string; level: number } | null
+        const roleId  = (row as { role_id?: string | null }).role_id ?? null
+        const roleIds = ((row as { role_ids?: string[] | null }).role_ids ?? [])
+
+        if (!map.has(row.profile_id)) {
+          map.set(row.profile_id, {
+            profile_id:     row.profile_id,
+            full_name:      profile?.full_name      ?? null,
+            name_ar:        profile?.name_ar        ?? null,
+            avatar_url:     profile?.avatar_url     ?? null,
+            phone:          profile?.phone          ?? null,
+            is_fee_manager: profile?.is_fee_manager ?? false,
             is_master:      false,
+            role_ids:       roleIds.length > 0 ? roleIds : (roleId ? [roleId] : []),
             branches:       [],
           })
+        } else {
+          // Merge role_ids from all rows for this profile
+          const existing = map.get(row.profile_id)!
+          const merged = [...new Set([...existing.role_ids, ...(roleIds.length > 0 ? roleIds : (roleId ? [roleId] : []))])]
+          existing.role_ids = merged
         }
 
-        map.get(p.id)!.branches.push({
-          assignment_id: row.id as string,
-          branch_id:     b.id,
-          branch_name:   b.name,
-          city:          b.city,
-          joined_at:     row.joined_at as string,
-          role_id:       (row.role_id as string | null) ?? null,
-          role_name:     r?.name ?? null,
-          role_level:    r?.level ?? null,
-        })
-      }
-
-      // Resolve the account's master owner (the person who created the org).
-      // If they already appear via branch assignments, mark them in-place.
-      // If they have no branches yet, fetch their profile and prepend them.
-      const masterProfileId = accountRes.data?.owner_id as string | null | undefined
-      if (masterProfileId) {
-        if (map.has(masterProfileId)) {
-          map.get(masterProfileId)!.is_master = true
-        } else {
-          const { data: mp } = await supabase
-            .from("profiles")
-            .select("id, full_name, name_ar, avatar_url, phone, is_fee_manager")
-            .eq("id", masterProfileId)
-            .single()
-          if (mp) {
-            const masterEntry: Owner = {
-              profile_id:     mp.id as string,
-              full_name:      mp.full_name as string | null,
-              name_ar:        mp.name_ar as string | null,
-              avatar_url:     mp.avatar_url as string | null,
-              phone:          mp.phone as string | null,
-              is_fee_manager: (mp.is_fee_manager as boolean) ?? false,
-              is_master:      true,
-              branches:       [],
-            }
-            // Prepend so master always appears first
-            const entries = Array.from(map.entries())
-            map.clear()
-            map.set(masterProfileId, masterEntry)
-            for (const [k, v] of entries) map.set(k, v)
+        if (row.is_active) {
+          const branch = (row as { branch?: unknown }).branch as { id: string; name: string; city: string | null } | null
+          if (branch) {
+            map.get(row.profile_id)!.branches.push({
+              assignment_id: row.id,
+              branch_id:     branch.id,
+              branch_name:   branch.name,
+              city:          branch.city,
+              joined_at:     row.joined_at,
+              role_ids:      roleIds.length > 0 ? roleIds : (roleId ? [roleId] : []),
+              role_id:       roleId,
+              role_name:     role?.name  ?? null,
+              role_level:    role?.level ?? null,
+            })
           }
         }
       }
 
-      return Array.from(map.values()) as Owner[]
+      return Array.from(map.values())
     },
-    enabled: !!accountId,
   })
 }
 
-interface CreateOwnerInput {
-  full_name: string
-  name_ar: string | null
-  phone: string
-  password: string
-  branchIds: string[]
-  systemRole: string
+// ── Read: all active owner-branch assignments (flat, no is_fee_manager) ──
+
+export interface OwnerAssignment {
+  profile_id: string
+  branch_id:  string
+  full_name:  string | null
+}
+
+export function useAllOwnerAssignments() {
+  return useQuery({
+    queryKey: ["owner-assignments-all"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("owners")
+        .select("profile_id, branch_id, profile:profiles(id, full_name)")
+        .eq("is_active", true)
+      if (error) throw error
+      return (data ?? []).map((row) => ({
+        profile_id: row.profile_id,
+        branch_id:  row.branch_id,
+        full_name:  (row.profile as { full_name?: string | null } | null)?.full_name ?? null,
+      })) as OwnerAssignment[]
+    },
+  })
+}
+
+// ── Read: owners for a specific branch (read-only view) ───────
+
+export function useGetOwnersByBranch(branchId: string | undefined) {
+  return useQuery({
+    queryKey: ["owners", "branch", branchId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("owners")
+        .select(`
+          id, profile_id, branch_id, joined_at,
+          profile:profiles(id, full_name, avatar_url, phone)
+        `)
+        .eq("branch_id", branchId!)
+        .eq("is_active", true)
+        .order("joined_at", { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!branchId,
+  })
+}
+
+// ── Create: new auth account + owner branch assignments ───────
+
+export interface CreateOwnerInput {
+  full_name:  string
+  name_ar?:  string | null
+  phone:      string
+  password:   string
+  branchIds:  string[]
+  roleIds:    string[]
+}
+
+async function createUserAuthAccount(
+  phone: string,
+  password: string,
+  fullName: string,
+): Promise<string> {
+  const email = `${phone.replace(/\D/g, "")}@charlies.internal`
+  const noopStorage = { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+  const temp = createClient(
+    import.meta.env.VITE_SUPABASE_URL as string,
+    import.meta.env.VITE_SUPABASE_ANON_KEY as string,
+    { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storage: noopStorage } },
+  )
+  const { data, error } = await temp.auth.signUp({
+    email,
+    password,
+    options: { data: { full_name: fullName, phone, must_change_password: true } },
+  })
+  if (error) throw new Error(error.message)
+  if (!data.user) throw new Error("Failed to create account")
+  return data.user.id
 }
 
 export function useCreateOwner() {
-  const { accountId } = useAuth()
   const qc = useQueryClient()
+  const { accountId } = useAuth()
   return useMutation({
     mutationFn: async (input: CreateOwnerInput) => {
-      const email = `${input.phone.replace(/\D/g, "")}@charlies.internal`
-      const client = supabaseAdmin ?? supabase
-      const { data: authData, error: authError } = await (supabaseAdmin
-        ? supabaseAdmin.auth.admin.createUser({
-            email,
-            password: input.password,
-            email_confirm: true,
-            user_metadata: {
-              full_name:            input.full_name,
-              phone:                input.phone,
-              system_role:          input.systemRole,
-              must_change_password: true,
-            },
-          })
-        : supabase.auth.signUp({
-            email,
-            password: input.password,
-            options: { data: { full_name: input.full_name, phone: input.phone, system_role: input.systemRole, must_change_password: true } },
-          }))
+      const profileId = await createUserAuthAccount(
+        input.phone.trim(),
+        input.password,
+        input.full_name.trim(),
+      )
 
-      if (authError) throw authError
-      const userId = authData.user?.id
-      if (!userId) throw new Error("User creation failed")
-
-      await client
+      await supabase
         .from("profiles")
-        .update({ account_id: accountId, name_ar: input.name_ar })
-        .eq("id", userId)
+        .update({
+          account_id: accountId ?? undefined,
+          ...(input.name_ar ? { name_ar: input.name_ar.trim() } : {}),
+        })
+        .eq("id", profileId)
 
-      if (input.branchIds.length > 0) {
-        const rows = input.branchIds.map((branch_id) => ({
-          profile_id: userId,
-          branch_id,
-          account_id: accountId,
-          is_active: true,
-        }))
-        const { error } = await client.from("owners").insert(rows)
+      for (const branchId of input.branchIds) {
+        const { error } = await supabase
+          .from("owners")
+          .upsert(
+            { branch_id: branchId, profile_id: profileId, is_active: true, account_id: accountId ?? undefined, role_ids: input.roleIds, role_id: null },
+            { onConflict: "branch_id,profile_id" },
+          )
         if (error) throw error
       }
-
-      return userId
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["owners"] })
+      qc.invalidateQueries({ queryKey: ["branches", "counts"] })
     },
   })
 }
+
+// ── Add owner to a single branch + set their equity stocks ───
 
 export function useAddOwnerToBranch() {
   const qc = useQueryClient()
+  const { accountId } = useAuth()
   return useMutation({
-    mutationFn: async ({ profileId, branchId, stocks }: { profileId: string; branchId: string; stocks: number }) => {
-      const { error: ownerErr } = await supabase
+    mutationFn: async ({ profileId, branchId, stocks, roleIds = [] }: { profileId: string; branchId: string; stocks: number; roleIds?: string[] }) => {
+      const { error } = await supabase
         .from("owners")
-        .upsert({ profile_id: profileId, branch_id: branchId, is_active: true }, { onConflict: "profile_id,branch_id" })
-      if (ownerErr) throw ownerErr
-
-      const { error: ownershipErr } = await supabase
+        .upsert(
+          { branch_id: branchId, profile_id: profileId, is_active: true, account_id: accountId ?? undefined, role_ids: roleIds, role_id: null },
+          { onConflict: "branch_id,profile_id" },
+        )
+      if (error) throw error
+      const { error: ownerErr } = await supabase
         .from("branch_ownership")
-        .upsert({ profile_id: profileId, branch_id: branchId, stocks }, { onConflict: "branch_id,profile_id" })
-      if (ownershipErr) throw ownershipErr
+        .upsert(
+          { branch_id: branchId, profile_id: profileId, stocks },
+          { onConflict: "branch_id,profile_id" },
+        )
+      if (ownerErr) throw ownerErr
     },
-    onSuccess: () => {
+    onSuccess: (_, { branchId }) => {
       qc.invalidateQueries({ queryKey: ["owners"] })
-      qc.invalidateQueries({ queryKey: ["branch-ownership"] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership", branchId] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership-all"] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership", "profile"] })
+      qc.invalidateQueries({ queryKey: ["branches", "counts"] })
     },
   })
 }
+
+// ── Remove owner from a single branch + clean up equity ──────
 
 export function useRemoveOwnerFromBranch() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ assignmentId, branchId, profileId }: { assignmentId: string; branchId: string; profileId: string }) => {
-      const { error: ownerErr } = await supabase
-        .from("owners")
-        .update({ is_active: false })
-        .eq("id", assignmentId)
-      if (ownerErr) throw ownerErr
-
-      await supabase
-        .from("branch_ownership")
-        .delete()
-        .eq("branch_id", branchId)
-        .eq("profile_id", profileId)
+      // Remove equity record (ignore if none exists)
+      await supabase.from("branch_ownership").delete().eq("branch_id", branchId).eq("profile_id", profileId)
+      // Deactivate branch access
+      const { error } = await supabase.from("owners").update({ is_active: false }).eq("id", assignmentId)
+      if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_, { branchId }) => {
       qc.invalidateQueries({ queryKey: ["owners"] })
-      qc.invalidateQueries({ queryKey: ["branch-ownership"] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership", branchId] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership-all"] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership", "profile"] })
+      qc.invalidateQueries({ queryKey: ["branches", "counts"] })
+      qc.invalidateQueries({ queryKey: ["members"] })
     },
   })
 }
 
-export function useDeleteOwner() {
+// ── Update roles: set role_ids across ALL branch rows for a profile ──
+
+export function useUpdateOwnerRoles() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (profileId: string) => {
+    mutationFn: async ({ profileId, roleIds }: { profileId: string; roleIds: string[] }) => {
       const { error } = await supabase
         .from("owners")
-        .update({ is_active: false })
+        .update({ role_ids: roleIds, role_id: null })
         .eq("profile_id", profileId)
+        .eq("is_active", true)
       if (error) throw error
     },
-    onSuccess: () => {
+    onSuccess: (_, { profileId }) => {
       qc.invalidateQueries({ queryKey: ["owners"] })
+      qc.invalidateQueries({ queryKey: ["my-branch-roles", profileId] })
     },
   })
 }
 
-export function useAllOwnerAssignments() {
-  return useQuery({
-    queryKey: ["owners", "all-assignments"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("owners")
-        .select("profile_id, branch_id, profile:profiles(full_name)")
-        .eq("is_active", true)
-      if (error) throw error
-      return (data ?? []).map((row) => ({
-        profile_id: row.profile_id as string,
-        branch_id:  row.branch_id as string,
-        full_name:  (row.profile as unknown as { full_name: string | null } | null)?.full_name ?? null,
-      }))
-    },
-  })
-}
+// ── Toggle manager status (receives management fee share) ────
 
 export function useSetOwnerManagerStatus() {
   const qc = useQueryClient()
@@ -273,6 +298,28 @@ export function useSetOwnerManagerStatus() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["owners"] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership-all"] })
+      qc.invalidateQueries({ queryKey: ["branch-ownership"] })
+    },
+  })
+}
+
+// ── Delete owner: deactivate all branch assignments ───────────
+
+export function useDeleteOwner() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (profileId: string) => {
+      const { error } = await supabase
+        .from("owners")
+        .update({ is_active: false })
+        .eq("profile_id", profileId)
+      if (error) throw error
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["owners"] })
+      qc.invalidateQueries({ queryKey: ["branches", "counts"] })
+      qc.invalidateQueries({ queryKey: ["members"] })
     },
   })
 }

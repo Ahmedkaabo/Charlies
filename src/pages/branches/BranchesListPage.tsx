@@ -4,6 +4,7 @@ import { toast } from "sonner"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/hooks/useAuth"
+import { useUserPermissions } from "@/hooks/usePermissions"
 import { useMyBranches } from "@/hooks/useAttendance"
 import {
   useGetBranches,
@@ -152,10 +153,16 @@ function BranchEditContent({
 export function BranchesListPage() {
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
+  const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
   const { data: allBranches, isLoading, isError } = useGetBranches()
   const { data: myBranches = [] } = useMyBranches(profile?.id)
   // Admins always see all branches; non-admins are scoped to their own
   const branches = isAdmin ? allBranches : myBranches
+
+  const canAddBranch    = canCreate("branches")
+  const canEditBranch   = canUpdate("branches")
+  const canDeleteBranch = canDeletePerm("branches")
+  const hasActions      = canEditBranch || canDeleteBranch
   const { data: counts } = useGetBranchCounts()
   const deleteBranch    = useDeleteBranch()
   const duplicateBranch = useDuplicateBranch()
@@ -215,7 +222,7 @@ export function BranchesListPage() {
               : `${branches?.length ?? 0} total · ${activeCount} active`}
           </p>
         </div>
-        {isAdmin && (
+        {canAddBranch && (
           <Button onClick={() => setDrawer({ type: "create" })}>
             <Plus className="h-4 w-4" />
             Add Branch
@@ -272,7 +279,7 @@ export function BranchesListPage() {
                 <TableHead>Owners</TableHead>
                 <TableHead>Staff</TableHead>
                 <TableHead>Status</TableHead>
-                {isAdmin && <TableHead className="w-10" />}
+                {hasActions && <TableHead className="w-10" />}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -285,13 +292,13 @@ export function BranchesListPage() {
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-4 w-8" /></TableCell>
                       <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                      {isAdmin && <TableCell />}
+                      {hasActions && <TableCell />}
                     </TableRow>
                   ))
                 : filtered.length === 0
                   ? (
                     <TableRow>
-                      <TableCell colSpan={isAdmin ? 7 : 6}>
+                      <TableCell colSpan={hasActions ? 7 : 6}>
                         <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                             <Store className="h-5 w-5 text-muted-foreground" />
@@ -342,7 +349,7 @@ export function BranchesListPage() {
                           {branch.is_active ? "Active" : "Inactive"}
                         </Badge>
                       </TableCell>
-                      {isAdmin && (
+                      {hasActions && (
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -356,35 +363,43 @@ export function BranchesListPage() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setDrawer({ type: "edit", id: branch.id })
-                                }}
-                              >
-                                <Pencil className="h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDuplicate(branch)
-                                }}
-                              >
-                                <Copy className="h-4 w-4" />
-                                Duplicate
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  setPendingDelete(branch)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
+                              {canEditBranch && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    setDrawer({ type: "edit", id: branch.id })
+                                  }}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
+                              {canAddBranch && (
+                                <DropdownMenuItem
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDuplicate(branch)
+                                  }}
+                                >
+                                  <Copy className="h-4 w-4" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                              )}
+                              {canDeleteBranch && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      setPendingDelete(branch)
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

@@ -1,25 +1,16 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react"
 import type { Session, User } from "@supabase/supabase-js"
-import { useQuery } from "@tanstack/react-query"
+import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
-import { supabaseAdmin } from "@/lib/supabaseAdmin"
 import type { Permission, Resource } from "@/types/permission"
 
 // ── Types ─────────────────────────────────────────────────────
-
-export type SystemRole =
-  | "owner"
-  | "branch_owner"
-  | "area_manager"
-  | "branch_manager"
-  | "staff"
 
 export interface Profile {
   id: string
   full_name: string | null
   avatar_url: string | null
   phone: string | null
-  system_role: SystemRole
   is_admin: boolean
   account_id: string | null
   created_at: string
@@ -29,10 +20,12 @@ interface AuthContextValue {
   user: User | null
   session: Session | null
   profile: Profile | null
-  systemRole: SystemRole
+  /** True when the user is the org admin (created the org or explicitly granted admin). */
   isAdmin: boolean
   accountId: string | null
   accountCode: number | null
+  /** URL-safe slug identifying the organisation — used in invite links. */
+  orgSlug: string | null
   mustChangePassword: boolean
   loading: boolean
   // Resolved permission helpers — available as soon as loading = false
@@ -45,7 +38,13 @@ interface AuthContextValue {
   roleLevel: number
   isOwner:   boolean
   signIn: (identifier: string, password: string) => Promise<{ error: string | null }>
-  signUp: (email: string, password: string, fullName: string, phone?: string, inviteToken?: string) => Promise<{ error: string | null }>
+  signUp: (
+    email: string,
+    password: string,
+    fullName: string,
+    phone?: string,
+    opts?: { inviteToken?: string; orgName?: string }
+  ) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   resetPassword: (email: string) => Promise<{ error: string | null }>
 }
@@ -56,10 +55,6 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 // ── Helpers ───────────────────────────────────────────────────
 
-// Checks the current user's active status.
-// System admins (is_admin = true) are always active.
-// For everyone else: no records → brand-new user, not yet assigned → active.
-// Has records → at least one must be is_active = true.
 async function checkUserActive(userId: string): Promise<boolean> {
   const { data: profileRow } = await supabase
     .from("profiles")
@@ -82,128 +77,197 @@ async function checkUserActive(userId: string): Promise<boolean> {
 
 type BranchRole = { role_id: string | null; role: { level: number } | null; isOwner: boolean }
 
-// Fetch the user's active branch roles (staff + owners tables).
-async function fetchBranchRoles(profileId: string): Promise<BranchRole[]> {
+async function fetchBranchRoles(
+  profileId: string,
+  profileIsAdmin: boolean,
+  accountId: string | null,
+): Promise<BranchRole[]> {
+  // Org admins always get full access — no role lookup needed.
+  if (profileIsAdmin) {
+    return [{ role_id: null as string | null, role: { level: -1 }, isOwner: false }]
+  }
+
   const [staffRes, ownerRes] = await Promise.all([
-    supabase.from("staff").select("role_id").eq("profile_id", profileId).eq("is_active", true),
-    supabase.from("owners").select("id, role_id").eq("profile_id", profileId).eq("is_active", true).limit(1),
+    supabase.from("staff").select("role_id, role_ids").eq("profile_id", profileId).eq("is_active", true),
+    // No .limit(1) — collect role_ids from ALL branch rows; a random single row may have empty role_ids
+    supabase.from("owners").select("role_id, role_ids").eq("profile_id", profileId).eq("is_active", true),
   ])
   if (staffRes.error) throw staffRes.error
 
-  type OwnerRow = { id: string; role_id?: string | null }
-  let ownerRow: OwnerRow | undefined
-
-  if (!ownerRes.error) {
-    ownerRow = (ownerRes.data ?? [])[0] as OwnerRow | undefined
-  } else {
-    // role_id column may not exist yet — plain existence check
+  // Determine owner status; if the owner query errored, fall back to a plain existence check
+  let isOwner = !ownerRes.error && (ownerRes.data ?? []).length > 0
+  if (ownerRes.error) {
     const { data: plain } = await supabase
       .from("owners").select("id").eq("profile_id", profileId).eq("is_active", true).limit(1)
-    if ((plain ?? []).length > 0) ownerRow = { id: (plain![0] as { id: string }).id, role_id: null }
+    if ((plain ?? []).length > 0) {
+      // Is an owner but role data unavailable — grant full access via sentinel
+      return [{ role_id: null as string | null, role: { level: -1 }, isOwner: true }]
+    }
   }
 
-  if (ownerRow) {
-    const rid = ownerRow.role_id ?? null
-    if (rid) return [{ role_id: rid, role: { level: 1 }, isOwner: true }]
+  // Collect role IDs from ALL rows of each table (union across branches)
+  const ownerRoleIds = new Set<string>()
+  const staffRoleIds = new Set<string>()
 
-    // No explicit role — look up the "Branch Owner" system role
-    const { data: branchOwnerRole } = await supabase
-      .from("roles").select("id").eq("name", "Branch Owner").maybeSingle()
-    if (branchOwnerRole?.id) return [{ role_id: branchOwnerRole.id, role: { level: 1 }, isOwner: true }]
-
-    // Branch Owner role not yet seeded → full-access sentinel
-    return [{ role_id: null as string | null, role: { level: -1 }, isOwner: true }]
+  for (const r of (ownerRes.data ?? []) as any[]) {
+    const ids: string[] = r.role_ids?.length ? r.role_ids : (r.role_id ? [r.role_id] : [])
+    ids.forEach((id: string) => ownerRoleIds.add(id))
+  }
+  for (const r of (staffRes.data ?? []) as any[]) {
+    const ids: string[] = r.role_ids?.length ? r.role_ids : (r.role_id ? [r.role_id] : [])
+    ids.forEach((id: string) => staffRoleIds.add(id))
   }
 
-  return (staffRes.data ?? []).map((r) => ({ role_id: r.role_id, role: null, isOwner: false }))
+  // Resolve levels for all role IDs in one query
+  const allIds = new Set<string>([...ownerRoleIds, ...staffRoleIds])
+  const roleLevelMap: Record<string, number> = {}
+  if (allIds.size > 0) {
+    const { data: rd } = await supabase.from("roles").select("id, level").in("id", [...allIds])
+    for (const r of rd ?? []) roleLevelMap[r.id] = r.level
+  }
+
+  if (isOwner) {
+    if (ownerRoleIds.size > 0) {
+      return [...ownerRoleIds].map(id => ({ role_id: id, role: { level: roleLevelMap[id] ?? 1 }, isOwner: true }))
+    }
+    // Owner has no roles assigned — isOwner flag preserved but no permissions
+    return [{ role_id: null as string | null, role: { level: 99 }, isOwner: true }]
+  }
+
+  // Staff: one BranchRole entry per unique role across all branches
+  return [...staffRoleIds].map(id => ({ role_id: id, role: { level: roleLevelMap[id] ?? 99 }, isOwner: false }))
 }
 
-// Compute the resolved permission helpers from branch roles + permissions table.
 function computePerms(
-  isAdmin: boolean,
+  _isAdmin: boolean,
   branchRoles: BranchRole[] | undefined,
   permissions: Permission[] | undefined,
-): Omit<AuthContextValue, "user"|"session"|"profile"|"systemRole"|"isAdmin"|"accountId"|"accountCode"|"mustChangePassword"|"loading"|"signIn"|"signUp"|"signOut"|"resetPassword"> {
+): Omit<AuthContextValue, "user"|"session"|"profile"|"isAdmin"|"accountId"|"accountCode"|"orgSlug"|"mustChangePassword"|"loading"|"signIn"|"signUp"|"signOut"|"resetPassword"> {
   const full = (ownerFlag: boolean) => ({
     canCreate: () => true, canRead: () => true, canUpdate: () => true, canDelete: () => true,
     canMoveTreasury: () => true, canSeeTreasury: () => true,
     roleLevel: 0, isOwner: ownerFlag,
   })
 
-  if (isAdmin) return full(false)
+  // No isAdmin bypass: all users (including org admin) go through the roles/permissions
+  // system. The admin user is assigned the "Admin" system role by fetchBranchRoles.
   if (!branchRoles) return {
     canCreate: () => false, canRead: () => false, canUpdate: () => false, canDelete: () => false,
     canMoveTreasury: () => false, canSeeTreasury: () => false,
     roleLevel: 99, isOwner: false,
   }
 
-  const sorted = branchRoles.slice().sort((a, b) => {
-    const la = (a.role as { level?: number } | null)?.level ?? 99
-    const lb = (b.role as { level?: number } | null)?.level ?? 99
-    return la - lb
-  })
+  const allRoleIds = new Set<string>(
+    branchRoles.map(r => r.role_id).filter((id): id is string => id !== null)
+  )
+  const levels = branchRoles.map(r => (r.role as { level?: number } | null)?.level ?? 99)
+  const myRoleLevel = levels.length ? Math.min(...levels) : 99
+  const isOwner = branchRoles.some(r => (r as { isOwner?: boolean }).isOwner === true)
 
-  const myRoleId    = sorted[0]?.role_id ?? null
-  const myRoleLevel = (sorted[0]?.role as { level?: number } | null)?.level ?? 99
-  const isOwner     = (sorted[0] as { isOwner?: boolean } | undefined)?.isOwner === true
+  if (myRoleLevel === -1) return full(isOwner)
 
-  if (myRoleLevel === -1) return full(true)
-
-  const perm = (resource: Resource) =>
-    myRoleId && permissions
-      ? permissions.find((p) => p.role_id === myRoleId && p.resource === resource)
-      : undefined
-
-  // Owners (in the owners table) always have full read access — they should see
-  // the same nav items and page structure as the system admin. Write/delete
-  // permissions still come from their assigned role.
-  if (isOwner) {
-    return {
-      canCreate: (r) => perm(r)?.can_create ?? false,
-      canRead:   () => true,
-      canUpdate: (r) => perm(r)?.can_update ?? false,
-      canDelete: (r) => perm(r)?.can_delete ?? false,
-      canMoveTreasury: () => perm("balance")?.can_move_treasury ?? false,
-      canSeeTreasury:  () => true,
-      roleLevel: myRoleLevel,
-      isOwner: true,
-    }
-  }
+  // Grant permission if ANY of the user's roles has it
+  const anyPerm = (resource: Resource, field: string): boolean =>
+    allRoleIds.size > 0 && !!permissions?.some(
+      p => allRoleIds.has(p.role_id) && p.resource === resource && (p as any)[field]
+    )
 
   return {
-    canCreate: (r) => perm(r)?.can_create ?? false,
-    canRead:   (r) => perm(r)?.can_read   ?? false,
-    canUpdate: (r) => perm(r)?.can_update ?? false,
-    canDelete: (r) => perm(r)?.can_delete ?? false,
-    canMoveTreasury: () => perm("balance")?.can_move_treasury ?? false,
-    canSeeTreasury:  () => perm("balance")?.can_see_treasury  ?? false,
+    canCreate:       (r) => anyPerm(r, 'can_create'),
+    canRead:         (r) => anyPerm(r, 'can_read'),
+    canUpdate:       (r) => anyPerm(r, 'can_update'),
+    canDelete:       (r) => anyPerm(r, 'can_delete'),
+    canMoveTreasury: ()  => anyPerm('treasury', 'can_create'),
+    canSeeTreasury:  ()  => anyPerm('treasury', 'can_read'),
     roleLevel: myRoleLevel,
     isOwner,
   }
 }
 
+// Generate a URL-safe slug from a plain-text org name.
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+}
+
 // ── Provider ──────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const queryClient = useQueryClient()
   const [session,     setSession]     = useState<Session | null>(null)
   const [user,        setUser]        = useState<User | null>(null)
   const [profile,     setProfile]     = useState<Profile | null>(null)
   const [accountCode, setAccountCode] = useState<number | null>(null)
+  const [orgSlug,     setOrgSlug]     = useState<string | null>(null)
   const [authLoading, setAuthLoading] = useState(true)
 
   const userIdRef           = useRef<string | null>(null)
   const profileLoadedForRef = useRef<string | null>(null)
 
   async function loadProfile(userId: string | undefined) {
-    if (!userId) { setProfile(null); setAccountCode(null); return }
-    const { data } = await supabase
+    if (!userId) { setProfile(null); setAccountCode(null); setOrgSlug(null); return }
+
+    // Try with slug (post-migration-085); fall back if column doesn't exist yet.
+    type Row = Profile & { account?: { code: number; slug?: string } | null }
+    let row: Row | null = null
+
+    const { data: withSlug, error: slugErr } = await supabase
       .from("profiles")
-      .select("id, full_name, avatar_url, phone, system_role, is_admin, account_id, created_at, account:accounts(code)")
+      .select("id, full_name, avatar_url, phone, is_admin, account_id, created_at, account:accounts(code, slug)")
       .eq("id", userId)
       .single()
-    const row = data as (Profile & { account?: { code: number } | null }) | null
+
+    if (!slugErr) {
+      row = withSlug as Row | null
+    } else {
+      // Pre-migration: slug column absent — query without it
+      const { data: noSlug } = await supabase
+        .from("profiles")
+        .select("id, full_name, avatar_url, phone, is_admin, account_id, created_at, account:accounts(code)")
+        .eq("id", userId)
+        .single()
+      row = noSlug as Row | null
+    }
+
+    // If the profile has no account_id (e.g. admin-created staff whose
+    // sync trigger hasn't run yet), find it from the staff table and
+    // repair the profile so all account-scoped queries work immediately.
+    if (row && !row.account_id) {
+      const { data: staffRow } = await supabase
+        .from("staff")
+        .select("account_id")
+        .eq("profile_id", userId)
+        .eq("is_active", true)
+        .not("account_id", "is", null)
+        .limit(1)
+        .maybeSingle()
+
+      if (staffRow?.account_id) {
+        await supabase
+          .from("profiles")
+          .update({ account_id: staffRow.account_id })
+          .eq("id", userId)
+
+        const { data: patched } = await supabase
+          .from("profiles")
+          .select("id, full_name, avatar_url, phone, is_admin, account_id, created_at, account:accounts(code, slug)")
+          .eq("id", userId)
+          .single()
+        if (patched) row = patched as Row
+
+        // Force branchRoles/permissions to refetch now that account is known
+        queryClient.invalidateQueries({ queryKey: ["my-branch-roles"] })
+        queryClient.invalidateQueries({ queryKey: ["permissions", staffRow.account_id] })
+      }
+    }
+
     setProfile(row ? { ...row, account: undefined } as Profile : null)
     setAccountCode(row?.account?.code ?? null)
+    setOrgSlug(row?.account?.slug ?? null)
   }
 
   async function verifyActiveOrSignOut(userId: string) {
@@ -211,45 +275,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!active) await supabase.auth.signOut()
   }
 
-  // ── Pre-load permissions table (starts as soon as session is known) ──
-  // Runs in parallel with loadProfile — cached by the time any page needs it.
+  // ── Pre-load permissions table ────────────────────────────────
+
+  const accountId = profile?.account_id ?? null
 
   const { data: permissions, isLoading: permsLoading } = useQuery({
-    queryKey: ["permissions"],
+    queryKey: ["permissions", accountId],
     queryFn: async () => {
       const { data, error } = await supabase.from("permissions").select("*")
       if (error) throw error
       return (data ?? []) as Permission[]
     },
-    enabled: !!user,
-    staleTime: 5 * 60_000,
+    enabled: !!user && !!accountId,
+    staleTime: 30_000,
   })
 
-  // ── Pre-load branch roles (starts after profile is known) ──────────────
+  // ── Pre-load branch roles ─────────────────────────────────────
 
-  const isAdmin = profile?.is_admin === true || profile?.system_role === "owner"
+  const isAdmin = profile?.is_admin === true
 
   const { data: branchRoles, isLoading: rolesLoading } = useQuery({
     queryKey: ["my-branch-roles", profile?.id],
-    queryFn: () => fetchBranchRoles(profile!.id),
-    enabled: !!profile?.id && !isAdmin,
+    queryFn: () => fetchBranchRoles(profile!.id, isAdmin, profile?.account_id ?? null),
+    enabled: !!profile?.id,
     staleTime: 60_000,
   })
 
-  // ── Unified loading state ──────────────────────────────────────────────
-  // Admins: loading = auth only (no permission queries needed)
-  // Non-admins: loading = auth + permissions table + branch roles
-
-  const loading = authLoading || (!isAdmin && !!profile && (permsLoading || rolesLoading))
-
-  // ── Resolved permission helpers ────────────────────────────────────────
+  const loading = authLoading || (!!profile && (permsLoading || rolesLoading))
 
   const perms = useMemo(
-    () => computePerms(isAdmin, isAdmin ? [] : branchRoles, permissions),
+    () => computePerms(isAdmin, branchRoles, permissions),
     [isAdmin, branchRoles, permissions],
   )
 
-  // ── Session bootstrap & auth state listener ───────────────────────────
+  // ── Session bootstrap ─────────────────────────────────────────
 
   useEffect(() => {
     supabase.auth.getSession().then(async ({ data }) => {
@@ -273,6 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!newSession) {
           setProfile(null)
           setAccountCode(null)
+          setOrgSlug(null)
           profileLoadedForRef.current = null
         } else {
           if (profileLoadedForRef.current !== newSession.user?.id) {
@@ -289,7 +349,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (event === "TOKEN_REFRESHED" && newSession.user) {
-            profileLoadedForRef.current = null  // force profile reload after refresh
+            profileLoadedForRef.current = null
             verifyActiveOrSignOut(newSession.user.id)
           }
         }
@@ -299,7 +359,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => listener.subscription.unsubscribe()
   }, [])
 
-  // ── Periodic active-status check ──────────────────────────────────────
+  // ── Periodic active-status check ─────────────────────────────
 
   useEffect(() => {
     const check = () => { if (userIdRef.current) verifyActiveOrSignOut(userIdRef.current) }
@@ -309,11 +369,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => { clearInterval(interval); document.removeEventListener("visibilitychange", handleVisibility) }
   }, [])
 
-  const systemRole: SystemRole = profile?.system_role ?? "staff"
-  const accountId              = profile?.account_id ?? null
-  const mustChangePassword     = user?.user_metadata?.must_change_password === true
 
-  // ── Auth actions ──────────────────────────────────────────────────────
+  const mustChangePassword = user?.user_metadata?.must_change_password === true
+
+  // ── Auth actions ──────────────────────────────────────────────
 
   async function signIn(identifier: string, password: string) {
     const isEmail = identifier.includes("@")
@@ -345,14 +404,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return { error: null }
   }
 
-  async function signUp(email: string, password: string, fullName: string, phone?: string, inviteToken?: string) {
+  async function signUp(
+    email: string,
+    password: string,
+    fullName: string,
+    phone?: string,
+    opts?: { inviteToken?: string; orgName?: string },
+  ) {
+    const { inviteToken, orgName } = opts ?? {}
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         data: {
-          full_name:   fullName,
-          phone:       phone ?? null,
+          full_name: fullName,
+          phone:     phone ?? null,
+          // Keep system_role in metadata for backwards-compat with the pre-085 trigger
+          // (migration 063 reads it to set is_admin=true for new org owners).
+          // The trigger in migration 085 ignores this field — safe to remove after 085 is applied.
           system_role: inviteToken ? "staff" : "owner",
         },
       },
@@ -360,12 +430,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) return { error: error.message ?? null }
 
     if (data.user) {
-      const db = supabaseAdmin ?? supabase
-      const profilePatch: Record<string, unknown> = {}
-      if (phone) profilePatch.phone = phone
-
       if (inviteToken) {
-        const { data: invite, error: inviteErr } = await db
+        // ── Invited user: link profile to the invite's account ──
+        const { data: invite, error: inviteErr } = await supabase
           .from("account_invites")
           .select("id, account_id, expires_at, max_uses, uses")
           .eq("token", inviteToken)
@@ -375,17 +442,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (invite.expires_at && new Date(invite.expires_at) < new Date()) return { error: "Invite link has expired" }
         if (invite.max_uses !== null && invite.uses >= invite.max_uses) return { error: "Invite link has reached its usage limit" }
 
-        profilePatch.account_id = invite.account_id
-        await db.from("profiles").update(profilePatch).eq("id", data.user.id)
-        await db.from("account_invites").update({ uses: invite.uses + 1 }).eq("id", invite.id)
+        await supabase
+          .from("profiles")
+          .update({ account_id: invite.account_id, ...(phone ? { phone } : {}) })
+          .eq("id", data.user.id)
+
+        await supabase
+          .from("account_invites")
+          .update({ uses: invite.uses + 1 })
+          .eq("id", invite.id)
+
       } else {
-        const { data: account } = await db
-          .from("accounts")
-          .insert({ name: `${fullName}'s Organization`, owner_id: data.user.id })
-          .select("id")
-          .single()
-        if (account) profilePatch.account_id = account.id
-        await db.from("profiles").update(profilePatch).eq("id", data.user.id)
+        // ── New org: call the atomic RPC to bootstrap the organisation ──
+        const name = orgName?.trim() || `${fullName}'s Organization`
+        const slug = slugify(name) || "org"
+
+        const { error: rpcErr } = await supabase.rpc("create_organization", {
+          p_name: name,
+          p_slug: slug,
+        })
+        if (rpcErr) return { error: rpcErr.message }
       }
 
       await loadProfile(data.user.id)
@@ -411,10 +487,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         session,
         profile,
-        systemRole,
         isAdmin,
         accountId,
         accountCode,
+        orgSlug,
         mustChangePassword,
         loading,
         ...perms,
