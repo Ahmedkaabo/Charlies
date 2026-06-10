@@ -58,6 +58,7 @@ export const ROUTE_TITLES: Record<string, string> = {
   "/finance":     "Payout",
   "/balance":     "Balance",
   "/settings":    "Settings",
+  "/categories":  "Expense Categories",
   "/permissions": "Roles & Permissions",
   "/admin":       "Admin Panel",
 }

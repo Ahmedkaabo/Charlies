@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { format, subDays } from "date-fns"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/hooks/useAuth"
 import type { AttendanceLog, AttendanceLogWithProfile } from "@/types/attendance"
 import type { BranchShift } from "@/types/branch"
 import type { Branch } from "@/types/branch"
@@ -135,8 +136,10 @@ export interface AttendanceFilters {
 }
 
 export function useAttendanceLogs(filters: AttendanceFilters) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["attendance", "logs", filters],
+    queryKey: ["attendance", "logs", filters, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       let q = supabase
         .from("attendance_logs")
@@ -146,6 +149,7 @@ export function useAttendanceLogs(filters: AttendanceFilters) {
           branch:branches(id, name, check_in_time, check_out_time, min_shift_hours, max_shift_hours),
           shift:branch_shifts(id, name, shift_start, shift_end, full_day_hours, overtime_hours)
         `)
+        .eq("account_id", accountId!)
         .order("date", { ascending: false })
         .order("check_in_at", { ascending: false })
 
@@ -166,10 +170,12 @@ export function useAttendanceLogs(filters: AttendanceFilters) {
 // ── Today's attendance for all staff (manager view) ───────────
 
 export function useTodayAttendance(branchId?: string) {
+  const { accountId } = useAuth()
   const today = format(new Date(), "yyyy-MM-dd")
 
   return useQuery({
-    queryKey: ["attendance", "today", branchId ?? "all", today],
+    queryKey: ["attendance", "today", branchId ?? "all", today, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       let q = supabase
         .from("attendance_logs")
@@ -179,6 +185,7 @@ export function useTodayAttendance(branchId?: string) {
           branch:branches(id, name, check_in_time, check_out_time, min_shift_hours, max_shift_hours),
           shift:branch_shifts(id, name, shift_start, shift_end, full_day_hours, overtime_hours)
         `)
+        .eq("account_id", accountId!)
         .eq("date", today)
         .order("check_in_at", { ascending: true })
 

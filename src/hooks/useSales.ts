@@ -2,6 +2,7 @@ import { useMemo } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { format, startOfDay, isAfter, getDaysInMonth } from "date-fns"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/hooks/useAuth"
 import type { SalesRecord, SalesEditHistory } from "@/types/sales"
 import { getCurrentSalesDate } from "@/lib/sales"
 
@@ -13,8 +14,10 @@ export function useSalesRecords(
   year: number,
   branchIds?: string[],
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["sales-records", branchId ?? "all", month, year, branchIds],
+    queryKey: ["sales-records", branchId ?? "all", month, year, branchIds, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
       const to   = format(new Date(year, month,     0), "yyyy-MM-dd")
@@ -28,6 +31,7 @@ export function useSalesRecords(
           submitter:profiles!submitted_by(id, full_name),
           edit_history:sales_edit_history(id)
         `)
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
         .order("date", { ascending: true })
@@ -39,7 +43,6 @@ export function useSalesRecords(
       if (error) throw error
       return (data ?? []) as unknown as SalesRecord[]
     },
-    enabled: true,
   })
 }
 
@@ -49,8 +52,9 @@ export function useSalesRecord(
   branchId: string | undefined,
   date: string | undefined,
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["sales-record", branchId, date],
+    queryKey: ["sales-record", branchId, date, accountId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sales_records")
@@ -61,13 +65,14 @@ export function useSalesRecord(
           submitter:profiles!submitted_by(id, full_name),
           edit_history:sales_edit_history(id)
         `)
+        .eq("account_id", accountId!)
         .eq("branch_id", branchId!)
         .eq("date", date!)
         .maybeSingle()
       if (error) throw error
       return (data ?? null) as unknown as SalesRecord | null
     },
-    enabled: !!branchId && !!date,
+    enabled: !!branchId && !!date && !!accountId,
   })
 }
 

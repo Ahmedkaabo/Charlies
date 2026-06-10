@@ -288,7 +288,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
 
           {/* Shift complete */}
           {checkedIn && checkedOut && todayLog && (
-            <Card className="py-0">
+            <Card className="py-4">
               <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-base">
                   <CheckCircle2 className="h-4 w-4 text-primary" />

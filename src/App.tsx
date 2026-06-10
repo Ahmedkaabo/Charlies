@@ -23,6 +23,7 @@ import { ExpensesListPage } from "@/pages/expenses/ExpensesListPage"
 import { SalesPage } from "@/pages/sales/SalesPage"
 import { FinancePage } from "@/pages/finance/FinancePage"
 import { BalancePage } from "@/pages/balance/BalancePage"
+import { CategoriesSettingsPage } from "@/pages/settings/CategoriesSettingsPage"
 import { NotFoundPage } from "@/pages/NotFoundPage"
 
 function Placeholder({ title }: { title: string }) {
@@ -86,8 +87,9 @@ export function App() {
           </Route>
 
           <Route element={<AdminGuard />}>
-            <Route path="/users"  element={<OwnersPage />} />
-            <Route path="/admin"  element={<Placeholder title="Admin Panel" />} />
+            <Route path="/users"       element={<OwnersPage />} />
+            <Route path="/categories"  element={<CategoriesSettingsPage />} />
+            <Route path="/admin"       element={<Placeholder title="Admin Panel" />} />
           </Route>
         </Route>
       </Route>

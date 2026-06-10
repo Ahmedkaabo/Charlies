@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { format } from "date-fns"
-import { CalendarIcon, Shield, Check, ChevronsUpDown, Eye, EyeOff } from "lucide-react"
+import { CalendarIcon, Shield, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -20,7 +20,6 @@ import { useGetBranches } from "@/hooks/useBranches"
 import { useGetRoles, useUserPermissions } from "@/hooks/usePermissions"
 import { useAuth } from "@/hooks/useAuth"
 import type { GroupedMember, SalaryCurrency } from "@/types/member"
-import { salaryRequired } from "@/types/member"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -89,152 +88,6 @@ async function createAuthUser(
   return data.user.id
 }
 
-// ── Multi-role select ─────────────────────────────────────────
-
-function MultiRoleSelect({
-  roles,
-  selectedIds,
-  onChange,
-}: {
-  roles: { id: string; name: string; level: number }[]
-  selectedIds: string[]
-  onChange: (ids: string[]) => void
-}) {
-  const [open, setOpen] = useState(false)
-
-  const selected = roles.filter((r) => selectedIds.includes(r.id))
-  const label =
-    selected.length === 0
-      ? "Select roles…"
-      : selected.length === 1
-      ? selected[0].name.replace(/_/g, " ")
-      : `${selected.length} roles`
-
-  function toggle(id: string) {
-    onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="w-full justify-between font-normal">
-          <span className={selected.length === 0 ? "text-muted-foreground capitalize" : "capitalize"}>{label}</span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="p-0"
-        style={{ width: "var(--radix-popover-trigger-width)" }}
-        align="start"
-      >
-        <div className="max-h-52 overflow-y-auto py-1">
-          {roles.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No roles available</p>
-          )}
-          {roles.map((r) => {
-            const checked = selectedIds.includes(r.id)
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => toggle(r.id)}
-                className="flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-sm hover:bg-muted"
-              >
-                <div className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                  checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
-                )}>
-                  {checked && <Check className="h-3 w-3" />}
-                </div>
-                <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
-              </button>
-            )
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-// ── Multi-branch dropdown ─────────────────────────────────────
-
-function MultiBranchSelect({
-  branches,
-  selectedIds,
-  onChange,
-  singleOnly = false,
-  placeholder = "Select branches…",
-}: {
-  branches: { id: string; name: string }[]
-  selectedIds: string[]
-  onChange: (ids: string[]) => void
-  singleOnly?: boolean
-  placeholder?: string
-}) {
-  const [open, setOpen] = useState(false)
-
-  const label =
-    selectedIds.length === 0
-      ? placeholder
-      : selectedIds.length === 1
-      ? (branches.find((b) => b.id === selectedIds[0])?.name ?? placeholder)
-      : `${selectedIds.length} branches selected`
-
-  function toggle(id: string) {
-    if (singleOnly) {
-      onChange([id])
-      setOpen(false)
-    } else {
-      onChange(
-        selectedIds.includes(id)
-          ? selectedIds.filter((x) => x !== id)
-          : [...selectedIds, id]
-      )
-    }
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline" className="w-full justify-between font-normal">
-          <span className={selectedIds.length === 0 ? "text-muted-foreground" : ""}>{label}</span>
-          <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        className="p-0"
-        style={{ width: "var(--radix-popover-trigger-width)" }}
-        align="start"
-      >
-        <div className="max-h-52 overflow-y-auto py-1">
-          {branches.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No branches available</p>
-          )}
-          {branches.map((b) => {
-            const checked = selectedIds.includes(b.id)
-            return (
-              <button
-                key={b.id}
-                type="button"
-                onClick={() => toggle(b.id)}
-                className="flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-sm hover:bg-muted"
-              >
-                <div className={cn(
-                  "flex h-4 w-4 shrink-0 items-center justify-center rounded border",
-                  checked ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground"
-                )}>
-                  {checked && <Check className="h-3 w-3" />}
-                </div>
-                {b.name}
-              </button>
-            )
-          })}
-        </div>
-      </PopoverContent>
-    </Popover>
-  )
-}
-
 // ── Salary section ────────────────────────────────────────────
 
 function SalarySection({
@@ -256,138 +109,130 @@ function SalarySection({
           Salary{required && <span className="text-destructive ml-1">*</span>}
         </h3>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {required ? "Required for this role" : "Not required for admin / owner"}
+          {required ? "Required for this role" : "Optional — can be left at 0"}
         </p>
       </div>
 
-      {required ? (
-        <>
-          <div className="flex gap-3">
-            <FormField
-              control={control}
-              name="monthly_salary"
-              render={({ field }) => (
-                <FormItem className="flex-1">
-                  <FormLabel>Monthly Salary</FormLabel>
-                  <FormControl>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      placeholder="0.00"
-                      value={field.value ?? ""}
-                      onChange={(e) =>
-                        field.onChange(e.target.value === "" ? null : Number(e.target.value))
-                      }
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={control}
-              name="currency"
-              render={({ field }) => (
-                <FormItem className="w-28">
-                  <FormLabel>Currency</FormLabel>
-                  <Select value={field.value} onValueChange={field.onChange}>
-                    <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                    <SelectContent>
-                      <SelectItem value="EGP">EGP</SelectItem>
-                      <SelectItem value="USD">USD</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+      <div className="flex gap-3">
+        <FormField
+          control={control}
+          name="monthly_salary"
+          render={({ field }) => (
+            <FormItem className="flex-1">
+              <FormLabel>Monthly Salary</FormLabel>
+              <FormControl>
+                <Input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  placeholder="0.00"
+                  value={field.value ?? ""}
+                  onChange={(e) =>
+                    field.onChange(e.target.value === "" ? null : Number(e.target.value))
+                  }
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={control}
+          name="currency"
+          render={({ field }) => (
+            <FormItem className="w-28">
+              <FormLabel>Currency</FormLabel>
+              <Select value={field.value} onValueChange={field.onChange}>
+                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                <SelectContent>
+                  <SelectItem value="EGP">EGP</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+      </div>
 
-          <FormField
-            control={control}
-            name="effective_from"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Effective From</FormLabel>
-                <Popover open={calendarOpen} onOpenChange={onCalendarOpen}>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button variant="outline" className="w-full justify-start text-left">
-                        <CalendarIcon className="h-4 w-4 shrink-0" />
-                        {field.value ? format(field.value, "d MMM yyyy") : "Pick a date"}
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={field.value ?? undefined}
-                      onSelect={(d) => { field.onChange(d ?? null); onCalendarOpen(false) }}
-                    />
-                  </PopoverContent>
-                </Popover>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={control}
-            name="paid_days_off"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Paid Days Off / month</FormLabel>
+      <FormField
+        control={control}
+        name="effective_from"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Effective From</FormLabel>
+            <Popover open={calendarOpen} onOpenChange={onCalendarOpen}>
+              <PopoverTrigger asChild>
                 <FormControl>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={30}
-                    placeholder="4"
-                    value={field.value ?? 4}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
-                  />
+                  <Button variant="outline" className="w-full justify-start text-left">
+                    <CalendarIcon className="h-4 w-4 shrink-0" />
+                    {field.value ? format(field.value, "d MMM yyyy") : "Pick a date"}
+                  </Button>
                 </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </>
-      ) : (
-        <p className="text-xs text-muted-foreground italic">No salary record needed</p>
-      )}
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={field.value ?? undefined}
+                  onSelect={(d) => { field.onChange(d ?? null); onCalendarOpen(false) }}
+                />
+              </PopoverContent>
+            </Popover>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <FormField
+        control={control}
+        name="paid_days_off"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>Paid Days Off / month</FormLabel>
+            <FormControl>
+              <Input
+                type="number"
+                min={0}
+                max={30}
+                placeholder="4"
+                value={field.value ?? 4}
+                onChange={(e) => field.onChange(Number(e.target.value))}
+              />
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
     </div>
   )
 }
 
 // ── Schemas ───────────────────────────────────────────────────
 
-const baseSchema = z.object({
-  role_ids:       z.array(z.string()).min(1, "Select at least one role"),
-  monthly_salary: z.number().nullable(),
-  currency:       z.string(),
-  effective_from: z.date().nullable(),
-  paid_days_off:  z.number().int().min(0).max(30),
-})
-
 const createSchema = z.object({
   full_name:      z.string().min(2, "Name must be at least 2 characters"),
   name_ar:        z.string(),
-  email:          z.string().email("Enter a valid email"),
   phone:          z.string().min(7, "Enter a valid phone number"),
   password:       z.string().min(8, "Password must be at least 8 characters"),
-  role_ids:       z.array(z.string()).min(1, "Select at least one role"),
+  branch_id:      z.string().min(1, "Select a branch"),
+  role_id:        z.string().min(1, "Select a role"),
   monthly_salary: z.number().nullable(),
   currency:       z.string(),
   effective_from: z.date().nullable(),
   paid_days_off:  z.number().int().min(0).max(30),
 })
 
-const editSchema = baseSchema.extend({
-  full_name:    z.string().min(2, "Name must be at least 2 characters"),
-  email:        z.string().email("Enter a valid email"),
-  phone:        z.string(),
-  new_password: z.string().min(8, "Minimum 8 characters").or(z.literal("")),
+const editSchema = z.object({
+  full_name:      z.string().min(2, "Name must be at least 2 characters"),
+  email:          z.string().email("Enter a valid email"),
+  phone:          z.string(),
+  new_password:   z.string().min(8, "Minimum 8 characters").or(z.literal("")),
+  branch_id:      z.string().min(1, "Select a branch"),
+  role_id:        z.string().min(1, "Select a role"),
+  monthly_salary: z.number().nullable(),
+  currency:       z.string(),
+  effective_from: z.date().nullable(),
+  paid_days_off:  z.number().int().min(0).max(30),
 })
 
 type CreateValues = z.infer<typeof createSchema>
@@ -407,36 +252,30 @@ function CreateContent({
   const { accountId } = useAuth()
   const createMulti = useCreateMemberMultiBranch()
   const [calendarOpen, setCalendarOpen] = useState(false)
-  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>([])
-  const [branchError, setBranchError]             = useState("")
 
   const form = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
-      full_name: "", name_ar: "", email: "", phone: "", password: "",
-      role_ids: [], monthly_salary: null, currency: "EGP",
+      full_name: "", name_ar: "", phone: "", password: "",
+      branch_id: "", role_id: "",
+      monthly_salary: null, currency: "EGP",
       effective_from: new Date(), paid_days_off: 4,
     },
   })
 
-  const watchedRoleIds = form.watch("role_ids")
-  const selectedRoles  = roles.filter((r) => watchedRoleIds.includes(r.id))
-  const minLevel       = selectedRoles.length > 0 ? Math.min(...selectedRoles.map((r) => r.level)) : null
-  const needsSalary    = minLevel !== null && minLevel > 2
-  const isSingleBranch = minLevel !== null && minLevel >= 3
+  const watchedRoleId  = form.watch("role_id")
+  const selectedRole   = roles.find((r) => r.id === watchedRoleId)
+  const needsSalary    = selectedRole ? selectedRole.level > 2 : false
 
   async function onSubmit(values: CreateValues) {
-    if (selectedBranchIds.length === 0) {
-      setBranchError("Select at least one branch")
-      return
-    }
-    if (needsSalary && !values.monthly_salary) {
+    if (needsSalary && values.monthly_salary === null) {
       form.setError("monthly_salary", { message: "Salary is required for this role" })
       return
     }
     try {
+      const generatedEmail = `${values.phone.replace(/\D/g, "")}@staff.charlies.app`
       const profileId = await createAuthUser(
-        values.email.trim(),
+        generatedEmail,
         values.password,
         values.full_name.trim(),
         values.phone.trim()
@@ -447,9 +286,9 @@ function CreateContent({
       await supabase.from("profiles").update(profileUpdates).eq("id", profileId)
 
       await createMulti.mutateAsync({
-        branchIds:      selectedBranchIds,
+        branchIds:      [values.branch_id],
         profileId,
-        roleIds:        values.role_ids,
+        roleIds:        [values.role_id],
         monthly_salary: needsSalary ? values.monthly_salary : null,
         currency:       values.currency as SalaryCurrency,
         effective_from: (values.effective_from ?? new Date()).toISOString().slice(0, 10),
@@ -504,13 +343,7 @@ function CreateContent({
                     <FormItem>
                       <FormLabel>Arabic Name</FormLabel>
                       <FormControl>
-                        <Input
-                          dir="rtl"
-                          lang="ar"
-                          placeholder="أحمد مصطفى"
-                          autoComplete="off"
-                          {...field}
-                        />
+                        <Input dir="rtl" lang="ar" placeholder="أحمد مصطفى" autoComplete="off" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -518,34 +351,19 @@ function CreateContent({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="you@example.com" autoComplete="off" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mobile</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -564,52 +382,63 @@ function CreateContent({
 
             <Separator />
 
-            {/* Role first, then Branch */}
+            {/* Role & Branch */}
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold">Role & Branch</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Role determines if multi-branch is allowed</p>
               </div>
 
-              <FormField
-                control={form.control}
-                name="role_ids"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <FormControl>
-                      <MultiRoleSelect
-                        roles={roles}
-                        selectedIds={field.value}
-                        onChange={(ids) => {
-                          field.onChange(ids)
-                          const lvl = ids.length > 0 ? Math.min(...roles.filter(r => ids.includes(r.id)).map(r => r.level)) : null
-                          if (lvl !== null && lvl >= 3 && selectedBranchIds.length > 1) {
-                            setSelectedBranchIds(selectedBranchIds.slice(0, 1))
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="role_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select role…" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {roles.length === 0
+                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No roles available</div>
+                            : roles.map((r) => (
+                                <SelectItem key={r.id} value={r.id} className="capitalize">
+                                  {r.name.replace(/_/g, " ")}
+                                </SelectItem>
+                              ))
                           }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium leading-none">Branch</label>
-                <MultiBranchSelect
-                  branches={branches}
-                  selectedIds={selectedBranchIds}
-                  onChange={(ids) => { setSelectedBranchIds(ids); setBranchError("") }}
-                  singleOnly={isSingleBranch}
-                  placeholder="Select branch…"
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {isSingleBranch && (
-                  <p className="text-xs text-muted-foreground">This role is limited to one branch</p>
-                )}
-                {branchError && (
-                  <p className="text-sm font-medium text-destructive">{branchError}</p>
-                )}
+
+                <FormField
+                  control={form.control}
+                  name="branch_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select branch…" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 
@@ -651,14 +480,11 @@ function EditContent({
   const updateMember  = useUpdateMember()
   const removeMember  = useRemoveMember()
   const createMulti   = useCreateMemberMultiBranch()
-  const [calendarOpen,   setCalendarOpen]   = useState(false)
-  const [showPassword,   setShowPassword]   = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
 
   const primary = groupedMember.assignments[0]
-
-  const [selectedBranchIds, setSelectedBranchIds] = useState<string[]>(
-    () => groupedMember.assignments.map((a) => a.branch_id)
-  )
+  const primaryRoleId = primary?.role_ids?.[0] ?? primary?.role_id ?? ""
 
   const form = useForm<EditValues>({
     resolver: zodResolver(editSchema),
@@ -667,7 +493,8 @@ function EditContent({
       email:          groupedMember.email     ?? "",
       phone:          groupedMember.phone     ?? "",
       new_password:   "",
-      role_ids:       primary?.role_ids?.length ? primary.role_ids : (primary?.role_id ? [primary.role_id] : []),
+      branch_id:      primary?.branch_id      ?? "",
+      role_id:        primaryRoleId,
       monthly_salary: primary?.salary?.monthly_salary ?? null,
       currency:       primary?.salary?.currency       ?? "EGP",
       effective_from: new Date(),
@@ -675,25 +502,19 @@ function EditContent({
     },
   })
 
-  const watchedRoleIds   = form.watch("role_ids")
-  const selectedRoles    = roles.filter((r) => watchedRoleIds.includes(r.id))
-  const minLevel         = selectedRoles.length > 0 ? Math.min(...selectedRoles.map((r) => r.level)) : null
-  const needsSalary      = minLevel !== null ? minLevel > 2 : salaryRequired({
-    profile: { is_admin: groupedMember.is_admin } as never,
-    role:    primary?.role ?? null,
-  })
-  const isSingleBranch = minLevel !== null && minLevel >= 3
+  const watchedRoleId = form.watch("role_id")
+  const selectedRole  = roles.find((r) => r.id === watchedRoleId)
+  const needsSalary   = selectedRole ? selectedRole.level > 2 : false
   const isSaving = updateMember.isPending || removeMember.isPending || createMulti.isPending
 
   async function onSubmit(values: EditValues) {
-    if (selectedBranchIds.length === 0) return
-    if (needsSalary && !values.monthly_salary) {
+    if (needsSalary && values.monthly_salary === null) {
       form.setError("monthly_salary", { message: "Salary is required for this role" })
       return
     }
 
     try {
-      // 1. Update profile name + phone (always works)
+      // 1. Update profile name + phone
       await supabase
         .from("profiles")
         .update({ full_name: values.full_name.trim(), phone: values.phone.trim() || null })
@@ -716,37 +537,34 @@ function EditContent({
         if (authErr) throw authErr
       }
 
-      // 3. Branch / role / salary mutations
-      const oldIds    = groupedMember.assignments.map((a) => a.branch_id)
-      const toAdd     = selectedBranchIds.filter((id) => !oldIds.includes(id))
-      const toRemove  = groupedMember.assignments.filter((a) => !selectedBranchIds.includes(a.branch_id))
-      const toUpdate  = groupedMember.assignments.filter((a) =>  selectedBranchIds.includes(a.branch_id))
+      // 3. Branch / role / salary
       const effectiveFrom = (values.effective_from ?? new Date()).toISOString().slice(0, 10)
-
-      for (const a of toRemove) await removeMember.mutateAsync(a.id)
-
-      if (toAdd.length > 0) {
-        await createMulti.mutateAsync({
-          branchIds:      toAdd,
-          profileId:      groupedMember.profile_id,
-          roleIds:        values.role_ids,
-          monthly_salary: needsSalary ? values.monthly_salary : null,
-          currency:       values.currency as SalaryCurrency,
-          effective_from: effectiveFrom,
-          paid_days_off:  needsSalary ? values.paid_days_off : 0,
-        })
+      const salaryPayload = {
+        monthly_salary: needsSalary ? values.monthly_salary : null,
+        currency:       values.currency as SalaryCurrency,
+        effective_from: effectiveFrom,
+        paid_days_off:  needsSalary ? values.paid_days_off : 0,
       }
 
-      for (const a of toUpdate) {
+      if (primary && primary.branch_id === values.branch_id) {
+        // Branch unchanged — update in place
         await updateMember.mutateAsync({
-          memberId:       a.id,
-          branchId:       a.branch_id,
-          profileId:      groupedMember.profile_id,
-          roleIds:        values.role_ids,
-          monthly_salary: needsSalary ? values.monthly_salary : null,
-          currency:       values.currency as SalaryCurrency,
-          effective_from: effectiveFrom,
-          paid_days_off:  needsSalary ? values.paid_days_off : 0,
+          memberId:  primary.id,
+          branchId:  primary.branch_id,
+          profileId: groupedMember.profile_id,
+          roleIds:   [values.role_id],
+          ...salaryPayload,
+        })
+      } else {
+        // Branch changed — remove all old assignments, create new one
+        for (const a of groupedMember.assignments) {
+          await removeMember.mutateAsync(a.id)
+        }
+        await createMulti.mutateAsync({
+          branchIds: [values.branch_id],
+          profileId: groupedMember.profile_id,
+          roleIds:   [values.role_id],
+          ...salaryPayload,
         })
       }
 
@@ -772,9 +590,6 @@ function EditContent({
                   <Shield className="h-3 w-3" />Owner
                 </Badge>
               )}
-              {groupedMember.email && (
-                <span className="text-xs text-muted-foreground truncate">{groupedMember.email}</span>
-              )}
               {groupedMember.phone && (
                 <span className="text-xs text-muted-foreground">{groupedMember.phone}</span>
               )}
@@ -791,7 +606,7 @@ function EditContent({
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold">Personal Info</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Name updates instantly · email/password require service role key</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Name and phone update instantly · password requires service role key</p>
               </div>
 
               <FormField
@@ -808,34 +623,19 @@ function EditContent({
                 )}
               />
 
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" placeholder="you@example.com" autoComplete="off" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone</FormLabel>
-                      <FormControl>
-                        <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Mobile</FormLabel>
+                    <FormControl>
+                      <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
@@ -858,10 +658,7 @@ function EditContent({
                           className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           tabIndex={-1}
                         >
-                          {showPassword
-                            ? <EyeOff className="h-4 w-4" />
-                            : <Eye    className="h-4 w-4" />
-                          }
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                     </FormControl>
@@ -877,47 +674,59 @@ function EditContent({
             <div className="space-y-4">
               <div>
                 <h3 className="text-sm font-semibold">Role & Branch</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Where and in what capacity</p>
               </div>
 
-              <FormField
-                control={form.control}
-                name="role_ids"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <FormControl>
-                      <MultiRoleSelect
-                        roles={roles}
-                        selectedIds={field.value}
-                        onChange={(ids) => {
-                          field.onChange(ids)
-                          const lvl = ids.length > 0 ? Math.min(...roles.filter(r => ids.includes(r.id)).map(r => r.level)) : null
-                          if (lvl !== null && lvl >= 3 && selectedBranchIds.length > 1) {
-                            setSelectedBranchIds(selectedBranchIds.slice(0, 1))
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="role_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select role…" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {roles.length === 0
+                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No roles available</div>
+                            : roles.map((r) => (
+                                <SelectItem key={r.id} value={r.id} className="capitalize">
+                                  {r.name.replace(/_/g, " ")}
+                                </SelectItem>
+                              ))
                           }
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="space-y-1.5">
-                <label className="text-sm font-medium leading-none">Branch</label>
-                <MultiBranchSelect
-                  branches={branches}
-                  selectedIds={selectedBranchIds}
-                  onChange={(ids) => {
-                    setSelectedBranchIds(isSingleBranch ? ids.slice(0, 1) : ids)
-                  }}
-                  singleOnly={isSingleBranch}
-                  placeholder="Select branch…"
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-                {isSingleBranch && (
-                  <p className="text-xs text-muted-foreground">This role is limited to one branch</p>
-                )}
+
+                <FormField
+                  control={form.control}
+                  name="branch_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Branch</FormLabel>
+                      <Select value={field.value} onValueChange={field.onChange}>
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Select branch…" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {branches.map((b) => (
+                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
             </div>
 

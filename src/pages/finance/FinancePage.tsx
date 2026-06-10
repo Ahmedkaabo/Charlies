@@ -405,10 +405,21 @@ function PayoutRunDisplay({
     ? run.owners.filter((o) => branchFilter.includes(o.branch_id))
     : run.owners
 
-  const ownerMap = new Map<string, { fullName: string | null; totalPayout: number }>()
+  const ownerMap = new Map<string, {
+    fullName: string | null
+    totalPayout: number
+    branches: Array<{ branchName: string; stocks: number; totalStocks: number; percentage: number; payout: number }>
+  }>()
   for (const o of filteredOwners) {
-    const ex = ownerMap.get(o.profile_id) ?? { fullName: o.full_name, totalPayout: 0 }
+    const ex = ownerMap.get(o.profile_id) ?? { fullName: o.full_name, totalPayout: 0, branches: [] }
     ex.totalPayout += Number(o.payout_amount)
+    ex.branches.push({
+      branchName:  o.branch_name,
+      stocks:      Number(o.stocks),
+      totalStocks: Number(o.total_stocks),
+      percentage:  Number(o.percentage),
+      payout:      Number(o.payout_amount),
+    })
     ownerMap.set(o.profile_id, ex)
   }
   const owners = Array.from(ownerMap.entries()).sort((a, b) => b[1].totalPayout - a[1].totalPayout)
@@ -477,24 +488,37 @@ function PayoutRunDisplay({
           ) : (
             <div className="space-y-1">
               {owners.map(([profileId, o]) => {
-                const displayed = o.totalPayout + (addMgmtFees ? mgmtFeePerOwner : 0)
+                const isFeeManager = feeManagerIds.has(profileId)
+                const displayed = o.totalPayout + (addMgmtFees && isFeeManager ? mgmtFeePerOwner : 0)
                 return (
-                  <div key={profileId} className="flex items-center gap-3 rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                      {getInitials(o.fullName)}
+                  <div key={profileId} className="rounded-lg px-3 py-2 hover:bg-muted/40 transition-colors space-y-1">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                        {getInitials(o.fullName)}
+                      </div>
+                      <p className="flex-1 min-w-0 text-sm font-medium truncate">{o.fullName ?? "Unknown"}</p>
+                      <p className={cn(
+                        "text-sm font-bold tabular-nums shrink-0",
+                        displayed >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
+                      )}>{egp(displayed)}</p>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{o.fullName ?? "Unknown"}</p>
-                      {addMgmtFees && (
-                        <p className="text-xs text-muted-foreground">
-                          {egp(o.totalPayout)} + {egp(mgmtFeePerOwner)} mgmt
-                        </p>
+                    <div className="pl-11 space-y-0.5">
+                      {o.branches.map((b, i) => (
+                        <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span className="truncate">
+                            {b.branchName}
+                            <span className="ml-1 text-muted-foreground/60">· {b.stocks}/{b.totalStocks} ({b.percentage.toFixed(1)}%)</span>
+                          </span>
+                          <span className="tabular-nums ml-2 shrink-0">{egp(b.payout)}</span>
+                        </div>
+                      ))}
+                      {addMgmtFees && isFeeManager && (
+                        <div className="flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Management fee</span>
+                          <span className="tabular-nums ml-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{egp(mgmtFeePerOwner)}</span>
+                        </div>
                       )}
                     </div>
-                    <p className={cn(
-                      "text-sm font-bold tabular-nums shrink-0",
-                      displayed >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
-                    )}>{egp(displayed)}</p>
                   </div>
                 )
               })}

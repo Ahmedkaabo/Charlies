@@ -2,6 +2,7 @@ export interface ExpenseCategory {
   id: string
   name: string
   icon: string | null
+  is_cogs: boolean
 }
 
 export interface Expense {

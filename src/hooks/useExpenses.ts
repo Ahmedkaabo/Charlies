@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query"
 import { format, startOfWeek, startOfMonth } from "date-fns"
 
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/hooks/useAuth"
 import type { Expense, ExpenseCategory, ExpenseEdit, ExpenseFilters } from "@/types/expense"
 
 function getDateRange(filters: ExpenseFilters): { from: string; to: string } {
@@ -25,8 +26,10 @@ function getDateRange(filters: ExpenseFilters): { from: string; to: string } {
 }
 
 export function useGetExpenses(filters: ExpenseFilters) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["expenses", filters],
+    queryKey: ["expenses", filters, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { from, to } = getDateRange(filters)
 
@@ -38,6 +41,7 @@ export function useGetExpenses(filters: ExpenseFilters) {
           branch:branches(id, name),
           category:expense_categories(id, name, icon)
         `)
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
         .order("date", { ascending: false })
@@ -79,7 +83,7 @@ export function useGetExpenseCategories() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_categories")
-        .select("id, name, icon")
+        .select("id, name, icon, is_cogs")
       if (error) throw error
       return sortCategories((data ?? []) as ExpenseCategory[])
     },
@@ -91,8 +95,10 @@ export function useGetExpenseSummaryByCategory(
   year: number,
   branchId?: string,
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["expenses", "summary-by-category", month, year, branchId],
+    queryKey: ["expenses", "summary-by-category", month, year, branchId, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
       const to = format(new Date(year, month, 0), "yyyy-MM-dd")
@@ -100,6 +106,7 @@ export function useGetExpenseSummaryByCategory(
       let query = supabase
         .from("expenses")
         .select(`amount, category:expense_categories(id, name, icon)`)
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
 
@@ -124,8 +131,10 @@ export function useGetExpenseSummaryByCategory(
 }
 
 export function useGetExpenseSummaryByBranch(month: number, year: number) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["expenses", "summary-by-branch", month, year],
+    queryKey: ["expenses", "summary-by-branch", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
       const to   = format(new Date(year, month, 0), "yyyy-MM-dd")
@@ -133,6 +142,7 @@ export function useGetExpenseSummaryByBranch(month: number, year: number) {
       const { data, error } = await supabase
         .from("expenses")
         .select(`amount, branch:branches(id, name)`)
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (error) throw error

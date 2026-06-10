@@ -463,24 +463,36 @@ function ReviewStep({ configs, ownerPayouts }: { configs: BranchConfig[]; ownerP
           ) : (
             <div className="rounded-lg border divide-y">
               {ownerPayouts.map((o) => (
-                <div key={o.profileId} className="flex items-center gap-2 px-3 py-2.5">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {getInitials(o.fullName)}
+                <div key={o.profileId} className="px-3 py-2.5 space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
+                      {getInitials(o.fullName)}
+                    </div>
+                    <p className="flex-1 min-w-0 text-xs font-medium truncate">{o.fullName ?? "Unknown"}</p>
+                    <p className={cn(
+                      "text-xs font-bold tabular-nums shrink-0",
+                      o.totalPayout >= 0
+                        ? "text-emerald-600 dark:text-emerald-400"
+                        : "text-destructive",
+                    )}>{egp(o.totalPayout)}</p>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium truncate">{o.fullName ?? "Unknown"}</p>
+                  <div className="pl-9 space-y-0.5">
+                    {o.branches.map((b) => (
+                      <div key={b.branchId} className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span className="truncate">
+                          {b.branchName}
+                          <span className="ml-1 text-muted-foreground/60">· {b.stocks}/{b.totalStocks} ({b.percentage.toFixed(1)}%)</span>
+                        </span>
+                        <span className="tabular-nums ml-2 shrink-0">{egp(b.payout)}</span>
+                      </div>
+                    ))}
                     {o.isFeeManager && o.mgmtFeeShare > 0 && (
-                      <p className="text-[10px] text-muted-foreground">
-                        {egp(o.totalPayout - o.mgmtFeeShare)} + {egp(o.mgmtFeeShare)} mgmt
-                      </p>
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span>Management fee</span>
+                        <span className="tabular-nums ml-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{egp(o.mgmtFeeShare)}</span>
+                      </div>
                     )}
                   </div>
-                  <p className={cn(
-                    "text-xs font-bold tabular-nums shrink-0",
-                    o.totalPayout >= 0
-                      ? "text-emerald-600 dark:text-emerald-400"
-                      : "text-destructive",
-                  )}>{egp(o.totalPayout)}</p>
                 </div>
               ))}
             </div>

@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { format } from "date-fns"
+import { format, parseISO } from "date-fns"
 import {
   TrendingUp,
   TrendingDown,
@@ -10,20 +10,24 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
 } from "lucide-react"
 
 import { useAuth } from "@/hooks/useAuth"
 import { useUserPermissions } from "@/hooks/usePermissions"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useMyBranches } from "@/hooks/useAttendance"
-import { usePayrollSummary, usePayrollRecords } from "@/hooks/usePayroll"
+import { usePayrollSummary, usePayrollRecords, useStaffMonthlyAttendance } from "@/hooks/usePayroll"
+import { calculateEarnedSalary } from "@/lib/attendance"
 import { PayrollAdjustmentDialog } from "@/components/attendance/PayrollAdjustmentDialog"
 import { StaffPayrollSheet } from "@/components/attendance/StaffPayrollSheet"
 import type { StaffPayrollRow } from "@/types/attendance"
+import { cn } from "@/lib/utils"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   Select,
@@ -49,11 +53,16 @@ function initials(name: string | null) {
     : parts[0].slice(0, 2).toUpperCase()
 }
 
+function statusVariant(s: string): "default" | "secondary" | "destructive" | "outline" {
+  if (s === "present") return "default"
+  if (s === "late")    return "secondary"
+  return "destructive"
+}
+
 function generateMonthOptions() {
   const start = new Date(2026, 5, 1) // June 2026
   const now   = new Date()
   const opts: { month: number; year: number; label: string; value: string }[] = []
-  // Walk forward from start to current month (inclusive)
   for (let d = new Date(now.getFullYear(), now.getMonth(), 1); d >= start; d.setMonth(d.getMonth() - 1)) {
     opts.push({
       month: d.getMonth() + 1,
@@ -66,6 +75,128 @@ function generateMonthOptions() {
 }
 
 const MONTH_OPTIONS = generateMonthOptions()
+
+// ── Attendance breakdown (expanded row) ───────────────────────
+
+function AttendanceBreakdown({
+  profileId,
+  branchId,
+  month,
+  year,
+  curr,
+  baseSalary,
+  paidDaysOff,
+}: {
+  profileId: string
+  branchId: string
+  month: number
+  year: number
+  curr: string
+  baseSalary: number | null
+  paidDaysOff: number
+}) {
+  const { data: logs, isLoading } = useStaffMonthlyAttendance(profileId, branchId, month, year)
+
+  if (isLoading) {
+    return (
+      <div className="px-10 py-3 bg-muted/30 space-y-2 border-b">
+        {[1, 2, 3].map((i) => <Skeleton key={i} className="h-8 w-full rounded-lg" />)}
+      </div>
+    )
+  }
+
+  if (!logs || logs.length === 0) {
+    return (
+      <div className="px-10 py-4 bg-muted/30 border-b text-sm text-muted-foreground">
+        No attendance records this month.
+      </div>
+    )
+  }
+
+  const totalDayValue = logs.reduce((s, l) => s + (l.day_value ?? 0), 0)
+  const totalHours    = logs.reduce((s, l) => s + (l.total_hours ?? 0), 0)
+  const dailyRate     = baseSalary != null ? baseSalary / 30 : null
+  const earnedTotal   = baseSalary != null
+    ? calculateEarnedSalary(baseSalary, totalDayValue + paidDaysOff)
+    : null
+
+  return (
+    <div className="bg-muted/30 border-b px-10 py-3">
+      <div className="rounded-lg border text-xs overflow-x-auto">
+        {/* Header */}
+        <div className="grid grid-cols-[1fr_80px_80px_60px_60px_80px] bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
+          <span>Date</span>
+          <span className="text-right">Check-in</span>
+          <span className="text-right">Check-out</span>
+          <span className="text-right">Hours</span>
+          <span className="text-right">Day</span>
+          <span className="text-right">Status</span>
+        </div>
+
+        {/* Log rows */}
+        <div className="divide-y">
+          {logs.map((log) => (
+            <div
+              key={log.id}
+              className="grid grid-cols-[1fr_80px_80px_60px_60px_80px] items-center px-3 py-2"
+            >
+              <div className="flex items-center gap-1.5">
+                <span className="font-medium">{format(parseISO(log.date), "EEE, d MMM")}</span>
+                {log.is_late && log.late_minutes > 0 && (
+                  <span className="text-amber-600 dark:text-amber-400">+{log.late_minutes}m</span>
+                )}
+              </div>
+              <span className="tabular-nums text-right text-muted-foreground">
+                {log.check_in_at ? format(parseISO(log.check_in_at), "h:mm a") : "—"}
+              </span>
+              <span className="tabular-nums text-right text-muted-foreground">
+                {log.check_out_at ? format(parseISO(log.check_out_at), "h:mm a") : "—"}
+              </span>
+              <span className="tabular-nums text-right">
+                {log.total_hours != null ? `${log.total_hours.toFixed(1)}h` : "—"}
+              </span>
+              <span className="tabular-nums text-right font-medium">
+                {log.day_value != null ? log.day_value.toFixed(2) : "—"}
+              </span>
+              <div className="flex justify-end">
+                <Badge variant={statusVariant(log.status)} className="capitalize text-[10px] px-1.5 py-0">
+                  {log.status}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Totals row */}
+        <div className="grid grid-cols-[1fr_80px_80px_60px_60px_80px] items-center bg-muted/50 border-t px-3 py-2 font-semibold">
+          <span>{logs.length} days attended</span>
+          <span />
+          <span />
+          <span className="tabular-nums text-right">{totalHours.toFixed(1)}h</span>
+          <span className="tabular-nums text-right">{totalDayValue.toFixed(2)}</span>
+          <span />
+        </div>
+      </div>
+
+      {/* Earning formula */}
+      {dailyRate != null && earnedTotal != null && (
+        <p className="mt-2 px-1 text-xs text-muted-foreground">
+          Earned:{" "}
+          <span className="font-medium text-foreground">
+            {totalDayValue.toFixed(2)} days attended
+          </span>
+          {paidDaysOff > 0 && (
+            <> + <span className="font-medium text-foreground">{paidDaysOff} paid leave</span></>
+          )}
+          {" "}&times;{" "}
+          <span className="font-medium text-foreground">{currency(dailyRate, curr)}/day</span>
+          {" "}={" "}
+          <span className="font-semibold text-foreground">{currency(earnedTotal, curr)}</span>
+        </p>
+      )}
+    </div>
+  )
+}
 
 // ── Summary card ──────────────────────────────────────────────
 
@@ -103,12 +234,10 @@ export function PayrollPage() {
   const { profile } = useAuth()
   const { canCreate, canUpdate } = useUserPermissions()
 
-  // can_create("payroll") = "View all staff payroll & financial analytics"
-  // Without it, the user only sees their own payroll record and no analytics cards.
   const canViewAllStaff  = canCreate("payroll")
   const canViewAnalytics = canViewAllStaff
-  // can_update("payroll") = "Add bonuses, deductions & adjustments"
   const canAdjust        = canUpdate("payroll")
+
   // ── Filters ───────────────────────────────────────────────
   const [branchFilters, setBranchFilters] = useState<string[]>([])
   const [roleFilters,   setRoleFilters]   = useState<string[]>([])
@@ -125,11 +254,22 @@ export function PayrollPage() {
   // ── Mobile summary expand/collapse ───────────────────────
   const [summaryExpanded, setSummaryExpanded] = useState(false)
 
+  // ── Expanded attendance rows ──────────────────────────────
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  function toggleExpanded(key: string) {
+    setExpandedRows((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   // ── Sheet / dialog state ──────────────────────────────────
   const [detailRow,    setDetailRow]    = useState<StaffPayrollRow | null>(null)
   const [adjustTarget, setAdjustTarget] = useState<StaffPayrollRow | null>(null)
 
-  // Every user scoped to their own branches; system admins with no branches see all
   const { data: myBranches = [] } = useMyBranches(profile?.id)
   const myBranchIds = myBranches.map((b) => b.id)
 
@@ -139,7 +279,6 @@ export function PayrollPage() {
   const selectedBranchId = branchFilters.length === 1 ? branchFilters[0] : undefined
   const scopeBranchIds   = branchFilters.length > 1 ? branchFilters : (myBranchIds.length > 0 && !selectedBranchId ? myBranchIds : undefined)
 
-  // Profile filter: own record only when user lacks can_create("payroll")
   const queryProfileId = canViewAllStaff ? undefined : profile?.id
 
   const { data: summary,     isLoading: summaryLoading } = usePayrollSummary(selectedBranchId, scopeBranchIds, month, year)
@@ -188,7 +327,6 @@ export function PayrollPage() {
 
         {/* ── Filter bar ─────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Search */}
           <div className="relative w-full sm:w-[160px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
@@ -199,7 +337,6 @@ export function PayrollPage() {
             />
           </div>
 
-          {/* Branch */}
           <MultiSelect
             options={branchDropdownList.map((b) => ({ value: b.id, label: b.name }))}
             selected={branchFilters}
@@ -208,7 +345,6 @@ export function PayrollPage() {
             className="w-[160px]"
           />
 
-          {/* Role */}
           <MultiSelect
             options={roleOptions.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
             selected={roleFilters}
@@ -219,7 +355,7 @@ export function PayrollPage() {
         </div>
       </div>
 
-      {/* ── Summary cards (analytics — can_create("payroll")) ── */}
+      {/* ── Summary cards ─────────────────────────────────── */}
 
       {canViewAnalytics && (
         <>
@@ -327,64 +463,97 @@ export function PayrollPage() {
               </tr>
             )}
 
-            {filteredRows.map((row) => (
-              <tr
-                key={`${row.branch_id}:${row.profile_id}`}
-                className="hover:bg-muted/30 cursor-pointer group"
-                onClick={() => setDetailRow(row)}
-              >
-                <td className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 px-4 py-3 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                      {initials(row.full_name)}
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-medium whitespace-nowrap">{row.full_name ?? "—"}</span>
-                      {row.role && (
-                        <span className="rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground capitalize">
-                          {row.role.name.replace(/_/g, " ")}
-                        </span>
+            {filteredRows.map((row) => {
+              const rowKey = `${row.branch_id}:${row.profile_id}`
+              const isExpanded = expandedRows.has(rowKey)
+
+              return (
+                <>
+                  <tr
+                    key={rowKey}
+                    className="hover:bg-muted/30 cursor-pointer group"
+                    onClick={() => setDetailRow(row)}
+                  >
+                    <td className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 px-4 py-3 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <div className="flex items-center gap-2">
+                        {/* Expand toggle */}
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-6 w-6 shrink-0 text-muted-foreground"
+                          onClick={(e) => { e.stopPropagation(); toggleExpanded(rowKey) }}
+                        >
+                          <ChevronRight className={cn("h-4 w-4 transition-transform duration-150", isExpanded && "rotate-90")} />
+                        </Button>
+                        <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
+                          {initials(row.full_name)}
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-medium whitespace-nowrap">{row.full_name ?? "—"}</span>
+                          {row.role && (
+                            <span className="rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground capitalize">
+                              {row.role.name.replace(/_/g, " ")}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {currency(row.base_salary, row.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {row.days_present.toFixed(2)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {row.paid_days_off > 0 ? row.paid_days_off.toFixed(1) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {currency(row.earned_salary, row.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {row.total_bonuses > 0 ? `+${currency(row.total_bonuses, row.currency)}` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-destructive">
+                      {row.total_deductions > 0 ? `−${currency(row.total_deductions, row.currency)}` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                      {row.total_debts > 0 ? currency(row.total_debts, row.currency) : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                      {currency(row.net_salary, row.currency)}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      {canAdjust && (
+                        <Button
+                          variant="outline"
+                          onClick={(e) => { e.stopPropagation(); setAdjustTarget(row) }}
+                        >
+                          <SlidersHorizontal className="h-3.5 w-3.5" />
+                          Adjust
+                        </Button>
                       )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                  {currency(row.base_salary, row.currency)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {row.days_present.toFixed(2)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                  {row.paid_days_off > 0 ? row.paid_days_off.toFixed(1) : "—"}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums">
-                  {currency(row.earned_salary, row.currency)}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
-                  {row.total_bonuses > 0 ? `+${currency(row.total_bonuses, row.currency)}` : "—"}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-destructive">
-                  {row.total_deductions > 0 ? `−${currency(row.total_deductions, row.currency)}` : "—"}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
-                  {row.total_debts > 0 ? currency(row.total_debts, row.currency) : "—"}
-                </td>
-                <td className="px-4 py-3 text-right tabular-nums font-semibold">
-                  {currency(row.net_salary, row.currency)}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  {canAdjust && (
-                    <Button
-                      variant="outline"
-                      onClick={(e) => { e.stopPropagation(); setAdjustTarget(row) }}
-                    >
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      Adjust
-                    </Button>
+                    </td>
+                  </tr>
+
+                  {/* ── Attendance log expansion ──────── */}
+                  {isExpanded && (
+                    <tr key={`${rowKey}-att`}>
+                      <td colSpan={10} className="p-0">
+                        <AttendanceBreakdown
+                          profileId={row.profile_id}
+                          branchId={row.branch_id}
+                          month={month}
+                          year={year}
+                          curr={row.currency}
+                          baseSalary={row.base_salary}
+                          paidDaysOff={row.paid_days_off}
+                        />
+                      </td>
+                    </tr>
                   )}
-                </td>
-              </tr>
-            ))}
+                </>
+              )
+            })}
           </tbody>
         </table>
       </div>

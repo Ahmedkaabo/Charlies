@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
+import { useAuth } from "@/hooks/useAuth"
 import { calculateEarnedSalary } from "@/lib/attendance"
 import type { PayrollAdjustment, PayrollSummary, StaffPayrollRow } from "@/types/attendance"
 
@@ -28,16 +29,19 @@ export function usePayrollSummary(
   month: number,
   year: number
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["payroll", "summary", branchId ?? branchIds ?? "all", month, year],
+    queryKey: ["payroll", "summary", branchId ?? branchIds ?? "all", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { start, end } = monthRange(month, year)
 
-      // 1. Active staff (to keep summary consistent with the per-staff table)
+      // 1. Active staff — account_id is the org anchor here
       let membersQ = supabase
         .from("staff")
         .select("branch_id, profile_id")
         .eq("is_active", true)
+        .eq("account_id", accountId!)
       if (branchId) membersQ = membersQ.eq("branch_id", branchId)
       else if (branchIds?.length) membersQ = membersQ.in("branch_id", branchIds)
       const { data: activeMembers, error: membersErr } = await membersQ
@@ -45,7 +49,7 @@ export function usePayrollSummary(
       const activeMembersTyped = (activeMembers ?? []) as StaffRow[]
       const activeMemberKeys = new Set(activeMembersTyped.map((m) => `${m.branch_id}:${m.profile_id}`))
 
-      // 2. Salary structures (base salaries + paid leave)
+      // 2. Salary structures — scoped by branch_id (already org-scoped via staff query above)
       let salaryQ = supabase
         .from("salary_structures")
         .select("branch_id, profile_id, monthly_salary, paid_days_off")
@@ -54,9 +58,10 @@ export function usePayrollSummary(
       const { data: allSalaries, error: salaryErr } = await salaryQ
       if (salaryErr) throw salaryErr
       const salariesTyped = (allSalaries ?? []) as SalaryRow[]
+      // Filter to only active staff in this account
       const salaries = salariesTyped.filter((s) => activeMemberKeys.has(`${s.branch_id}:${s.profile_id}`))
 
-      // 3. Attendance day_value sums for the month
+      // 3. Attendance day_value sums for the month — scoped by branch_id
       let attQ = supabase
         .from("attendance_logs")
         .select("branch_id, profile_id, day_value")
@@ -69,7 +74,7 @@ export function usePayrollSummary(
       if (attErr) throw attErr
       const attLogsTyped = (attLogs ?? []) as AttLogRow[]
 
-      // 4. Adjustment totals from payroll_records
+      // 4. Adjustment totals from payroll_records — scoped by branch_id
       let payrollQ = supabase
         .from("payroll_records")
         .select("total_bonuses, total_deductions, total_debts")
@@ -122,12 +127,14 @@ export function usePayrollRecords(
   month: number,
   year: number
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["payroll", "records", branchId ?? branchIds ?? "all", profileId ?? "all", month, year],
+    queryKey: ["payroll", "records", branchId ?? branchIds ?? "all", profileId ?? "all", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { start, end } = monthRange(month, year)
 
-      // 1. Active staff + profiles (scoped to branch + optional single profile)
+      // 1. Active staff — account_id is the org anchor here
       let membersQ = supabase
         .from("staff")
         .select(`
@@ -136,6 +143,7 @@ export function usePayrollRecords(
           role:roles(id, name, level)
         `)
         .eq("is_active", true)
+        .eq("account_id", accountId!)
       if (branchId) membersQ = membersQ.eq("branch_id", branchId)
       else if (branchIds?.length) membersQ = membersQ.in("branch_id", branchIds)
       if (profileId) membersQ = membersQ.eq("profile_id", profileId)
@@ -143,7 +151,7 @@ export function usePayrollRecords(
       if (membersErr) throw membersErr
       const membersTyped = (members ?? []) as StaffRow[]
 
-      // 2. Salary structures
+      // 2. Salary structures — scoped by branch_id (org-scoped via staff query)
       let salaryQ = supabase
         .from("salary_structures")
         .select("branch_id, profile_id, monthly_salary, currency, paid_days_off")
@@ -154,7 +162,7 @@ export function usePayrollRecords(
       if (salaryErr) throw salaryErr
       const salariesTyped = (salaries ?? []) as SalaryRow[]
 
-      // 3. Payroll records (adjustments)
+      // 3. Payroll records (adjustments) — scoped by branch_id
       let payrollQ = supabase
         .from("payroll_records")
         .select("*")
@@ -167,7 +175,7 @@ export function usePayrollRecords(
       if (payrollErr) throw payrollErr
       const payrollRecsTyped = (payrollRecs ?? []) as PayrollRecordRow[]
 
-      // 4. Attendance day_value sums for the month
+      // 4. Attendance day_value sums for the month — scoped by branch_id
       let attQ = supabase
         .from("attendance_logs")
         .select("branch_id, profile_id, day_value")
@@ -248,10 +256,12 @@ export function useStaffMonthlyAttendance(
   month: number,
   year: number
 ) {
+  const { accountId } = useAuth()
   const { start, end } = monthRange(month, year)
   return useQuery({
-    queryKey: ["payroll", "attendance", profileId, branchId, month, year],
+    queryKey: ["payroll", "attendance", profileId, branchId, month, year, accountId],
     queryFn: async () => {
+      // Scoped by profile_id + branch_id — no account_id needed since branch is org-specific
       const { data, error } = await supabase
         .from("attendance_logs")
         .select("id, date, check_in_at, check_out_at, status, is_late, late_minutes, total_hours, day_value, shift_id")
@@ -263,7 +273,7 @@ export function useStaffMonthlyAttendance(
       if (error) throw error
       return data ?? []
     },
-    enabled: !!profileId && !!branchId,
+    enabled: !!profileId && !!branchId && !!accountId,
   })
 }
 
@@ -274,9 +284,11 @@ export function usePayrollAdjustments(
   month: number,
   year: number
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["payroll", "adjustments", profileId, month, year],
+    queryKey: ["payroll", "adjustments", profileId, month, year, accountId],
     queryFn: async () => {
+      // Scoped by profile_id + month + year — no account_id needed
       let q = supabase
         .from("payroll_adjustments")
         .select("*")
@@ -290,6 +302,6 @@ export function usePayrollAdjustments(
       if (error) throw error
       return (data ?? []) as PayrollAdjustment[]
     },
-    enabled: !!profileId,
+    enabled: !!profileId && !!accountId,
   })
 }

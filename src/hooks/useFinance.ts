@@ -21,15 +21,19 @@ async function fetchPayrollByBranch(
   year: number,
   branchId?: string,
   branchIds?: string[],
+  accountId?: string,
 ): Promise<Map<string, number>> {
   const [membersRes, salariesRes, attRes, payrollRes] = await Promise.all([
     (() => {
+      // staff is the account anchor — account_id filter belongs only here
       let q = supabase.from("staff").select("branch_id, profile_id").eq("is_active", true)
+      if (accountId) q = q.eq("account_id", accountId)
       if (branchId) q = q.eq("branch_id", branchId)
       else if (branchIds?.length) q = q.in("branch_id", branchIds)
       return q
     })(),
     (() => {
+      // scoped by branch_id; org isolation comes from the staff filter above
       let q = supabase.from("salary_structures").select("branch_id, profile_id, monthly_salary, paid_days_off")
       if (branchId) q = q.eq("branch_id", branchId)
       else if (branchIds?.length) q = q.in("branch_id", branchIds)
@@ -97,8 +101,10 @@ export function useFinanceRecords(
   year: number,
   branchIds?: string[],
 ) {
+  const { accountId } = useAuth()
   return useQuery({
-    queryKey: ["finance-records", branchId ?? "all", month, year, branchIds],
+    queryKey: ["finance-records", branchId ?? "all", month, year, branchIds, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
       const to   = format(new Date(year, month,     0), "yyyy-MM-dd")
@@ -110,6 +116,7 @@ export function useFinanceRecords(
           adder:profiles!added_by(id, full_name),
           branch:branches(id, name)
         `)
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
         .order("date", { ascending: false })
@@ -127,15 +134,18 @@ export function useFinanceRecords(
 
 // Returns branch_ids that have a rent-marked debit for this period
 export function useRentPaidBranches(month: number, year: number) {
+  const { accountId } = useAuth()
   const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
   const to   = format(new Date(year, month,     0), "yyyy-MM-dd")
 
   return useQuery({
-    queryKey: ["rent-paid-branches", month, year],
+    queryKey: ["rent-paid-branches", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_records")
         .select("branch_id")
+        .eq("account_id", accountId!)
         .eq("type", "debit")
         .eq("is_rent", true)
         .gte("date", from)
@@ -154,15 +164,18 @@ export function useFinanceSummary(
   year: number,
   branchIds?: string[],
 ) {
+  const { accountId } = useAuth()
   const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
   const to   = format(new Date(year, month,     0), "yyyy-MM-dd")
 
   const salesQ = useQuery({
-    queryKey: ["finance-revenue", branchId ?? "all", month, year, branchIds],
+    queryKey: ["finance-revenue", branchId ?? "all", month, year, branchIds, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       let q = supabase
         .from("sales_records")
         .select("revenue")
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (branchId) q = q.eq("branch_id", branchId)
@@ -174,11 +187,13 @@ export function useFinanceSummary(
   })
 
   const expensesQ = useQuery({
-    queryKey: ["finance-expenses", branchId ?? "all", month, year, branchIds],
+    queryKey: ["finance-expenses", branchId ?? "all", month, year, branchIds, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       let q = supabase
         .from("expenses")
         .select("amount")
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (branchId) q = q.eq("branch_id", branchId)
@@ -192,8 +207,9 @@ export function useFinanceSummary(
   const adjQ = useFinanceRecords(branchId, month, year, branchIds)
 
   const payrollQ = useQuery({
-    queryKey: ["finance-payroll", branchId ?? "all", month, year, branchIds],
-    queryFn: () => fetchPayrollByBranch(from, to, month, year, branchId, branchIds),
+    queryKey: ["finance-payroll", branchId ?? "all", month, year, branchIds, accountId],
+    enabled: !!accountId,
+    queryFn: () => fetchPayrollByBranch(from, to, month, year, branchId, branchIds, accountId ?? undefined),
   })
 
   const summary: FinanceSummary = useMemo(() => {
@@ -238,15 +254,18 @@ export interface BranchFinancials {
 }
 
 export function useAllBranchFinancials(month: number, year: number) {
+  const { accountId } = useAuth()
   const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
   const to   = format(new Date(year, month,     0), "yyyy-MM-dd")
 
   const revenueQ = useQuery({
-    queryKey: ["all-branch-revenues", month, year],
+    queryKey: ["all-branch-revenues", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sales_records")
         .select("branch_id, revenue")
+        .eq("account_id", accountId!)
         .gte("date", from).lte("date", to)
       if (error) throw error
       const m = new Map<string, number>()
@@ -256,11 +275,13 @@ export function useAllBranchFinancials(month: number, year: number) {
   })
 
   const expensesQ = useQuery({
-    queryKey: ["all-branch-expenses", month, year],
+    queryKey: ["all-branch-expenses", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("branch_id, amount")
+        .eq("account_id", accountId!)
         .gte("date", from).lte("date", to)
       if (error) throw error
       const m = new Map<string, number>()
@@ -270,16 +291,19 @@ export function useAllBranchFinancials(month: number, year: number) {
   })
 
   const payrollQ = useQuery({
-    queryKey: ["all-branch-payroll", month, year],
-    queryFn: () => fetchPayrollByBranch(from, to, month, year),
+    queryKey: ["all-branch-payroll", month, year, accountId],
+    enabled: !!accountId,
+    queryFn: () => fetchPayrollByBranch(from, to, month, year, undefined, undefined, accountId ?? undefined),
   })
 
   const adjQ = useQuery({
-    queryKey: ["all-branch-adj", month, year],
+    queryKey: ["all-branch-adj", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_records")
         .select("branch_id, amount, type, is_visa")
+        .eq("account_id", accountId!)
         .gte("date", from).lte("date", to)
       if (error) throw error
       // Visa credits go into sales; non-visa credits/debits stay as adjustments
@@ -353,6 +377,7 @@ export function useOwnerPayouts(
 // Groups every ownership row by profile → sums payouts across branches.
 
 export function useAllOwnerPayouts(month: number, year: number) {
+  const { accountId } = useAuth()
   const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
   const to   = format(new Date(year, month,     0), "yyyy-MM-dd")
 
@@ -360,11 +385,13 @@ export function useAllOwnerPayouts(month: number, year: number) {
 
   // Revenue per branch for the period
   const revenueQ = useQuery({
-    queryKey: ["all-branch-revenues", month, year],
+    queryKey: ["all-branch-revenues", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("sales_records")
         .select("branch_id, revenue")
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (error) throw error
@@ -376,11 +403,13 @@ export function useAllOwnerPayouts(month: number, year: number) {
 
   // Expenses per branch
   const expensesQ = useQuery({
-    queryKey: ["all-branch-expenses", month, year],
+    queryKey: ["all-branch-expenses", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expenses")
         .select("branch_id, amount")
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (error) throw error
@@ -392,17 +421,20 @@ export function useAllOwnerPayouts(month: number, year: number) {
 
   // Payroll net payout per branch
   const payrollQ = useQuery({
-    queryKey: ["all-branch-payroll", month, year],
-    queryFn: () => fetchPayrollByBranch(from, to, month, year),
+    queryKey: ["all-branch-payroll", month, year, accountId],
+    enabled: !!accountId,
+    queryFn: () => fetchPayrollByBranch(from, to, month, year, undefined, undefined, accountId ?? undefined),
   })
 
   // Finance adjustments (net credit − debit) per branch
   const adjQ = useQuery({
-    queryKey: ["all-branch-adj", month, year],
+    queryKey: ["all-branch-adj", month, year, accountId],
+    enabled: !!accountId,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("finance_records")
         .select("branch_id, amount, type")
+        .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (error) throw error
@@ -417,9 +449,13 @@ export function useAllOwnerPayouts(month: number, year: number) {
 
   // Branch names (for display)
   const branchNamesQ = useQuery({
-    queryKey: ["branch-names"],
+    queryKey: ["branch-names", accountId],
+    enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase.from("branches").select("id, name")
+      const { data, error } = await supabase
+        .from("branches")
+        .select("id, name")
+        .eq("account_id", accountId!)
       if (error) throw error
       return new Map<string, string>((data ?? []).map((b) => [b.id as string, b.name as string]))
     },
