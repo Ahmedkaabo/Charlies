@@ -93,17 +93,28 @@ export function useCheckInFlow(profileId: string | undefined) {
       setPosition(pos)
       setStep("selfie")
 
-      // Open camera; if user dismisses without picking a file, reset to idle
+      // Open camera; detect dismiss via cancel (modern), focus (desktop), or visibilitychange (mobile)
       setTimeout(() => {
-        fileInputRef.current?.click()
-        const onFocus = () => {
+        const input = fileInputRef.current
+        if (!input) return
+
+        const checkDismiss = () => {
           setTimeout(() => {
-            if (!fileInputRef.current?.files?.length) {
-              resetFlow()
-            }
-          }, 300)
+            if (!fileInputRef.current?.files?.length) resetFlow()
+          }, 400)
         }
-        window.addEventListener("focus", onFocus, { once: true })
+
+        input.addEventListener("cancel", () => resetFlow(), { once: true })
+        window.addEventListener("focus", checkDismiss, { once: true })
+        const onVisibility = () => {
+          if (document.visibilityState === "visible") {
+            document.removeEventListener("visibilitychange", onVisibility)
+            checkDismiss()
+          }
+        }
+        document.addEventListener("visibilitychange", onVisibility)
+
+        input.click()
       }, 0)
     } catch {
       setLocationError("Could not get your location. Enable location access and try again.")
