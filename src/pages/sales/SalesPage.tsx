@@ -57,7 +57,7 @@ export function SalesPage() {
   const { data: allBranches = [], isLoading: allBranchesLoading } = useGetBranches()
   const { data: myBranches  = [], isLoading: myBranchesLoading  } = useMyBranches(profile?.id)
   const { canRead } = useUserPermissions()
-  const canTreasuryRead = canRead("treasury_transfers")
+  const canTreasuryRead = canRead("treasury")
 
   // The branches this user can access: their assignments, or all branches if none (admin/owner)
   const branchList = myBranches.length > 0 ? myBranches : allBranches

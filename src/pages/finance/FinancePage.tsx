@@ -595,7 +595,6 @@ function FinanceContent({
   month,
   year,
   branches,
-  isManagement,
   canRunPayout,
 }: {
   branchId:     string | undefined

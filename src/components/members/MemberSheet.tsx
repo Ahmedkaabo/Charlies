@@ -47,6 +47,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -54,12 +61,6 @@ function getInitials(name?: string | null) {
   if (!name) return "??"
   const p = name.trim().split(/\s+/)
   return p.length >= 2 ? (p[0][0] + p[p.length - 1][0]).toUpperCase() : p[0].slice(0, 2).toUpperCase()
-}
-
-function roleVariant(level: number): "default" | "secondary" | "outline" {
-  if (level <= 1) return "default"
-  if (level <= 3) return "secondary"
-  return "outline"
 }
 
 // Creates a new auth user without touching the current session

@@ -1,7 +1,8 @@
 import { createClient } from "@supabase/supabase-js"
 // Prefer reading the service role key from server-only env (`process.env`).
 // Do NOT expose the service role key to the client (avoid `VITE_` prefix).
-const serviceKey = (typeof process !== "undefined" && (process.env as any)?.SUPABASE_SERVICE_ROLE_KEY)
+const _proc = typeof globalThis !== "undefined" ? (globalThis as any).process : undefined
+const serviceKey = (_proc?.env?.SUPABASE_SERVICE_ROLE_KEY as string | undefined)
   || (import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY as string | undefined)
 
 // The admin client should only be created server-side. Creating it in the

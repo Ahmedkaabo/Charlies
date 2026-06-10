@@ -67,8 +67,12 @@ async function fetchPayrollByBranch(
     daysMap.set(k, (daysMap.get(k) ?? 0) + (Number(log.day_value) || 0))
   }
 
-  const payrollMap = new Map(
-    (payrollRes.data ?? []).map((r) => [`${r.branch_id}:${r.profile_id}`, r]),
+  type PayrollRow = { branch_id: string; profile_id: string; total_bonuses: number | null; total_deductions: number | null; total_debts: number | null }
+  const payrollMap = new Map<string, PayrollRow>(
+    (payrollRes.data ?? []).map((r) => {
+      const row = r as unknown as PayrollRow
+      return [`${row.branch_id}:${row.profile_id}`, row]
+    }),
   )
 
   const result = new Map<string, number>()
@@ -417,7 +421,7 @@ export function useAllOwnerPayouts(month: number, year: number) {
     queryFn: async () => {
       const { data, error } = await supabase.from("branches").select("id, name")
       if (error) throw error
-      return new Map((data ?? []).map((b) => [b.id as string, b.name as string]))
+      return new Map<string, string>((data ?? []).map((b) => [b.id as string, b.name as string]))
     },
     staleTime: 5 * 60_000,
   })

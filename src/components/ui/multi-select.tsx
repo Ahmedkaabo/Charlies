@@ -39,7 +39,7 @@ export function MultiSelect({
         : `${selected.length} selected`
 
   return (
-    <ComboboxPrimitive.Root multiple value={selected} onValueChange={onChange} filterFn={() => true}>
+    <ComboboxPrimitive.Root multiple value={selected} onValueChange={onChange} filter={() => true}>
       <ComboboxPrimitive.Trigger
         render={
           <Button

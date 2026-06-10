@@ -33,7 +33,7 @@ export interface ExpenseEdit {
 export type ExpenseDateFilter = "this_week" | "this_month" | "custom"
 
 export interface ExpenseFilters {
-  branchId: string
+  branchId?: string
   branchIds?: string[]   // scope to multiple branches when no single branchId selected
   categoryId?: string
   categoryIds?: string[]

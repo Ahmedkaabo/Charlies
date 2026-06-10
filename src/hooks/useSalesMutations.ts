@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
-import type { SalesRecord, SalesStatus } from "@/types/sales"
+import type { SalesStatus } from "@/types/sales"
 
 export interface UpsertSalesRecordInput {
   branch_id: string

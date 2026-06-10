@@ -178,7 +178,7 @@ interface UserPermissions {
 }
 
 export function useUserPermissions(): UserPermissions {
-  const { isAdmin, profile }                               = useAuth()
+  const { profile }                                        = useAuth()
   const { data: permissions, isLoading: permsLoading }    = useGetPermissions()
 
   // Fetch the user's active role.

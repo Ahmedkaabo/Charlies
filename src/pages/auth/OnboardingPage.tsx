@@ -42,7 +42,7 @@ export function OnboardingPage() {
       await createMember.mutateAsync({
         branchId,
         profileId:      user.id,
-        roleId:         defaultRole.id,
+        roleIds:        [defaultRole.id],
         monthly_salary: null,
         currency:       "EGP",
         effective_from: new Date().toISOString().slice(0, 10),

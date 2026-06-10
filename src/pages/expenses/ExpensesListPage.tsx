@@ -47,13 +47,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
   Table,
   TableBody,
   TableCell,
@@ -242,7 +235,7 @@ function formatDateRangeTrigger(range: DateRange | undefined) {
 export function ExpensesListPage() {
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
-  const { canRead, canCreate, canUpdate, canDelete } = useUserPermissions()
+  const { canCreate, canUpdate, canDelete } = useUserPermissions()
 
   // can_create("expenses") = "Submit new expenses"
   const canSubmit      = isAdmin || canCreate("expenses")

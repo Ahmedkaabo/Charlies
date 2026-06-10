@@ -9,7 +9,6 @@ import { useGetBranches } from "@/hooks/useBranches"
 import { useMyBranches } from "@/hooks/useAttendance"
 import { useAuth } from "@/hooks/useAuth"
 import { useUserPermissions } from "@/hooks/usePermissions"
-import type { GroupedMember } from "@/types/member"
 import { MemberSheet } from "@/components/members/MemberSheet"
 import type { MemberSheetMode } from "@/components/members/MemberSheet"
 
@@ -17,13 +16,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { MultiSelect } from "@/components/ui/multi-select"
 import {
   Table,
@@ -164,7 +156,7 @@ export function MembersPage() {
   const filtered = visible?.filter((gm) => {
     const name = gm.full_name?.toLowerCase() ?? ""
     if (search && !name.includes(search.toLowerCase())) return false
-    if (roleFilters.length > 0 && !gm.assignments.some((a) => roleFilters.includes(a.role_id))) return false
+    if (roleFilters.length > 0 && !gm.assignments.some((a) => a.role_id !== null && roleFilters.includes(a.role_id))) return false
     if (branchFilters.length > 0 && !gm.assignments.some((a) => branchFilters.includes(a.branch_id))) return false
     return true
   })

@@ -100,8 +100,8 @@ function SummaryCard({
 // ── Page ──────────────────────────────────────────────────────
 
 export function PayrollPage() {
-  const { isAdmin, profile } = useAuth()
-  const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
+  const { profile } = useAuth()
+  const { canCreate, canUpdate } = useUserPermissions()
 
   // can_create("payroll") = "View all staff payroll & financial analytics"
   // Without it, the user only sees their own payroll record and no analytics cards.
@@ -109,9 +109,6 @@ export function PayrollPage() {
   const canViewAnalytics = canViewAllStaff
   // can_update("payroll") = "Add bonuses, deductions & adjustments"
   const canAdjust        = canUpdate("payroll")
-  // can_delete("payroll") = "Delete payroll adjustments"
-  const canDeleteAdj     = canDeletePerm("payroll")
-
   // ── Filters ───────────────────────────────────────────────
   const [branchFilters, setBranchFilters] = useState<string[]>([])
   const [roleFilters,   setRoleFilters]   = useState<string[]>([])

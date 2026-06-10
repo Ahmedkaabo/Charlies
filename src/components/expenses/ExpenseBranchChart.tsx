@@ -1,6 +1,4 @@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, CartesianGrid } from "recharts"
-import type { TooltipProps } from "recharts"
-
 import { useGetExpenseSummaryByBranch } from "@/hooks/useExpenses"
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,9 +11,9 @@ const chartConfig: ChartConfig = {
 
 // ── Tooltip ────────────────────────────────────────────────
 
-function CustomTooltip({ active, payload }: TooltipProps<number, string>) {
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: Array<{ payload: { name: string; total: number } }> }) {
   if (!active || !payload?.length) return null
-  const { name, total } = payload[0].payload as { name: string; total: number }
+  const { name, total } = payload[0].payload
   return (
     <div className="rounded-lg border bg-background px-3 py-2 text-xs shadow-md">
       <p className="font-medium">{name}</p>

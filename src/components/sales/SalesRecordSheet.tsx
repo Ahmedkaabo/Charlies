@@ -55,7 +55,7 @@ import {
 // ── Schema ────────────────────────────────────────────────────
 
 const schema = z.object({
-  revenue:     z.number({ invalid_type_error: "Revenue is required" }).min(0),
+  revenue:     z.number({ error: "Revenue is required" }).min(0),
   notes:       z.string(),
   receipt_url: z.string().min(1, "A receipt image is required"),
 })

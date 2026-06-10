@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
-import type { TreasuryTransfer, PoolTransfer, BranchBalance, BalanceSummary } from "@/types/balance"
+import type { TreasuryTransfer, PoolTransfer, BalanceSummary } from "@/types/balance"
 
 // ── Realtime: invalidate balance caches when any permitted user changes data ──
 
@@ -132,7 +132,7 @@ export function useAllBranchBalances(month: number, year: number, enabled = true
       // pool_transfers may 403 if user lacks permission — degrade gracefully
       if (branchRes.error) throw branchRes.error
 
-      const names    = new Map((branchRes.data ?? []).map((b) => [b.id as string, b.name as string]))
+      const names    = new Map<string, string>((branchRes.data ?? []).map((b) => [b.id as string, b.name as string]))
       const salesMap = new Map<string, number>()
       const expMap   = new Map<string, number>()
       const trfMap   = new Map<string, number>()

@@ -8,7 +8,6 @@ import {
   ArrowRight,
   ArrowLeft,
   ArrowLeftRight,
-  Wallet,
   Landmark,
   Plus,
   Pencil,
@@ -747,8 +746,6 @@ function BalanceContent({
   const { data: poolTransfers = [], isPending: poolTransfersLoading } = usePoolTransfers(branchId, from, to)
   const { data: poolCredit = 0, isPending: poolCreditLoading }        = useExpensesPoolCredit(branchId, from, to)
 
-  const poolRemaining = poolCredit - summary.totalExpenses
-
   const deleteTreasuryTransfer = useDeleteTreasuryTransfer()
   const deletePoolTransfer     = useDeletePoolTransfer()
 
@@ -758,8 +755,6 @@ function BalanceContent({
   function handlePoolSheetClose(v: boolean) {
     if (!v) { setPoolOpen(false); setTimeout(() => setEditPool(null), 300) }
   }
-
-  const showBreakdown = canBreakdownRead
 
   return (
     <div className="space-y-8">
@@ -774,7 +769,17 @@ function BalanceContent({
       />
 
       {/* ── Branch breakdown ─────────────────────────────── */}
-      
+      {canBreakdownRead && (
+        <>
+          <Separator />
+          <BranchBreakdownSection
+            balances={balances}
+            summary={summary}
+            isLoading={balancesLoading}
+            canPoolRead={canPoolRead}
+          />
+        </>
+      )}
 
       {/* ── Treasury transfers ────────────────────────────── */}
       {canTreasuryRead && (

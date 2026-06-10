@@ -80,7 +80,7 @@ type BranchRole = { role_id: string | null; role: { level: number } | null; isOw
 async function fetchBranchRoles(
   profileId: string,
   profileIsAdmin: boolean,
-  accountId: string | null,
+  _accountId: string | null,
 ): Promise<BranchRole[]> {
   // Org admins always get full access — no role lookup needed.
   if (profileIsAdmin) {

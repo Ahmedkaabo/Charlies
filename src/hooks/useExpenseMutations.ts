@@ -2,8 +2,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
-import type { Expense } from "@/types/expense"
-
 // ── Update ─────────────────────────────────────────────────
 
 export interface UpdateExpenseInput {

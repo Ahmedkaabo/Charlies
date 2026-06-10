@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { format, parseISO } from "date-fns"
-import { TrendingUp, TrendingDown, Wallet, SlidersHorizontal, Trash2 } from "lucide-react"
+import { SlidersHorizontal, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { usePayrollAdjustments, useStaffMonthlyAttendance } from "@/hooks/usePayroll"
 import { useDeleteAdjustment } from "@/hooks/useAttendanceMutations"
