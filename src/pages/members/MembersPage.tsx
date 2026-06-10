@@ -18,14 +18,6 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { MultiSelect } from "@/components/ui/multi-select"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -62,34 +54,34 @@ function roleVariant(level: number): "default" | "secondary" | "outline" {
 function TableSkeleton() {
   return (
     <div className="rounded-lg border overflow-x-auto">
-      <Table>
-        <TableHeader className="bg-muted/40">
-          <TableRow>
+      <table className="w-full text-sm">
+        <thead className="border-b bg-muted/40">
+          <tr>
             {["Staff", "Status", "Branches", "Role", "Salary", "Since", "Last Login", ""].map((h, i) => (
-              <TableHead key={i} className={i === 0 ? "sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : undefined}>{h}</TableHead>
+              <th key={i} className={`px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap${i === 0 ? " sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : ""}`}>{h}</th>
             ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
+          </tr>
+        </thead>
+        <tbody className="divide-y">
           {Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i}>
-              <TableCell className="sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+            <tr key={i}>
+              <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-8 w-8 rounded-full shrink-0" />
                   <Skeleton className="h-4 w-28" />
                 </div>
-              </TableCell>
-              <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-32 rounded-full" /></TableCell>
-              <TableCell><Skeleton className="h-5 w-20 rounded-full" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-              <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-              <TableCell><Skeleton className="h-7 w-7 rounded" /></TableCell>
-            </TableRow>
+              </td>
+              <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-5 w-32 rounded-full" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-5 w-20 rounded-full" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>
+              <td className="px-4 py-3"><Skeleton className="h-7 w-7 rounded" /></td>
+            </tr>
           ))}
-        </TableBody>
-      </Table>
+        </tbody>
+      </table>
     </div>
   )
 }
@@ -236,23 +228,22 @@ export function MembersPage() {
       {/* ── Table ─────────────────────────────────────── */}
       {!isLoading && !isError && visible && visible.length > 0 && (
         <div className="rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Branches</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Salary</TableHead>
-                <TableHead>Since</TableHead>
-                <TableHead>Last Login</TableHead>
-                {hasActions && <TableHead className="w-10" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted/40">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branches</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Role</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Salary</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Since</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Last Login</th>
+                {hasActions && <th className="px-4 py-3 w-10" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
               {filtered && filtered.length > 0 ? (
                 filtered.map((gm) => {
-                  // Use first assignment for primary role/salary/date
                   const first = gm.assignments[0]
                   const earliestJoin = gm.assignments.reduce(
                     (min, a) => (a.joined_at < min ? a.joined_at : min),
@@ -261,9 +252,9 @@ export function MembersPage() {
                   const primarySalary = gm.assignments.find((a) => a.salary?.monthly_salary)?.salary
 
                   return (
-                    <TableRow key={gm.profile_id} className={hasActions ? "cursor-pointer group" : undefined} onClick={canEdit ? () => setSheet({ type: "edit", groupedMember: gm }) : undefined}>
+                    <tr key={gm.profile_id} className={`hover:bg-muted/30 group${hasActions ? " cursor-pointer" : ""}`} onClick={canEdit ? () => setSheet({ type: "edit", groupedMember: gm }) : undefined}>
                       {/* Member */}
-                      <TableCell className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/50 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         <div className="flex items-center gap-2.5">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                             {getInitials(gm.full_name)}
@@ -275,10 +266,10 @@ export function MembersPage() {
                             )}
                           </div>
                         </div>
-                      </TableCell>
+                      </td>
 
                       {/* Status */}
-                      <TableCell>
+                      <td className="px-4 py-3">
                         {gm.last_login_at ? (
                           <Badge variant="outline" className="border-emerald-500/40 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
                             Active
@@ -288,24 +279,24 @@ export function MembersPage() {
                             Pending
                           </Badge>
                         )}
-                      </TableCell>
+                      </td>
 
                       {/* Branches — all assignments as chips */}
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1">
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <div className="flex gap-1">
                           {gm.assignments.map((a) => (
                             <span
                               key={a.id}
-                              className="inline-block rounded-md border bg-muted/50 px-2 py-0.5 text-xs font-medium"
+                              className="inline-block rounded-md border bg-muted/50 px-2 py-0.5 text-xs font-medium whitespace-nowrap"
                             >
                               {a.branch_name}
                             </span>
                           ))}
                         </div>
-                      </TableCell>
+                      </td>
 
                       {/* Role — primary assignment */}
-                      <TableCell>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {first?.role ? (
                           <Badge variant={roleVariant(first.role.level)} className="capitalize">
                             {first.role.name.replace(/_/g, " ")}
@@ -313,36 +304,36 @@ export function MembersPage() {
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
-                      </TableCell>
+                      </td>
 
                       {/* Salary (primary) */}
-                      <TableCell>
+                      <td className="px-4 py-3 whitespace-nowrap">
                         {primarySalary?.monthly_salary ? (
-                          <span className="text-sm">
+                          <span className="text-sm tabular-nums">
                             {primarySalary.currency}{" "}
                             {primarySalary.monthly_salary.toLocaleString("en-EG")}
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
-                      </TableCell>
+                      </td>
 
                       {/* Since (earliest) */}
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
                         {format(new Date(earliestJoin), "d MMM yyyy")}
-                      </TableCell>
+                      </td>
 
                       {/* Last Login */}
-                      <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                      <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
                         {gm.last_login_at
                           ? format(new Date(gm.last_login_at), "d MMM yyyy, HH:mm")
                           : <span className="text-xs italic">Never</span>
                         }
-                      </TableCell>
+                      </td>
 
                       {/* Actions */}
                       {hasActions && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end">
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
@@ -374,23 +365,23 @@ export function MembersPage() {
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </div>
-                        </TableCell>
+                        </td>
                       )}
-                    </TableRow>
+                    </tr>
                   )
                 })
               ) : (
-                <TableRow>
-                  <TableCell
+                <tr>
+                  <td
                     colSpan={hasActions ? 8 : 7}
-                    className="py-10 text-center text-sm text-muted-foreground"
+                    className="px-4 py-10 text-center text-sm text-muted-foreground"
                   >
                     No staff match the current filters
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
 

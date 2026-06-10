@@ -47,14 +47,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -133,15 +125,15 @@ function TableSkeleton() {
   return (
     <>
       {Array.from({ length: 6 }).map((_, i) => (
-        <TableRow key={i}>
-          <TableCell className="sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-24" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-28" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-          <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-          <TableCell><Skeleton className="h-10 w-10 rounded" /></TableCell>
-          <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-          <TableCell><Skeleton className="h-6 w-6 ml-auto" /></TableCell>
-        </TableRow>
+        <tr key={i}>
+          <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-24" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-10 w-10 rounded" /></td>
+          <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-6 w-6 ml-auto" /></td>
+        </tr>
       ))}
     </>
   )
@@ -570,25 +562,25 @@ export function ExpensesListPage() {
         </Card>
       ) : (
         /* ─ Desktop table ─ */
-        <div className="rounded-lg border">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Date</TableHead>
-                <TableHead>Branch</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="w-14">Receipt</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+        <div className="rounded-lg border overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted/40">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Date</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branch</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Category</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Description</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-14">Receipt</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount</th>
+                <th className="px-4 py-3 w-10" />
+              </tr>
+            </thead>
+            <tbody className="divide-y">
               {isLoading ? (
                 <TableSkeleton />
               ) : filteredExpenses.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7}>
+                <tr>
+                  <td colSpan={7} className="px-4 py-3">
                     <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                         <Receipt className="h-5 w-5 text-muted-foreground" />
@@ -606,44 +598,44 @@ export function ExpensesListPage() {
                         </Button>
                       )}
                     </div>
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ) : (
                 filteredExpenses.map((expense) => {
                   const Icon = getCategoryIcon(expense.category?.icon ?? null)
                   return (
-                    <TableRow
+                    <tr
                       key={expense.id}
-                      className="cursor-pointer group"
+                      className="hover:bg-muted/30 cursor-pointer group"
                       onClick={() => setDrawer({ type: "view", expense })}
                     >
                       {/* Date — orange Pencil when edited */}
-                      <TableCell className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/50 text-sm whitespace-nowrap relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 whitespace-nowrap relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         <span className="flex items-center gap-1.5">
                           {formatDate(expense.date)}
                           {expense.edited_at && (
                             <Pencil className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
                           )}
                         </span>
-                      </TableCell>
+                      </td>
 
-                      <TableCell className="text-sm">{expense.branch?.name ?? "—"}</TableCell>
+                      <td className="px-4 py-3">{expense.branch?.name ?? "—"}</td>
 
-                      <TableCell>
-                        <span className="flex items-center gap-1.5 text-sm">
+                      <td className="px-4 py-3">
+                        <span className="flex items-center gap-1.5">
                           <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           {expense.category?.name ?? (
                             <span className="text-muted-foreground">Uncategorized</span>
                           )}
                         </span>
-                      </TableCell>
+                      </td>
 
-                      <TableCell className="text-sm text-muted-foreground max-w-[240px]">
+                      <td className="px-4 py-3 text-muted-foreground max-w-[240px]">
                         <span className="truncate block">{expense.description ?? "—"}</span>
-                      </TableCell>
+                      </td>
 
-                      {/* Receipt thumbnail — stop propagation so row click isn't triggered */}
-                      <TableCell>
+                      {/* Receipt thumbnail */}
+                      <td className="px-4 py-3">
                         {expense.receipt_url ? (
                           <button
                             className="block h-10 w-10 overflow-hidden rounded border hover:opacity-80 transition-opacity"
@@ -656,14 +648,14 @@ export function ExpensesListPage() {
                             <Receipt className="h-4 w-4 text-muted-foreground" />
                           </div>
                         )}
-                      </TableCell>
+                      </td>
 
-                      <TableCell className="text-right font-semibold tabular-nums text-sm whitespace-nowrap">
+                      <td className="px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap">
                         {formatAmount(expense.amount)}
-                      </TableCell>
+                      </td>
 
                       {(canEdit || canDeleteEntry) && (
-                        <TableCell onClick={(e) => e.stopPropagation()}>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button size="icon" variant="ghost">
@@ -689,14 +681,14 @@ export function ExpensesListPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
+                        </td>
                       )}
-                    </TableRow>
+                    </tr>
                   )
                 })
               )}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
 

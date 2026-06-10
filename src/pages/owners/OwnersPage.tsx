@@ -27,14 +27,6 @@ import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -731,38 +723,38 @@ export function OwnersPage() {
       )}
 
       {/* ── Table ────────────────────────────────────── */}
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              <TableHead className="w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Owner</TableHead>
-              <TableHead>Branches</TableHead>
-              <TableHead className="w-36">Role</TableHead>
-              <TableHead className="w-32">
+      <div className="rounded-lg border overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/40">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Owner</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branches</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-36">Role</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-32">
                 <div className="flex items-center gap-1.5">
-                  <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+                  <ShieldCheck className="h-3.5 w-3.5" />
                   Manager
                 </div>
-              </TableHead>
-              <TableHead className="w-20" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+              </th>
+              <th className="px-4 py-3 w-20" />
+            </tr>
+          </thead>
+          <tbody className="divide-y">
             {/* Loading */}
             {isLoading && Array.from({ length: 4 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell className="sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-28" /></div></TableCell>
-                <TableCell><Skeleton className="h-4 w-40" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-20" /></TableCell>
-                <TableCell><Skeleton className="h-5 w-9 rounded-full" /></TableCell>
-                <TableCell><Skeleton className="h-7 w-14" /></TableCell>
-              </TableRow>
+              <tr key={i}>
+                <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-28" /></div></td>
+                <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-20" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-5 w-9 rounded-full" /></td>
+                <td className="px-4 py-3"><Skeleton className="h-7 w-14" /></td>
+              </tr>
             ))}
 
             {/* Empty */}
             {!isLoading && !isError && users?.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={5}>
+              <tr>
+                <td colSpan={5} className="px-4 py-3">
                   <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                       <Users className="h-5 w-5 text-muted-foreground" />
@@ -778,16 +770,16 @@ export function OwnersPage() {
                       </Button>
                     )}
                   </div>
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             )}
 
             {/* Rows */}
             {!isLoading && users?.map((user) => {
               return (
-                <TableRow key={user.profile_id} className="cursor-pointer group" onClick={() => setEditTarget(user)}>
+                <tr key={user.profile_id} className="hover:bg-muted/30 cursor-pointer group" onClick={() => setEditTarget(user)}>
                   {/* User */}
-                  <TableCell className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/50 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                  <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                         {getInitials(user.full_name)}
@@ -806,47 +798,47 @@ export function OwnersPage() {
                         )}
                       </div>
                     </div>
-                  </TableCell>
+                  </td>
 
                   {/* Branches */}
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex gap-1">
                       {user.branches.length === 0 ? (
                         <span className="text-xs text-muted-foreground">No branches</span>
                       ) : user.branches.map((b) => (
                         <span
                           key={b.assignment_id}
-                          className="rounded-md border bg-muted/50 px-2 py-0.5 text-xs font-medium"
+                          className="rounded-md border bg-muted/50 px-2 py-0.5 text-xs font-medium whitespace-nowrap"
                         >
                           {b.branch_name}
                         </span>
                       ))}
                     </div>
-                  </TableCell>
+                  </td>
 
                   {/* Role */}
-                  <TableCell>
+                  <td className="px-4 py-3 whitespace-nowrap">
                     {user.is_master ? (
-                      <span className="rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium">
+                      <span className="rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
                         Full Access
                       </span>
                     ) : (() => {
                       const roles = allRoles.filter((r) => user.role_ids.includes(r.id))
                       if (roles.length === 0) return <span className="text-xs text-muted-foreground">—</span>
                       return (
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex gap-1">
                           {roles.map((r) => (
-                            <span key={r.id} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium capitalize">
+                            <span key={r.id} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium capitalize whitespace-nowrap">
                               {r.name.replace(/_/g, " ")}
                             </span>
                           ))}
                         </div>
                       )
                     })()}
-                  </TableCell>
+                  </td>
 
                   {/* Manager toggle */}
-                  <TableCell onClick={(e) => e.stopPropagation()}>
+                  <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <Switch
                       checked={user.is_fee_manager}
                       disabled={setManagerStatus.isPending || !canEditOwner}
@@ -854,11 +846,11 @@ export function OwnersPage() {
                         canEditOwner && setManagerStatus.mutate({ profileId: user.profile_id, isFeeManager: checked })
                       }
                     />
-                  </TableCell>
+                  </td>
 
                   {/* Actions */}
                   {(canEditOwner || canDeleteOwner) && (
-                    <TableCell onClick={(e) => e.stopPropagation()}>
+                    <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex justify-end">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -888,13 +880,13 @@ export function OwnersPage() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
-                    </TableCell>
+                    </td>
                   )}
-                </TableRow>
+                </tr>
               )
             })}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
 
       {/* ── Add sheet ────────────────────────────────── */}

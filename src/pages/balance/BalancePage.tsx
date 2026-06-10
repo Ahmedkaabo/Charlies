@@ -49,14 +49,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   Select,
   SelectContent,
   SelectItem,
@@ -598,8 +590,9 @@ function PoolTransferSheet({
 
 // ── Shared table sticky-column classes ───────────────────────
 
-const STICKY_HEAD = "sticky left-0 z-10 bg-muted/40"
-const STICKY_CELL = "sticky left-0 z-10 bg-background"
+const STICKY_HEAD = "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
+const STICKY_CELL = "px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
+const TH = "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap"
 
 // ── Branch breakdown section ──────────────────────────────────
 
@@ -618,30 +611,30 @@ function BranchBreakdownSection({
   if (isLoading) {
     return (
       <div className="rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              <TableHead className={STICKY_HEAD}>Branch</TableHead>
-              <TableHead className="text-right">Sales</TableHead>
-              <TableHead className="text-right">Expenses</TableHead>
-              <TableHead className="text-right">Transferred</TableHead>
-              {canPoolRead && <TableHead className="text-right">Pool Credit</TableHead>}
-              <TableHead className="text-right">Remaining</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/40">
+            <tr>
+              <th className={STICKY_HEAD}>Branch</th>
+              <th className={`${TH} text-right`}>Sales</th>
+              <th className={`${TH} text-right`}>Expenses</th>
+              <th className={`${TH} text-right`}>Transferred</th>
+              {canPoolRead && <th className={`${TH} text-right`}>Pool Credit</th>}
+              <th className={`${TH} text-right`}>Remaining</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
             {Array.from({ length: 4 }).map((_, i) => (
-              <TableRow key={i}>
-                <TableCell className={STICKY_CELL}><Skeleton className="h-4 w-28" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-                {canPoolRead && <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>}
-                <TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell>
-              </TableRow>
+              <tr key={i}>
+                <td className={STICKY_CELL}><Skeleton className="h-4 w-28" /></td>
+                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                {canPoolRead && <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>}
+                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+              </tr>
             ))}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     )
   }
@@ -655,38 +648,38 @@ function BranchBreakdownSection({
         <p className="text-sm text-muted-foreground mt-0.5">Per-branch summary for the selected period</p>
       </div>
       <div className="rounded-lg border overflow-x-auto">
-        <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              <TableHead className={STICKY_HEAD}>Branch</TableHead>
-              <TableHead className="text-right">Sales</TableHead>
-              <TableHead className="text-right">Expenses</TableHead>
-              <TableHead className="text-right">Transferred</TableHead>
-              {canPoolRead && <TableHead className="text-right">Pool Credit</TableHead>}
-              <TableHead className="text-right">Remaining</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/40">
+            <tr>
+              <th className={STICKY_HEAD}>Branch</th>
+              <th className={`${TH} text-right`}>Sales</th>
+              <th className={`${TH} text-right`}>Expenses</th>
+              <th className={`${TH} text-right`}>Transferred</th>
+              {canPoolRead && <th className={`${TH} text-right`}>Pool Credit</th>}
+              <th className={`${TH} text-right`}>Remaining</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
             {balances.map((b) => (
-              <TableRow key={b.branchId}>
-                <TableCell className={cn(STICKY_CELL, "font-medium whitespace-nowrap")}>{b.branchName}</TableCell>
-                <TableCell className="text-right tabular-nums">{egp(b.sales)}</TableCell>
-                <TableCell className="text-right tabular-nums text-destructive">{egp(b.expenses)}</TableCell>
-                <TableCell className="text-right tabular-nums">{egp(b.transferred)}</TableCell>
-                {canPoolRead && <TableCell className="text-right tabular-nums">{egp(b.poolCredit)}</TableCell>}
-                <TableCell className={cn("text-right tabular-nums font-semibold", b.remaining < 0 && "text-destructive")}>{egp(b.remaining)}</TableCell>
-              </TableRow>
+              <tr key={b.branchId}>
+                <td className={cn(STICKY_CELL, "font-medium whitespace-nowrap")}>{b.branchName}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{egp(b.sales)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-destructive">{egp(b.expenses)}</td>
+                <td className="px-4 py-3 text-right tabular-nums">{egp(b.transferred)}</td>
+                {canPoolRead && <td className="px-4 py-3 text-right tabular-nums">{egp(b.poolCredit)}</td>}
+                <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", b.remaining < 0 && "text-destructive")}>{egp(b.remaining)}</td>
+              </tr>
             ))}
-            <TableRow className="border-t-2 font-bold bg-muted/20">
-              <TableCell className={cn(STICKY_CELL, "font-bold bg-muted/20")}>Total</TableCell>
-              <TableCell className="text-right tabular-nums">{egp(summary.totalSales)}</TableCell>
-              <TableCell className="text-right tabular-nums text-destructive">{egp(summary.totalExpenses)}</TableCell>
-              <TableCell className="text-right tabular-nums">{egp(summary.totalTransferred)}</TableCell>
-              {canPoolRead && <TableCell className="text-right tabular-nums">—</TableCell>}
-              <TableCell className={cn("text-right tabular-nums font-bold", summary.totalRemaining < 0 && "text-destructive")}>{egp(summary.totalRemaining)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+            <tr className="border-t-2 bg-muted/20">
+              <td className={cn(STICKY_CELL, "font-bold bg-muted/20")}>Total</td>
+              <td className="px-4 py-3 text-right tabular-nums font-bold">{egp(summary.totalSales)}</td>
+              <td className="px-4 py-3 text-right tabular-nums font-bold text-destructive">{egp(summary.totalExpenses)}</td>
+              <td className="px-4 py-3 text-right tabular-nums font-bold">{egp(summary.totalTransferred)}</td>
+              {canPoolRead && <td className="px-4 py-3 text-right tabular-nums font-bold">—</td>}
+              <td className={cn("px-4 py-3 text-right tabular-nums font-bold", summary.totalRemaining < 0 && "text-destructive")}>{egp(summary.totalRemaining)}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
   )
@@ -801,10 +794,10 @@ function BalanceContent({
 
             {transfersLoading ? (
               <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/40"><TableRow><TableHead className={STICKY_HEAD}>Date</TableHead>{isAllBranches && <TableHead>Branch</TableHead>}<TableHead className="text-right">Amount</TableHead><TableHead>Notes</TableHead><TableHead>Added by</TableHead></TableRow></TableHeader>
-                  <TableBody>{Array.from({ length: 4 }).map((_, i) => <TableRow key={i}><TableCell className={STICKY_CELL}><Skeleton className="h-4 w-24" /></TableCell>{isAllBranches && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}<TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-4 w-24" /></TableCell></TableRow>)}</TableBody>
-                </Table>
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>Date</th>{isAllBranches && <th className={TH}>Branch</th>}<th className={`${TH} text-right`}>Amount</th><th className={TH}>Notes</th><th className={TH}>Added by</th></tr></thead>
+                  <tbody className="divide-y">{Array.from({ length: 4 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
+                </table>
               </div>
             ) : transfers.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
@@ -821,46 +814,47 @@ function BalanceContent({
               </div>
             ) : (
               <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow>
-                      <TableHead className={STICKY_HEAD}>Date</TableHead>
-                      {isAllBranches && <TableHead>Branch</TableHead>}
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Notes</TableHead><TableHead>Added by</TableHead>
-                      {(canTreasuryUpdate || canTreasuryDelete) && <TableHead className="w-10" />}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/40">
+                    <tr>
+                      <th className={STICKY_HEAD}>Date</th>
+                      {isAllBranches && <th className={TH}>Branch</th>}
+                      <th className={`${TH} text-right`}>Amount</th>
+                      <th className={TH}>Notes</th>
+                      <th className={TH}>Added by</th>
+                      {(canTreasuryUpdate || canTreasuryDelete) && <th className="px-4 py-3 w-10" />}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
                     {transfers.map((t) => {
                       const branchObj = t.branch as { id: string; name: string } | null
                       const adderObj  = t.adder  as { id: string; full_name: string | null } | null
                       const isInflow  = t.direction === "inflow"
                       return (
-                        <TableRow key={t.id}>
-                          <TableCell className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</TableCell>
-                          {isAllBranches && <TableCell className="font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</TableCell>}
-                          <TableCell className="text-right whitespace-nowrap">
+                        <tr key={t.id} className="hover:bg-muted/30">
+                          <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</td>
+                          {isAllBranches && <td className="px-4 py-3 font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
+                          <td className="px-4 py-3 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1">
                               {isInflow ? <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" /> : <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
                               <span className={cn("tabular-nums font-medium", isInflow ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400")}>{egp(t.amount)}</span>
                             </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground max-w-xs truncate">{t.notes || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</TableCell>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{t.notes || "—"}</td>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
                           {(canTreasuryUpdate || canTreasuryDelete) && (
-                            <TableCell>
+                            <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-1">
                                 {canTreasuryUpdate && <Button size="icon" variant="ghost" onClick={() => { setEditTransfer(t); setTransferOpen(true) }}><Pencil className="h-4 w-4" /></Button>}
                                 {canTreasuryDelete && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDelTransferId(t.id)}><Trash2 className="h-4 w-4" /></Button>}
                               </div>
-                            </TableCell>
+                            </td>
                           )}
-                        </TableRow>
+                        </tr>
                       )
                     })}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -886,10 +880,10 @@ function BalanceContent({
 
             {poolTransfersLoading ? (
               <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/40"><TableRow><TableHead className={STICKY_HEAD}>Date</TableHead>{isAllBranches && <TableHead>Branch</TableHead>}<TableHead>Type</TableHead><TableHead className="text-right">Amount</TableHead><TableHead>Notes</TableHead><TableHead>Added by</TableHead></TableRow></TableHeader>
-                  <TableBody>{Array.from({ length: 3 }).map((_, i) => <TableRow key={i}><TableCell className={STICKY_CELL}><Skeleton className="h-4 w-24" /></TableCell>{isAllBranches && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}<TableCell><Skeleton className="h-5 w-28 rounded-full" /></TableCell><TableCell className="text-right"><Skeleton className="h-4 w-20 ml-auto" /></TableCell><TableCell><Skeleton className="h-4 w-32" /></TableCell><TableCell><Skeleton className="h-4 w-24" /></TableCell></TableRow>)}</TableBody>
-                </Table>
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>Date</th>{isAllBranches && <th className={TH}>Branch</th>}<th className={TH}>Type</th><th className={`${TH} text-right`}>Amount</th><th className={TH}>Notes</th><th className={TH}>Added by</th></tr></thead>
+                  <tbody className="divide-y">{Array.from({ length: 3 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3"><Skeleton className="h-5 w-28 rounded-full" /></td><td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
+                </table>
               </div>
             ) : poolTransfers.length === 0 ? (
               <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
@@ -906,50 +900,51 @@ function BalanceContent({
               </div>
             ) : (
               <div className="rounded-lg border overflow-x-auto">
-                <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow>
-                      <TableHead className={STICKY_HEAD}>Date</TableHead>
-                      {isAllBranches && <TableHead>Branch</TableHead>}
-                      <TableHead>Type</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                      <TableHead>Notes</TableHead><TableHead>Added by</TableHead>
-                      {(canPoolUpdate || canPoolDelete) && <TableHead className="w-10" />}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
+                <table className="w-full text-sm">
+                  <thead className="border-b bg-muted/40">
+                    <tr>
+                      <th className={STICKY_HEAD}>Date</th>
+                      {isAllBranches && <th className={TH}>Branch</th>}
+                      <th className={TH}>Type</th>
+                      <th className={`${TH} text-right`}>Amount</th>
+                      <th className={TH}>Notes</th>
+                      <th className={TH}>Added by</th>
+                      {(canPoolUpdate || canPoolDelete) && <th className="px-4 py-3 w-10" />}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
                     {poolTransfers.map((t) => {
                       const branchObj  = t.branch as { id: string; name: string } | null
                       const adderObj   = t.adder  as { id: string; full_name: string | null } | null
                       const toExpenses = t.from_pool === "sales"
                       return (
-                        <TableRow key={t.id}>
-                          <TableCell className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</TableCell>
-                          {isAllBranches && <TableCell className="font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</TableCell>}
-                          <TableCell>
+                        <tr key={t.id} className="hover:bg-muted/30">
+                          <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</td>
+                          {isAllBranches && <td className="px-4 py-3 font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
+                          <td className="px-4 py-3">
                             <span className={cn(
                               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                               toExpenses ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400",
                             )}>
                               {toExpenses ? <><ArrowRight className="h-3 w-3" />Sales → Exp.</> : <><ArrowLeft className="h-3 w-3" />Exp. → Sales</>}
                             </span>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-medium whitespace-nowrap">{egp(t.amount)}</TableCell>
-                          <TableCell className="text-muted-foreground max-w-xs truncate">{t.notes || "—"}</TableCell>
-                          <TableCell className="text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</TableCell>
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{egp(t.amount)}</td>
+                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{t.notes || "—"}</td>
+                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
                           {(canPoolUpdate || canPoolDelete) && (
-                            <TableCell>
+                            <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-1">
                                 {canPoolUpdate && <Button size="icon" variant="ghost" onClick={() => { setEditPool(t); setPoolOpen(true) }}><Pencil className="h-4 w-4" /></Button>}
                                 {canPoolDelete && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDelPoolId(t.id)}><Trash2 className="h-4 w-4" /></Button>}
                               </div>
-                            </TableCell>
+                            </td>
                           )}
-                        </TableRow>
+                        </tr>
                       )
                     })}
-                  </TableBody>
-                </Table>
+                  </tbody>
+                </table>
               </div>
             )}
           </div>

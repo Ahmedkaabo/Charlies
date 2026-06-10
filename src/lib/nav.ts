@@ -32,8 +32,8 @@ const HR_ITEMS: NavItem[] = [
 ]
 
 const ACCOUNTING_ITEMS: NavItem[] = [
-  { label: "Expenses", path: "/expenses", icon: Receipt,    resource: "expenses" },
   { label: "Sales",    path: "/sales",    icon: TrendingUp, resource: "sales"    },
+  { label: "Expenses", path: "/expenses", icon: Receipt,    resource: "expenses" },
   { label: "Balance",  path: "/balance",  icon: Landmark,   resource: "balance"  },
   { label: "Payout",   path: "/finance",  icon: DollarSign, resource: "finance"  },
 ]

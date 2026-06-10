@@ -296,15 +296,15 @@ export function PayrollPage() {
           <thead className="border-b bg-muted/40">
             <tr>
               <th className="sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Base</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Attendance</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Leave</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Earned</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Bonus</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Deduction</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Debt</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Net</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Base</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Attendance</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Leave</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Earned</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Bonus</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Deduction</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Debt</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Net</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y">

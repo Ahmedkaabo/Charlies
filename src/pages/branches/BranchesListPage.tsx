@@ -23,14 +23,6 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -270,35 +262,35 @@ export function BranchesListPage() {
       {/* ── Table ───────────────────────────────────────── */}
       {(isLoading || (branches && branches.length > 0)) && (
         <div className="rounded-lg border overflow-x-auto">
-          <Table>
-            <TableHeader className="bg-muted/40">
-              <TableRow>
-                <TableHead className="pl-4 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Branch</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead>Shifts</TableHead>
-                <TableHead>Owners</TableHead>
-                <TableHead>Staff</TableHead>
-                <TableHead>Status</TableHead>
-                {hasActions && <TableHead className="w-10" />}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table className="w-full text-sm">
+            <thead className="border-b bg-muted/40">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Branch</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Location</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Shifts</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Owners</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Staff</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                {hasActions && <th className="px-4 py-3 w-10" />}
+              </tr>
+            </thead>
+            <tbody className="divide-y">
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell className="pl-4 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-36" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-20" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
-                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
-                      {hasActions && <TableCell />}
-                    </TableRow>
+                    <tr key={i}>
+                      <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-36" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
+                      <td className="px-4 py-3"><Skeleton className="h-5 w-16 rounded-full" /></td>
+                      {hasActions && <td className="px-4 py-3" />}
+                    </tr>
                   ))
                 : filtered.length === 0
                   ? (
-                    <TableRow>
-                      <TableCell colSpan={hasActions ? 7 : 6}>
+                    <tr>
+                      <td colSpan={hasActions ? 7 : 6} className="px-4 py-3">
                         <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                             <Store className="h-5 w-5 text-muted-foreground" />
@@ -308,24 +300,24 @@ export function BranchesListPage() {
                             <p className="text-xs text-muted-foreground mt-0.5">Try adjusting your search</p>
                           </div>
                         </div>
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   )
                   : filtered.map((branch) => (
-                    <TableRow
+                    <tr
                       key={branch.id}
-                      className="cursor-pointer group"
+                      className="hover:bg-muted/30 cursor-pointer group"
                       onClick={() => setDrawer({ type: "view", id: branch.id })}
                     >
-                      <TableCell className="pl-4 font-medium sticky left-0 z-10 bg-background sm:group-hover:bg-muted/50 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <td className="px-4 py-3 font-medium sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         {branch.name}
                         {branch.name_ar && (
                           <span className="ml-2 text-xs text-muted-foreground" dir="rtl">
                             {branch.name_ar}
                           </span>
                         )}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 text-muted-foreground">
                         {branch.latitude !== null ? (
                           <span className="inline-flex items-center gap-1.5">
                             <MapPin className="h-3 w-3 shrink-0" />
@@ -334,23 +326,23 @@ export function BranchesListPage() {
                         ) : (
                           "Not set"
                         )}
-                      </TableCell>
-                      <TableCell className="tabular-nums text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
                         {counts?.get(branch.id)?.shifts ?? 0}
-                      </TableCell>
-                      <TableCell className="tabular-nums text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
                         {counts?.get(branch.id)?.owners ?? 0}
-                      </TableCell>
-                      <TableCell className="tabular-nums text-muted-foreground">
+                      </td>
+                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
                         {counts?.get(branch.id)?.members ?? 0}
-                      </TableCell>
-                      <TableCell>
+                      </td>
+                      <td className="px-4 py-3">
                         <Badge variant={branch.is_active ? "default" : "secondary"}>
                           {branch.is_active ? "Active" : "Inactive"}
                         </Badge>
-                      </TableCell>
+                      </td>
                       {hasActions && (
-                        <TableCell>
+                        <td className="px-4 py-3">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -402,12 +394,12 @@ export function BranchesListPage() {
                               )}
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        </TableCell>
+                        </td>
                       )}
-                    </TableRow>
+                    </tr>
                   ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       )}
 

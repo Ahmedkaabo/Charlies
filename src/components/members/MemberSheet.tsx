@@ -962,9 +962,9 @@ export function MemberSheet({
   const { data: branches  = [] } = useGetBranches()
   const { data: allRoles  = [] } = useGetRoles()
 
-  // System roles (is_system=true, e.g. Owner) are never shown in selectors.
+  // System roles (is_system=true, e.g. Owner) and roles hidden from assignment are never shown in selectors.
   // Non-admins can only assign roles with higher level numbers than their own.
-  const assignableRoles = allRoles.filter((r) => !r.is_system)
+  const assignableRoles = allRoles.filter((r) => !r.is_system && !r.hidden_from_assignment)
   const roles = isAdmin
     ? assignableRoles
     : assignableRoles.filter((r) => r.level > roleLevel)

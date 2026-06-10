@@ -17,6 +17,7 @@ export interface Role {
   level: number
   is_system?: boolean
   role_type?: RoleType
+  hidden_from_assignment?: boolean
 }
 
 export type Resource =

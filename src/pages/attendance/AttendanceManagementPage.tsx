@@ -215,12 +215,12 @@ export function AttendanceManagementPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Branch</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Shift</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Check In</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Late?</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground">Check Out</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branch</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Shift</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Check In</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Late?</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Check Out</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Hours</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Days</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">Selfie</th>

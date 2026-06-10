@@ -6,14 +6,6 @@ import { getMissingDays } from "@/lib/sales"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 
 // ── Summary cards ─────────────────────────────────────────────
 
@@ -130,52 +122,49 @@ export function SalesManagementView({
       )}
 
       {/* ── Branch table ──────────────────────────── */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Branch</TableHead>
-              <TableHead className="text-right">Days Filled</TableHead>
-              {canTreasuryRead && <TableHead className="text-right">Total Revenue</TableHead>}
-              <TableHead className="text-right">Missing Days</TableHead>
-              <TableHead className="text-right">Last Entry</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
+      <div className="rounded-lg border overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="border-b bg-muted/40">
+            <tr>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branch</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Days Filled</th>
+              {canTreasuryRead && <th className="px-4 py-3 text-right font-medium text-muted-foreground">Total Revenue</th>}
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Missing Days</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Last Entry</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
             {allLoading || branchesLoading ? (
               Array.from({ length: 3 }).map((_, i) => (
-                <TableRow key={i}>
+                <tr key={i}>
                   {Array.from({ length: canTreasuryRead ? 5 : 4 }).map((_, j) => (
-                    <TableCell key={j}>
+                    <td key={j} className="px-4 py-3">
                       <Skeleton className="h-4 w-full" />
-                    </TableCell>
+                    </td>
                   ))}
-                </TableRow>
+                </tr>
               ))
             ) : branchRows.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={canTreasuryRead ? 5 : 4}
-                  className="text-center text-muted-foreground py-8"
-                >
+              <tr>
+                <td colSpan={canTreasuryRead ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground">
                   No branches found
-                </TableCell>
-              </TableRow>
+                </td>
+              </tr>
             ) : (
               branchRows.map((row) => (
-                <TableRow
+                <tr
                   key={row.id}
-                  className="cursor-pointer hover:bg-muted/50"
+                  className="cursor-pointer hover:bg-muted/30"
                   onClick={() => onSelectBranch(row.id)}
                 >
-                  <TableCell className="font-medium">{row.name}</TableCell>
-                  <TableCell className="text-right">{row.daysFilled}</TableCell>
+                  <td className="px-4 py-3 font-medium">{row.name}</td>
+                  <td className="px-4 py-3 text-right tabular-nums">{row.daysFilled}</td>
                   {canTreasuryRead && (
-                    <TableCell className="text-right tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums">
                       EGP {row.totalRevenue.toLocaleString()}
-                    </TableCell>
+                    </td>
                   )}
-                  <TableCell className="text-right">
+                  <td className="px-4 py-3 text-right">
                     {row.missingDays > 0 ? (
                       <span className="text-destructive font-medium">
                         {row.missingDays}
@@ -183,15 +172,15 @@ export function SalesManagementView({
                     ) : (
                       <span className="text-muted-foreground">0</span>
                     )}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
+                  </td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">
                     {row.lastEntry ?? "—"}
-                  </TableCell>
-                </TableRow>
+                  </td>
+                </tr>
               ))
             )}
-          </TableBody>
-        </Table>
+          </tbody>
+        </table>
       </div>
     </div>
   )

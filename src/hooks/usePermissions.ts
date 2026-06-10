@@ -15,12 +15,20 @@ export function useGetRoles() {
       if (!accountId) return []
       const { data, error } = await supabase
         .from("roles")
-        .select("id, name, level, is_system, role_type")
+        .select("id, name, level, is_system, role_type, hidden_from_assignment")
         .eq("account_id", accountId)
         .order("level", { ascending: true })
       if (!error) return data as Role[]
 
-      // Fallback: newer columns may not exist yet
+      // Fallback: hidden_from_assignment column may not exist yet
+      const { data: noHidden, error: noHiddenErr } = await supabase
+        .from("roles")
+        .select("id, name, level, is_system, role_type")
+        .eq("account_id", accountId)
+        .order("level", { ascending: true })
+      if (!noHiddenErr) return (noHidden ?? []).map((r) => ({ ...r, hidden_from_assignment: false })) as Role[]
+
+      // Fallback: older schema without is_system / role_type either
       const { data: basic, error: basicErr } = await supabase
         .from("roles")
         .select("id, name, level")
@@ -30,7 +38,8 @@ export function useGetRoles() {
       return (basic ?? []).map((r) => ({
         ...r,
         is_system: false,
-        role_type:  "operational" as const,
+        role_type: "operational" as const,
+        hidden_from_assignment: false,
       })) as Role[]
     },
     enabled: !!accountId,
@@ -41,6 +50,7 @@ export interface RoleInput {
   name: string
   level: number
   role_type?: "managerial" | "operational"
+  hidden_from_assignment?: boolean
 }
 
 export function useCreateRole() {

@@ -60,6 +60,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Switch } from "@/components/ui/switch"
 
 // ── Resource metadata ─────────────────────────────────────────
 
@@ -225,6 +226,7 @@ function formatRoleName(name: string) {
 
 const roleSchema = z.object({
   name: z.string().min(1, "Required").regex(/^[a-z_]+$/, "Lowercase & underscores only"),
+  hidden_from_assignment: z.boolean().default(false),
 })
 type RoleFormValues = z.infer<typeof roleSchema>
 
@@ -238,7 +240,7 @@ function AddRoleDialog({
   const createRole = useCreateRole()
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
-    defaultValues: { name: "" },
+    defaultValues: { name: "", hidden_from_assignment: false },
   })
 
   async function onSubmit(values: RoleFormValues) {
@@ -273,6 +275,28 @@ function AddRoleDialog({
                     <Input placeholder="branch_manager" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="hidden_from_assignment"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-sm">Hide from staff assignment</FormLabel>
+                      <p className="text-xs text-muted-foreground">
+                        This role won't appear when assigning roles to staff members.
+                      </p>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </div>
                 </FormItem>
               )}
             />
@@ -434,10 +458,24 @@ function RoleDrawer({
 }) {
   const isMobile   = useIsMobile()
   const deleteRole = useDeleteRole()
-  const [confirmDelete, setConfirmDelete] = useState(false)
-  const [localName, setLocalName]         = useState<string | null>(null)
+  const updateRole = useUpdateRole(role?.id ?? "")
+  const [confirmDelete, setConfirmDelete]           = useState(false)
+  const [localName, setLocalName]                   = useState<string | null>(null)
+  const [localHidden, setLocalHidden]               = useState<boolean | null>(null)
 
-  const displayName = localName ?? (role ? role.name : "")
+  const displayName   = localName   ?? (role ? role.name : "")
+  const displayHidden = localHidden ?? (role?.hidden_from_assignment ?? false)
+
+  async function handleToggleHidden(value: boolean) {
+    if (!role) return
+    setLocalHidden(value)
+    try {
+      await updateRole.mutateAsync({ hidden_from_assignment: value })
+    } catch {
+      setLocalHidden(!value)
+      toast.error("Failed to update role")
+    }
+  }
 
   async function handleDelete() {
     if (!role) return
@@ -453,7 +491,7 @@ function RoleDrawer({
 
   return (
     <>
-      <Sheet open={role !== null} onOpenChange={(v) => { if (!v) { onClose(); setLocalName(null) } }}>
+      <Sheet open={role !== null} onOpenChange={(v) => { if (!v) { onClose(); setLocalName(null); setLocalHidden(null) } }}>
         <SheetContent
           side={isMobile ? "bottom" : "right"}
           className={cn(
@@ -465,14 +503,29 @@ function RoleDrawer({
             <>
               {/* Header */}
               <SheetHeader className="border-b px-6 py-4">
-                <div className="space-y-1.5">
-                  <RenameField
-                    role={{ ...role, name: displayName }}
-                    onSaved={setLocalName}
-                  />
-                  <SheetDescription className="text-xs">
-                    Changes save automatically
-                  </SheetDescription>
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <RenameField
+                      role={{ ...role, name: displayName }}
+                      onSaved={setLocalName}
+                    />
+                    <SheetDescription className="text-xs">
+                      Changes save automatically
+                    </SheetDescription>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border px-4 py-3">
+                    <div className="space-y-0.5">
+                      <p className="text-sm font-medium">Hide from staff assignment</p>
+                      <p className="text-xs text-muted-foreground">
+                        This role won't appear when assigning roles to staff members.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={displayHidden}
+                      onCheckedChange={handleToggleHidden}
+                      disabled={updateRole.isPending}
+                    />
+                  </div>
                 </div>
               </SheetHeader>
 
