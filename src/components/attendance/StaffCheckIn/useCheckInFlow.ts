@@ -63,13 +63,49 @@ export function useCheckInFlow(profileId: string | undefined) {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  async function startFlow(m: FlowMode) {
+  function startFlow(m: FlowMode) {
     setMode(m)
-    setStep("locating")
+    setStep("selfie")
     setLocationError("")
     setPosition(null)
     setDistanceM(0)
+    setSelfieFile(null)
+    setSelfiePreview("")
 
+    // Open camera immediately; detect dismiss via cancel (modern), focus (desktop), visibilitychange (mobile)
+    setTimeout(() => {
+      const input = fileInputRef.current
+      if (!input) return
+
+      const checkDismiss = () => {
+        setTimeout(() => {
+          if (!fileInputRef.current?.files?.length) resetFlow()
+        }, 400)
+      }
+
+      input.addEventListener("cancel", () => resetFlow(), { once: true })
+      window.addEventListener("focus", checkDismiss, { once: true })
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") {
+          document.removeEventListener("visibilitychange", onVisibility)
+          checkDismiss()
+        }
+      }
+      document.addEventListener("visibilitychange", onVisibility)
+
+      input.click()
+    }, 0)
+  }
+
+  async function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSelfieFile(file)
+    setSelfiePreview(URL.createObjectURL(file))
+
+    // Check location after selfie is taken
+    setStep("locating")
+    setLocationError("")
     setLocationPending(true)
     try {
       const pos = await getGeoPosition()
@@ -91,45 +127,13 @@ export function useCheckInFlow(profileId: string | undefined) {
         }
       }
       setPosition(pos)
-      setStep("selfie")
-
-      // Open camera; detect dismiss via cancel (modern), focus (desktop), or visibilitychange (mobile)
-      setTimeout(() => {
-        const input = fileInputRef.current
-        if (!input) return
-
-        const checkDismiss = () => {
-          setTimeout(() => {
-            if (!fileInputRef.current?.files?.length) resetFlow()
-          }, 400)
-        }
-
-        input.addEventListener("cancel", () => resetFlow(), { once: true })
-        window.addEventListener("focus", checkDismiss, { once: true })
-        const onVisibility = () => {
-          if (document.visibilityState === "visible") {
-            document.removeEventListener("visibilitychange", onVisibility)
-            checkDismiss()
-          }
-        }
-        document.addEventListener("visibilitychange", onVisibility)
-
-        input.click()
-      }, 0)
+      setStep("reviewing")
     } catch {
       setLocationError("Could not get your location. Enable location access and try again.")
       setStep("location_error")
     } finally {
       setLocationPending(false)
     }
-  }
-
-  function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file || step === "idle") return
-    setSelfieFile(file)
-    setSelfiePreview(URL.createObjectURL(file))
-    setStep("reviewing")
   }
 
   async function handleConfirm(now: Date) {

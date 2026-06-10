@@ -237,7 +237,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
                   </p>
                 </div>
                 <Button
-                  onClick={() => void startFlow("checkin")}
+                  onClick={() => startFlow("checkin")}
                   disabled={!withinWindow}
                   className="w-full"
                 >
@@ -276,7 +276,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
                   </p>
                 </div>
                 <Button
-                  onClick={() => void startFlow("checkout")}
+                  onClick={() => startFlow("checkout")}
                   className="w-full"
                 >
                   <LogOut className="h-4 w-4" />
