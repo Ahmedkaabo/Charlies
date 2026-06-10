@@ -63,9 +63,14 @@ export function useCheckInFlow(profileId: string | undefined) {
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
-  async function detectLocation() {
-    setLocationPending(true)
+  async function startFlow(m: FlowMode) {
+    setMode(m)
+    setStep("locating")
     setLocationError("")
+    setPosition(null)
+    setDistanceM(0)
+
+    setLocationPending(true)
     try {
       const pos = await getGeoPosition()
       if (branch?.latitude != null && branch?.longitude != null) {
@@ -81,24 +86,31 @@ export function useCheckInFlow(profileId: string | undefined) {
           setLocationError(
             `You are ${rounded} m away from the branch. Check-in requires being within ${branch.location_radius_meters} m.`
           )
+          setStep("location_error")
           return
         }
       }
       setPosition(pos)
+      setStep("selfie")
+
+      // Open camera; if user dismisses without picking a file, reset to idle
+      setTimeout(() => {
+        fileInputRef.current?.click()
+        const onFocus = () => {
+          setTimeout(() => {
+            if (!fileInputRef.current?.files?.length) {
+              resetFlow()
+            }
+          }, 300)
+        }
+        window.addEventListener("focus", onFocus, { once: true })
+      }, 0)
     } catch {
       setLocationError("Could not get your location. Enable location access and try again.")
+      setStep("location_error")
     } finally {
       setLocationPending(false)
     }
-  }
-
-  function startFlow(m: FlowMode) {
-    setMode(m)
-    setStep("selfie")
-    setLocationError("")
-    setPosition(null)
-    setDistanceM(0)
-    void detectLocation()
   }
 
   function handleSelfieCapture(e: React.ChangeEvent<HTMLInputElement>) {

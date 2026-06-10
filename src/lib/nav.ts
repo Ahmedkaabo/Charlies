@@ -39,8 +39,8 @@ const ACCOUNTING_ITEMS: NavItem[] = [
 ]
 
 export const NAV_GROUPS: NavGroup[] = [
-  { label: "HR",         items: HR_ITEMS         },
   { label: "Accounting", items: ACCOUNTING_ITEMS },
+  { label: "HR",         items: HR_ITEMS         },
 ]
 
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flatMap((g) => g.items)

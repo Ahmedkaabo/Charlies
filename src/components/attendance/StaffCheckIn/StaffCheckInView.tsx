@@ -122,9 +122,30 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
       />
 
 
+      {/* Flow: Locating */}
+      {step === "locating" && (
+        <Card className="py-0">
+          <CardContent className="flex flex-col items-center gap-3 py-10">
+            <MapPin className="h-8 w-8 animate-pulse text-primary" />
+            <p className="text-sm text-muted-foreground">Verifying your location…</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Flow: Location error */}
+      {step === "location_error" && (
+        <Card className="py-0">
+          <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
+            <AlertCircle className="h-8 w-8 text-destructive" />
+            <p className="text-sm text-destructive">{locationError}</p>
+            <Button variant="outline" onClick={resetFlow}>Try Again</Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Flow: Reviewing */}
       {step === "reviewing" && (
-        <Card className="py-0">
+        <Card className="py-4">
           <CardHeader className="pb-3">
             <CardTitle className="text-base">
               Confirm {mode === "checkin" ? "Check In" : "Check Out"}
@@ -216,7 +237,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
                   </p>
                 </div>
                 <Button
-                  onClick={() => { startFlow("checkin"); fileInputRef.current?.click() }}
+                  onClick={() => void startFlow("checkin")}
                   disabled={!withinWindow}
                   className="w-full"
                 >
@@ -255,7 +276,7 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
                   </p>
                 </div>
                 <Button
-                  onClick={() => { startFlow("checkout"); fileInputRef.current?.click() }}
+                  onClick={() => void startFlow("checkout")}
                   className="w-full"
                 >
                   <LogOut className="h-4 w-4" />
