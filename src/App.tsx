@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom"
+import { Routes, Route } from "react-router-dom"
 
 import { AuthGuard } from "@/components/layout/AuthGuard"
 import { AdminGuard } from "@/components/layout/AdminGuard"
@@ -23,6 +23,7 @@ import { ExpensesListPage } from "@/pages/expenses/ExpensesListPage"
 import { SalesPage } from "@/pages/sales/SalesPage"
 import { FinancePage } from "@/pages/finance/FinancePage"
 import { BalancePage } from "@/pages/balance/BalancePage"
+import { NotFoundPage } from "@/pages/NotFoundPage"
 
 function Placeholder({ title }: { title: string }) {
   return (
@@ -92,7 +93,7 @@ export function App() {
       </Route>
 
       {/* Fallback */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   )
 }
