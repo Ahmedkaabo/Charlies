@@ -87,7 +87,37 @@ export function useGetOwners() {
         }
       }
 
-      return Array.from(map.values())
+      // Always ensure the account admin appears as master owner with no roles
+      const adminRes = await supabase
+        .from("profiles")
+        .select("id, full_name, name_ar, avatar_url, phone, is_fee_manager")
+        .eq("account_id", accountId)
+        .eq("is_admin", true)
+        .maybeSingle()
+
+      if (adminRes.data) {
+        const admin = adminRes.data
+        if (map.has(admin.id)) {
+          map.get(admin.id)!.is_master = true
+          map.get(admin.id)!.role_ids  = []
+        } else {
+          map.set(admin.id, {
+            profile_id:     admin.id,
+            full_name:      admin.full_name      ?? null,
+            name_ar:        admin.name_ar        ?? null,
+            avatar_url:     admin.avatar_url     ?? null,
+            phone:          admin.phone          ?? null,
+            is_fee_manager: admin.is_fee_manager ?? false,
+            is_master:      true,
+            role_ids:       [],
+            branches:       [],
+          })
+        }
+      }
+
+      const all = Array.from(map.values())
+      all.sort((a, b) => (b.is_master ? 1 : 0) - (a.is_master ? 1 : 0))
+      return all
     },
   })
 }

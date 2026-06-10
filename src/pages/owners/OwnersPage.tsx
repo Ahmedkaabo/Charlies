@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Plus, Minus, Pencil, Trash2, Check, ChevronsUpDown, MoreHorizontal, Users, ShieldCheck, Crown, Phone, Languages } from "lucide-react"
+import { Plus, Minus, Pencil, Trash2, Check, ChevronsUpDown, MoreHorizontal, Users, ShieldCheck, Phone, Languages } from "lucide-react"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -476,9 +476,8 @@ function OwnerSheet({
               <div className="flex items-center gap-2 flex-wrap">
                 <SheetTitle className="text-left">{user?.full_name ?? "Owner"}</SheetTitle>
                 {user?.is_master && (
-                  <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">
-                    <Crown className="h-2.5 w-2.5" />
-                    Master
+                  <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground shrink-0">
+                    master
                   </span>
                 )}
               </div>
@@ -510,7 +509,14 @@ function OwnerSheet({
                 <p className="text-xs text-muted-foreground mt-0.5">Determines permissions across all branches</p>
               </div>
 
-              {canEdit ? (
+              {user?.is_master ? (
+                <div className="space-y-1.5">
+                  <span className="inline-flex rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium">
+                    Full Access
+                  </span>
+                  <p className="text-xs text-muted-foreground">Master account has unrestricted access to all modules.</p>
+                </div>
+              ) : canEdit ? (
                 <MultiRoleSelect
                   roles={assignableRoles}
                   selectedIds={selectedRoleIds}
@@ -790,9 +796,8 @@ export function OwnersPage() {
                         <div className="flex items-center gap-1.5">
                           <p className="text-sm font-medium truncate">{user.full_name ?? "—"}</p>
                           {user.is_master && (
-                            <span className="inline-flex items-center gap-0.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-semibold text-amber-600 dark:text-amber-400 shrink-0">
-                              <Crown className="h-2.5 w-2.5" />
-                              Owner
+                            <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground shrink-0">
+                              master
                             </span>
                           )}
                         </div>
@@ -821,7 +826,11 @@ export function OwnersPage() {
 
                   {/* Role */}
                   <TableCell>
-                    {(() => {
+                    {user.is_master ? (
+                      <span className="rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium">
+                        Full Access
+                      </span>
+                    ) : (() => {
                       const roles = allRoles.filter((r) => user.role_ids.includes(r.id))
                       if (roles.length === 0) return <span className="text-xs text-muted-foreground">—</span>
                       return (

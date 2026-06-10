@@ -85,7 +85,15 @@ export function OrgSetupPage() {
         return
       }
 
-      // 2. Invalidate caches and go to dashboard.
+      // 2. Add the org admin to owners with no roles (full access by is_admin flag).
+      await supabase
+        .from("owners")
+        .upsert(
+          { branch_id: branch.id, profile_id: user.id, is_active: true, account_id: accountId, role_ids: [], role_id: null },
+          { onConflict: "branch_id,profile_id" },
+        )
+
+      // 3. Invalidate caches and go to dashboard.
       await qc.invalidateQueries({ queryKey: ["my-branch-roles"] })
       await qc.invalidateQueries({ queryKey: ["branches"] })
       toast.success("Branch created — welcome!")
