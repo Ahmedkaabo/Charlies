@@ -781,6 +781,7 @@ function BalanceContent({
         </>
       )}
 
+
       {/* ── Treasury transfers ────────────────────────────── */}
       {canTreasuryRead && (
         <>
