@@ -550,7 +550,7 @@ const ar: Translations = {
   "Branch Owner": "صاحب فرع",
   "More": "المزيد",
   "Profile": "الملف الشخصي",
-  // ── Common actions ──────────────────────────────────────────
+  // ── Common actionss ──────────────────────────────────────────
   "Cancel": "إلغاء",
   "Save": "حفظ",
   "Save Changes": "حفظ التغييرات",
