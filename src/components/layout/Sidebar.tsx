@@ -1,6 +1,6 @@
 import * as React from "react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { EllipsisVertical, LogOut, KeyRound, Crown, Store, UserPlus, Tag, Truck } from "lucide-react"
+import { EllipsisVertical, LogOut, KeyRound, Crown, Store, UserPlus, Tag, Truck, SunIcon, MoonIcon, Languages } from "lucide-react"
 import logo from "@/assets/logo.svg"
 import { toast } from "sonner"
 
@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils"
 import { supabase } from "@/lib/supabase"
 import { useAuth } from "@/hooks/useAuth"
 import { useVisibleNavGroups, useUserPermissions } from "@/hooks/usePermissions"
+import { useTheme } from "@/components/theme-provider"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Sidebar,
   SidebarContent,
@@ -66,16 +68,19 @@ export function CharSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const { setOpenMobile } = useSidebar()
   const { pathname } = useLocation()
   const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
+  const isDark = theme === "dark"
 
   async function copyInviteLink() {
-    if (!accountId) { toast.error("No account found"); return }
+    if (!accountId) { toast.error(t("No account found")); return }
     setGeneratingInvite(true)
     const token = crypto.randomUUID()
     const { error } = await supabase.from("account_invites").insert({ account_id: accountId, token, uses: 0 })
     setGeneratingInvite(false)
-    if (error) { toast.error("Failed to generate invite link"); return }
+    if (error) { toast.error(t("Failed to generate invite link")); return }
     await navigator.clipboard.writeText(`${window.location.origin}/register?invite=${token}`)
-    toast.success("Invite link copied!")
+    toast.success(t("Invite link copied!"))
   }
 
   // Close the mobile sheet whenever the route changes
@@ -95,9 +100,9 @@ export function CharSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const showPermissions = permsLoading || canRead("permissions")
 
   const hasSettingsGroup = isAdmin || showSettings || showPermissions
-async function handleSignOut() {
+  async function handleSignOut() {
     await signOut()
-    toast.success("Signed out")
+    toast.success(t("Signed out"))
     navigate("/login", { replace: true })
   }
 
@@ -125,20 +130,20 @@ async function handleSignOut() {
         <SidebarContent>
           {visibleNavGroups.map((group) => (
             <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupLabel>{t(group.label)}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   {group.items.map((item) => (
                     <SidebarMenuItem key={item.path}>
                       <SidebarMenuButton
                         asChild
-                        tooltip={item.label}
+                        tooltip={t(item.label)}
                         isActive={isPathActive(item.path, pathname)}
                         className={cn(item.adminOnly && "text-muted-foreground")}
                       >
                         <NavLink to={item.path} end={item.path === "/"}>
                           <item.icon />
-                          <span>{item.label}</span>
+                          <span>{t(item.label)}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -151,53 +156,53 @@ async function handleSignOut() {
           {/* ── Settings group ────────────────────────── */}
           {hasSettingsGroup && (
             <SidebarGroup>
-              <SidebarGroupLabel>Settings</SidebarGroupLabel>
+              <SidebarGroupLabel>{t("Settings")}</SidebarGroupLabel>
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Branches" isActive={isPathActive("/branches", pathname)}>
+                    <SidebarMenuButton asChild tooltip={t("Branches")} isActive={isPathActive("/branches", pathname)}>
                       <NavLink to="/branches">
                         <Store />
-                        <span>Branches</span>
+                        <span>{t("Branches")}</span>
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                   {(isAdmin || isOwner || permsLoading) && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Owners" isActive={isPathActive("/users", pathname)}>
+                      <SidebarMenuButton asChild tooltip={t("Owners")} isActive={isPathActive("/users", pathname)}>
                         <NavLink to="/users">
                           <Crown />
-                          <span>Owners</span>
+                          <span>{t("Owners")}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
                   {(isAdmin || permsLoading) && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Expense Categories" isActive={isPathActive("/categories", pathname)}>
+                      <SidebarMenuButton asChild tooltip={t("Categories")} isActive={isPathActive("/categories", pathname)}>
                         <NavLink to="/categories">
                           <Tag />
-                          <span>Categories</span>
+                          <span>{t("Categories")}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
                   {(isAdmin || permsLoading) && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Suppliers" isActive={isPathActive("/suppliers", pathname)}>
+                      <SidebarMenuButton asChild tooltip={t("Suppliers")} isActive={isPathActive("/suppliers", pathname)}>
                         <NavLink to="/suppliers">
                           <Truck />
-                          <span>Suppliers</span>
+                          <span>{t("Suppliers")}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
                   {showPermissions && (
                     <SidebarMenuItem>
-                      <SidebarMenuButton asChild tooltip="Permissions" isActive={isPathActive("/permissions", pathname)}>
+                      <SidebarMenuButton asChild tooltip={t("Permissions")} isActive={isPathActive("/permissions", pathname)}>
                         <NavLink to="/permissions">
                           <KeyRound />
-                          <span>Permissions</span>
+                          <span>{t("Permissions")}</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>
@@ -228,7 +233,7 @@ async function handleSignOut() {
                     <div className="grid flex-1 text-start text-sm leading-tight">
                       <span className="truncate font-medium">{fullName ?? email}</span>
                       <span className="truncate text-xs text-muted-foreground">
-                        {isAdmin ? "Admin" : isOwner ? "Branch Owner" : email}
+                        {isAdmin ? t("Admin") : isOwner ? t("Branch Owner") : email}
                       </span>
                     </div>
                     <EllipsisVertical className="ms-auto size-4" />
@@ -260,7 +265,7 @@ async function handleSignOut() {
                               className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-accent disabled:opacity-50"
                             >
                               <UserPlus className="size-3" />
-                              {generatingInvite ? "…" : "Invite"}
+                              {generatingInvite ? t("Generating…") : t("Invite")}
                             </button>
                           </span>
                         )}
@@ -268,12 +273,39 @@ async function handleSignOut() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      {isDark ? <MoonIcon className="size-3" /> : <SunIcon className="size-3" />}
+                      <span>{t(isDark ? "Dark mode" : "Light mode")}</span>
+                    </div>
+                    <button
+                      onClick={() => setTheme(isDark ? "light" : "dark")}
+                      className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isDark ? "bg-primary" : "bg-input"}`}
+                      role="switch"
+                      aria-checked={isDark}
+                    >
+                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${isDark ? "translate-x-3.5" : "translate-x-0.5"}`} />
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between px-2 py-1.5">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Languages className="size-3" />
+                      <span>{t("Language")}</span>
+                    </div>
+                    <button
+                      onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+                      className="flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium text-primary hover:bg-accent"
+                    >
+                      {language === "en" ? "عربي" : "English"}
+                    </button>
+                  </div>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
                     onClick={() => setConfirmOpen(true)}
                   >
                     <LogOut />
-                    Sign out
+                    {t("Sign out")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -286,14 +318,14 @@ async function handleSignOut() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign out</AlertDialogTitle>
+            <AlertDialogTitle>{t("Sign out")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to sign out of CHARLIES?
+              {t("Are you sure you want to sign out of CHARLIES?")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut}>{t("Sign out")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

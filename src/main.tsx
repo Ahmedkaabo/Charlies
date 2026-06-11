@@ -10,18 +10,21 @@ import { ThemeProvider } from "@/components/theme-provider.tsx"
 import { queryClient } from "@/lib/queryClient.ts"
 import { TooltipProvider } from "@/components/ui/tooltip"
 import { AuthProvider } from "@/contexts/AuthContext"
+import { LanguageProvider } from "@/contexts/LanguageContext"
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ThemeProvider defaultTheme="light">
-            <TooltipProvider>
-              <App />
-              <Toaster />
-            </TooltipProvider>
-          </ThemeProvider>
+          <LanguageProvider>
+            <ThemeProvider defaultTheme="light">
+              <TooltipProvider>
+                <App />
+                <Toaster />
+              </TooltipProvider>
+            </ThemeProvider>
+          </LanguageProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

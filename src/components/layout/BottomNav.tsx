@@ -4,6 +4,7 @@ import { MoreHorizontal } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { useVisibleNavItems } from "@/hooks/usePermissions"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   Sheet,
   SheetContent,
@@ -16,6 +17,7 @@ const MAX_DIRECT = 4 // items shown directly; slot 5 becomes "More"
 export function BottomNav() {
   const { items } = useVisibleNavItems()
   const { pathname } = useLocation()
+  const { t } = useLanguage()
   const [moreOpen, setMoreOpen] = useState(false)
 
   const needsMore   = items.length > MAX_DIRECT + 1
@@ -64,7 +66,7 @@ export function BottomNav() {
                       )}
                       strokeWidth={isActive ? 2.25 : 1.75}
                     />
-                    <span>{item.label}</span>
+                    <span>{t(item.label)}</span>
                   </>
                 )}
               </NavLink>
@@ -94,7 +96,7 @@ export function BottomNav() {
                   className="h-5 w-5"
                   strokeWidth={moreIsActive ? 2.25 : 1.75}
                 />
-                <span>More</span>
+                <span>{t("More")}</span>
               </button>
             </li>
           )}
@@ -106,7 +108,7 @@ export function BottomNav() {
         <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
           <SheetContent side="bottom" className="h-auto rounded-t-2xl p-0">
             <SheetHeader className="px-6 pt-5 pb-3 border-b">
-              <SheetTitle className="text-sm">More</SheetTitle>
+              <SheetTitle className="text-sm">{t("More")}</SheetTitle>
             </SheetHeader>
             <ul className="px-3 py-3 space-y-1">
               {overflowItems.map((item) => {
@@ -128,7 +130,7 @@ export function BottomNav() {
                       )}
                     >
                       <item.icon className="h-5 w-5" strokeWidth={isActive ? 2.25 : 1.75} />
-                      {item.label}
+                      {t(item.label)}
                     </NavLink>
                   </li>
                 )

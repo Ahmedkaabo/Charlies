@@ -855,7 +855,7 @@ function FinanceContent({
               </p>
             </div>
             {canRunPayout && (
-              <Button size="sm" onClick={() => { setEditRun(undefined); setPayoutOpen(true) }}>
+              <Button onClick={() => { setEditRun(undefined); setPayoutOpen(true) }}>
                 <Play className="h-3.5 w-3.5" />
                 Run Payout
               </Button>

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import { Outlet, useLocation, useNavigate } from "react-router-dom"
-import { LogOut, UserPlus } from "lucide-react"
+import { LogOut, UserPlus, SunIcon, MoonIcon, Languages } from "lucide-react"
 import { toast } from "sonner"
 import logo from "@/assets/logo.svg"
 
@@ -8,6 +8,8 @@ import { CharSidebar } from "@/components/layout/Sidebar"
 import { BottomNav } from "@/components/layout/BottomNav"
 import { ROUTE_TITLES } from "@/lib/nav"
 import { Separator } from "@/components/ui/separator"
+import { useTheme } from "@/components/theme-provider"
+import { useLanguage } from "@/contexts/LanguageContext"
 import {
   SidebarInset,
   SidebarProvider,
@@ -46,23 +48,26 @@ function getInitials(name?: string | null, email?: string): string {
   return (email ?? "??").slice(0, 2).toUpperCase()
 }
 
-function usePageTitle(): string {
+function usePageTitle(t: (key: string) => string): string {
   const { pathname } = useLocation()
-  if (ROUTE_TITLES[pathname]) return ROUTE_TITLES[pathname]
-  const prefix = Object.keys(ROUTE_TITLES).find(
-    (p) => p !== "/" && pathname.startsWith(p)
-  )
-  return prefix ? ROUTE_TITLES[prefix] : "Dashboard"
+  const key = ROUTE_TITLES[pathname]
+    ?? (Object.keys(ROUTE_TITLES).find((p) => p !== "/" && pathname.startsWith(p))
+        ? ROUTE_TITLES[Object.keys(ROUTE_TITLES).find((p) => p !== "/" && pathname.startsWith(p))!]
+        : "Dashboard")
+  return t(key)
 }
 
 // ── AppShell ──────────────────────────────────────────────────
 
 export function AppShell() {
   const isMobile = useIsMobile()
-  const pageTitle = usePageTitle()
   const navigate = useNavigate()
 
   const { user, profile, isAdmin, accountId, accountCode, signOut } = useAuth()
+  const { theme, setTheme } = useTheme()
+  const { language, setLanguage, t } = useLanguage()
+  const isDark = theme === "dark"
+  const pageTitle = usePageTitle(t)
 
   const [profileOpen, setProfileOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -73,22 +78,22 @@ export function AppShell() {
   const initials = getInitials(fullName, email)
 
   async function copyInviteLink() {
-    if (!accountId) { toast.error("No account found"); return }
+    if (!accountId) { toast.error(t("No account found")); return }
     setGeneratingInvite(true)
     const token = crypto.randomUUID()
     const { error } = await supabase
       .from("account_invites")
       .insert({ account_id: accountId, token, uses: 0 })
     setGeneratingInvite(false)
-    if (error) { toast.error("Failed to generate invite link"); return }
+    if (error) { toast.error(t("Failed to generate invite link")); return }
     await navigator.clipboard.writeText(`${window.location.origin}/register?invite=${token}`)
-    toast.success("Invite link copied!")
+    toast.success(t("Invite link copied!"))
   }
 
   async function handleSignOut() {
     setProfileOpen(false)
     await signOut()
-    toast.success("Signed out")
+    toast.success(t("Signed out"))
     navigate("/login", { replace: true })
   }
 
@@ -140,7 +145,7 @@ export function AppShell() {
       <Sheet open={profileOpen} onOpenChange={setProfileOpen}>
         <SheetContent side="bottom" className="h-auto rounded-t-2xl p-0 md:hidden">
           <SheetHeader className="sr-only">
-            <SheetTitle>Profile</SheetTitle>
+            <SheetTitle>{t("Profile")}</SheetTitle>
           </SheetHeader>
 
           {/* User info */}
@@ -154,7 +159,7 @@ export function AppShell() {
               <p className="truncate font-semibold text-sm">{fullName ?? email}</p>
               <p className="truncate text-xs text-muted-foreground">{email}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                {isAdmin ? "Admin" : ""}
+                {isAdmin ? t("Admin") : ""}
               </p>
               {accountCode !== null && (
                 <div className="flex items-center gap-2 mt-1.5">
@@ -165,10 +170,40 @@ export function AppShell() {
                     className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium text-primary hover:bg-accent disabled:opacity-50"
                   >
                     <UserPlus className="size-3" />
-                    {generatingInvite ? "…" : "Invite"}
+                    {generatingInvite ? t("Generating…") : t("Invite")}
                   </button>
                 </div>
               )}
+            </div>
+          </div>
+
+          {/* Theme + Language toggles */}
+          <div className="px-6 py-3 border-b space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                {isDark ? <MoonIcon className="size-4" /> : <SunIcon className="size-4" />}
+                <span>{t(isDark ? "Dark mode" : "Light mode")}</span>
+              </div>
+              <button
+                onClick={() => setTheme(isDark ? "light" : "dark")}
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${isDark ? "bg-primary" : "bg-input"}`}
+                role="switch"
+                aria-checked={isDark}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${isDark ? "translate-x-4.5" : "translate-x-0.5"}`} />
+              </button>
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Languages className="size-4" />
+                <span>{t("Language")}</span>
+              </div>
+              <button
+                onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+                className="rounded-md px-3 py-1 text-xs font-medium text-primary hover:bg-accent border border-border"
+              >
+                {language === "en" ? "عربي" : "English"}
+              </button>
             </div>
           </div>
 
@@ -181,7 +216,7 @@ export function AppShell() {
                 className="flex w-full items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
               >
                 <LogOut className="h-5 w-5" />
-                Sign out
+                {t("Sign out")}
               </button>
             </li>
           </ul>
@@ -194,14 +229,14 @@ export function AppShell() {
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Sign out</AlertDialogTitle>
+            <AlertDialogTitle>{t("Sign out")}</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to sign out of CHARLIES?
+              {t("Are you sure you want to sign out of CHARLIES?")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSignOut}>Sign out</AlertDialogAction>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSignOut}>{t("Sign out")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
