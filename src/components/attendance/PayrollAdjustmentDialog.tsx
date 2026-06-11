@@ -147,7 +147,7 @@ export function PayrollAdjustmentDialog({
         profile_id:           profileId,
         type:                 values.type,
         amount:               Number(values.amount),
-        reason:               values.reason ?? null,
+        reason:               values.reason ?? "",
         month,
         year,
         created_by:           profile.id,

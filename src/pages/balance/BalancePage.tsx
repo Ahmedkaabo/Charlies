@@ -657,6 +657,7 @@ function BalanceContent({
 }) {
   const { t } = useLanguage()
   const { egp } = useFormatters()
+  const ln = useLocalName()
   const [transferOpen,  setTransferOpen]  = useState(false)
   const [editTransfer,  setEditTransfer]  = useState<TreasuryTransfer | null>(null)
   const [delTransferId, setDelTransferId] = useState<string | null>(null)

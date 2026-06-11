@@ -574,7 +574,6 @@ function defaultConfig(branch: Branch): BranchConfig {
 
 export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, editRun }: Props) {
   const { profile } = useAuth()
-  const fmt = useFormatters()
   const { t } = useLanguage()
   const [step, setStep]       = useState<0 | 1>(0)
   const [configs, setConfigs] = useState<BranchConfig[]>([])
