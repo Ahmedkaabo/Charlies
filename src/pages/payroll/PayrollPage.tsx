@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MultiSelect } from "@/components/ui/multi-select"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -234,6 +234,7 @@ function SummaryCard({
 export function PayrollPage() {
   const { t } = useLanguage()
   const fmt = useFormatters()
+  const ln  = useLocalName()
   const currency = (amount: number | null, curr = "EGP") =>
     amount == null ? "—" : fmt.money(amount, curr)
   const { profile } = useAuth()
@@ -291,11 +292,11 @@ export function PayrollPage() {
 
   // ── Role options derived from rows ────────────────────────
   const roleOptions = useMemo(() => {
-    const seen = new Map<string, string>()
+    const seen = new Map<string, { name: string; name_ar?: string | null }>()
     for (const r of payrollRows ?? []) {
-      if (r.role && !seen.has(r.role.id)) seen.set(r.role.id, r.role.name)
+      if (r.role && !seen.has(r.role.id)) seen.set(r.role.id, { name: r.role.name, name_ar: r.role.name_ar })
     }
-    return Array.from(seen.entries()).map(([id, name]) => ({ id, name }))
+    return Array.from(seen.entries()).map(([id, v]) => ({ id, name: v.name, name_ar: v.name_ar }))
   }, [payrollRows])
 
   // ── Filtered rows ─────────────────────────────────────────
@@ -343,7 +344,7 @@ export function PayrollPage() {
           </div>
 
           <MultiSelect
-            options={branchDropdownList.map((b) => ({ value: b.id, label: b.name }))}
+            options={branchDropdownList.map((b) => ({ value: b.id, label: ln(b.name, b.name_ar) }))}
             selected={branchFilters}
             onChange={setBranchFilters}
             placeholder={t("All Branches")}
@@ -351,7 +352,7 @@ export function PayrollPage() {
           />
 
           <MultiSelect
-            options={roleOptions.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
+            options={roleOptions.map((r) => ({ value: r.id, label: ln(r.name.replace(/_/g, " "), r.name_ar) }))}
             selected={roleFilters}
             onChange={setRoleFilters}
             placeholder={t("All Roles")}
@@ -497,7 +498,7 @@ export function PayrollPage() {
                           <span className="font-medium whitespace-nowrap">{row.full_name ?? "—"}</span>
                           {row.role && (
                             <span className="rounded-md border px-1.5 py-0.5 text-xs text-muted-foreground capitalize">
-                              {row.role.name.replace(/_/g, " ")}
+                              {ln(row.role.name.replace(/_/g, " "), row.role.name_ar)}
                             </span>
                           )}
                         </div>

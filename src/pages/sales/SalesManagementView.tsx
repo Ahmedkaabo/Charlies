@@ -1,6 +1,7 @@
 import { TrendingUp } from "lucide-react"
 
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 import { useFormatters } from "@/lib/format"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useSalesRecords, useSalesSummary } from "@/hooks/useSales"
@@ -60,6 +61,7 @@ export function SalesManagementView({
   canTreasuryRead,
 }: SalesManagementViewProps) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const fmt = useFormatters()
 
   const { data: allBranches, isLoading: branchesLoading } = useGetBranches()
@@ -100,7 +102,7 @@ export function SalesManagementView({
       const sorted  = [...recs].sort((a, b) => b.date.localeCompare(a.date))
       return {
         id:           branch.id,
-        name:         branch.name,
+        name:         ln(branch.name, branch.name_ar),
         daysFilled:   recs.length,
         totalRevenue: recs.reduce((s, r) => s + r.revenue, 0),
         missingDays:  missing.length,

@@ -9,6 +9,7 @@ import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import { cn } from "@/lib/utils"
 import type { Expense, ExpenseEdit } from "@/types/expense"
 import { useFormatters } from "@/lib/format"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -76,6 +77,7 @@ export function ExpenseDetailSheet({
   onDelete,
   onClose,
 }: ExpenseDetailSheetProps) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const fmt = useFormatters()
 
@@ -128,7 +130,7 @@ export function ExpenseDetailSheet({
 
           {/* Amount */}
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Amount</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">{t("Amount")}</p>
             <p className="text-3xl font-bold tabular-nums">{fmt.egp(expense.amount, 2)}</p>
           </div>
 
@@ -136,7 +138,7 @@ export function ExpenseDetailSheet({
 
           {/* Description */}
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Description</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">{t("Description")}</p>
             <p className="text-sm">{expense.description ?? "—"}</p>
           </div>
 
@@ -145,7 +147,7 @@ export function ExpenseDetailSheet({
             <>
               <Separator />
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Supplier</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">{t("Supplier")}</p>
                 <div className="flex items-center gap-2">
                   <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
                     <Truck className="h-3.5 w-3.5 text-muted-foreground" />
@@ -161,7 +163,7 @@ export function ExpenseDetailSheet({
             <>
               <Separator />
               <div>
-                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Receipt</p>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">{t("Receipt")}</p>
                 <div className="relative w-fit">
                   <img
                     src={expense.receipt_url}
@@ -186,7 +188,7 @@ export function ExpenseDetailSheet({
 
           {/* Added by */}
           <div>
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Added by</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">{t("Added by")}</p>
             {adderLoading ? (
               <div className="flex items-center gap-2">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -213,7 +215,7 @@ export function ExpenseDetailSheet({
             ) : (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <UserCircle className="h-8 w-8" />
-                <p className="text-sm">Unknown · {fmtDateTime(expense.created_at)}</p>
+                <p className="text-sm">{t("Unknown")} · {fmtDateTime(expense.created_at)}</p>
               </div>
             )}
           </div>
@@ -224,7 +226,7 @@ export function ExpenseDetailSheet({
               <Separator />
               <div>
                 <div className="flex items-center gap-2 mb-3">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">Edit History</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium">{t("Edit History")}</p>
                   <Pencil className="h-3 w-3 text-amber-500 fill-amber-500" />
                 </div>
 
@@ -238,7 +240,7 @@ export function ExpenseDetailSheet({
                     ))}
                   </div>
                 ) : edits.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No history available</p>
+                  <p className="text-sm text-muted-foreground">{t("No history available")}</p>
                 ) : (
                   <div className="space-y-4">
                     {edits.map((edit: ExpenseEdit) => (
@@ -283,13 +285,13 @@ export function ExpenseDetailSheet({
                 onClick={() => { onClose(); onDelete(expense) }}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                {t("Delete")}
               </Button>
             )}
             {onEdit && (
               <Button onClick={() => onEdit(expense)} className="ms-auto">
                 <Pencil className="h-4 w-4" />
-                Edit
+                {t("Edit")}
               </Button>
             )}
           </div>

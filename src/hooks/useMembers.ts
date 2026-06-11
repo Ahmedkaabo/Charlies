@@ -22,8 +22,8 @@ export function useGetMembers(branchId?: string, branchIds?: string[]) {
 
       function buildQuery(withRoleIds: boolean) {
         const cols = withRoleIds
-          ? "id, branch_id, profile_id, role_id, role_ids, joined_at, is_active, profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, last_login_at), role:roles(id, name, level), branch:branches(id, name)"
-          : "id, branch_id, profile_id, role_id, joined_at, is_active, profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, last_login_at), role:roles(id, name, level), branch:branches(id, name)"
+          ? "id, branch_id, profile_id, role_id, role_ids, joined_at, is_active, profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, last_login_at), role:roles(id, name, name_ar, level), branch:branches(id, name, name_ar)"
+          : "id, branch_id, profile_id, role_id, joined_at, is_active, profile:profiles(id, full_name, name_ar, avatar_url, phone, email, is_admin, last_login_at), role:roles(id, name, name_ar, level), branch:branches(id, name, name_ar)"
         let q = supabase
           .from("staff")
           .select(cols)

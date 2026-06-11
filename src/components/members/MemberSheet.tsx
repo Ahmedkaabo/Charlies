@@ -21,6 +21,8 @@ import { useGetRoles, useUserPermissions } from "@/hooks/usePermissions"
 import { useAuth } from "@/hooks/useAuth"
 import type { GroupedMember, SalaryCurrency } from "@/types/member"
 
+import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
@@ -96,14 +98,15 @@ function SalarySection({
   calendarOpen: boolean
   onCalendarOpen: (v: boolean) => void
 }) {
+  const { t } = useLanguage()
   return (
     <div className="space-y-4">
       <div>
         <h3 className="text-sm font-semibold">
-          Salary{required && <span className="text-destructive ms-1">*</span>}
+          {t("Salary")}{required && <span className="text-destructive ms-1">*</span>}
         </h3>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {required ? "Required for this role" : "Optional — can be left at 0"}
+          {required ? t("Required for this role") : t("Optional — can be left at 0")}
         </p>
       </div>
 
@@ -113,7 +116,7 @@ function SalarySection({
           name="monthly_salary"
           render={({ field }) => (
             <FormItem className="flex-1">
-              <FormLabel>Monthly Salary</FormLabel>
+              <FormLabel>{t("Monthly Salary")}</FormLabel>
               <FormControl>
                 <Input
                   type="number"
@@ -135,7 +138,7 @@ function SalarySection({
           name="currency"
           render={({ field }) => (
             <FormItem className="w-28">
-              <FormLabel>Currency</FormLabel>
+              <FormLabel>{t("Currency")}</FormLabel>
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                 <SelectContent>
@@ -154,13 +157,13 @@ function SalarySection({
         name="effective_from"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Effective From</FormLabel>
+            <FormLabel>{t("Effective From")}</FormLabel>
             <Popover open={calendarOpen} onOpenChange={onCalendarOpen}>
               <PopoverTrigger asChild>
                 <FormControl>
                   <Button variant="outline" className="w-full justify-start text-start">
                     <CalendarIcon className="h-4 w-4 shrink-0" />
-                    {field.value ? format(field.value, "d MMM yyyy") : "Pick a date"}
+                    {field.value ? format(field.value, "d MMM yyyy") : t("Pick a date")}
                   </Button>
                 </FormControl>
               </PopoverTrigger>
@@ -182,7 +185,7 @@ function SalarySection({
         name="paid_days_off"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Paid Days Off / month</FormLabel>
+            <FormLabel>{t("Paid Days Off / month")}</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -240,9 +243,11 @@ function CreateContent({
   branches,
 }: {
   onClose: () => void
-  roles: { id: string; name: string; level: number }[]
-  branches: { id: string; name: string }[]
+  roles: { id: string; name: string; name_ar?: string | null; level: number }[]
+  branches: { id: string; name: string; name_ar?: string | null }[]
 }) {
+  const { t } = useLanguage()
+  const ln = useLocalName()
   const { accountId } = useAuth()
   const createMulti = useCreateMemberMultiBranch()
   const [calendarOpen, setCalendarOpen] = useState(false)
@@ -289,19 +294,19 @@ function CreateContent({
         paid_days_off:  needsSalary ? values.paid_days_off : 0,
       })
 
-      toast.success("Staff created")
+      toast.success(t("Staff created"))
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create staff")
+      toast.error(err instanceof Error ? err.message : t("Failed to create staff"))
     }
   }
 
   return (
     <>
       <SheetHeader className="border-b px-6 py-4">
-        <SheetTitle className="text-start">New Staff</SheetTitle>
+        <SheetTitle className="text-start">{t("New Staff")}</SheetTitle>
         <SheetDescription className="text-start">
-          Create an account and assign them to a branch
+          {t("Create an account and assign them to a branch")}
         </SheetDescription>
       </SheetHeader>
 
@@ -312,8 +317,8 @@ function CreateContent({
             {/* Personal info */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold">Personal Info</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Account details for the new staff member</p>
+                <h3 className="text-sm font-semibold">{t("Personal Info")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("Account details for the new staff member")}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -322,7 +327,7 @@ function CreateContent({
                   name="full_name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>{t("Full Name")}</FormLabel>
                       <FormControl>
                         <Input placeholder="Ahmed Mostafa" autoComplete="off" {...field} />
                       </FormControl>
@@ -335,7 +340,7 @@ function CreateContent({
                   name="name_ar"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Arabic Name <span className="text-destructive">*</span></FormLabel>
+                      <FormLabel>{t("Arabic Name")} <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input dir="rtl" lang="ar" placeholder="أحمد مصطفى" autoComplete="off" {...field} />
                       </FormControl>
@@ -350,7 +355,7 @@ function CreateContent({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobile</FormLabel>
+                    <FormLabel>{t("Mobile")}</FormLabel>
                     <FormControl>
                       <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
                     </FormControl>
@@ -364,7 +369,7 @@ function CreateContent({
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Initial Password</FormLabel>
+                    <FormLabel>{t("Initial Password")}</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
                     </FormControl>
@@ -379,7 +384,7 @@ function CreateContent({
             {/* Role & Branch */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold">Role & Branch</h3>
+                <h3 className="text-sm font-semibold">{t("Role & Branch")}</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -388,19 +393,19 @@ function CreateContent({
                   name="role_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>{t("Role")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select role…" />
+                            <SelectValue placeholder={t("Select role…")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {roles.length === 0
-                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No roles available</div>
+                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">{t("No roles available")}</div>
                             : roles.map((r) => (
                                 <SelectItem key={r.id} value={r.id} className="capitalize">
-                                  {r.name.replace(/_/g, " ")}
+                                  {ln(r.name.replace(/_/g, " "), r.name_ar)}
                                 </SelectItem>
                               ))
                           }
@@ -416,16 +421,16 @@ function CreateContent({
                   name="branch_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Branch</FormLabel>
+                      <FormLabel>{t("Branch")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select branch…" />
+                            <SelectValue placeholder={t("Select branch…")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {branches.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                            <SelectItem key={b.id} value={b.id}>{ln(b.name, b.name_ar)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -447,9 +452,9 @@ function CreateContent({
           </div>
 
           <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t("Cancel")}</Button>
             <Button type="submit" disabled={createMulti.isPending}>
-              {createMulti.isPending ? "Creating…" : "Create Staff"}
+              {createMulti.isPending ? t("Creating…") : t("Create Staff")}
             </Button>
           </div>
         </form>
@@ -468,9 +473,11 @@ function EditContent({
 }: {
   groupedMember: GroupedMember
   onClose: () => void
-  roles: { id: string; name: string; level: number }[]
-  branches: { id: string; name: string }[]
+  roles: { id: string; name: string; name_ar?: string | null; level: number }[]
+  branches: { id: string; name: string; name_ar?: string | null }[]
 }) {
+  const { t } = useLanguage()
+  const ln = useLocalName()
   const updateMember  = useUpdateMember()
   const removeMember  = useRemoveMember()
   const createMulti   = useCreateMemberMultiBranch()
@@ -562,10 +569,10 @@ function EditContent({
         })
       }
 
-      toast.success("Staff updated")
+      toast.success(t("Staff updated"))
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update")
+      toast.error(err instanceof Error ? err.message : t("Failed to update"))
     }
   }
 
@@ -581,7 +588,7 @@ function EditContent({
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               {groupedMember.is_admin && (
                 <Badge variant="default" className="text-xs gap-1">
-                  <Shield className="h-3 w-3" />Owner
+                  <Shield className="h-3 w-3" />{t("Owner")}
                 </Badge>
               )}
               {groupedMember.phone && (
@@ -599,8 +606,8 @@ function EditContent({
             {/* Personal info */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold">Personal Info</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Name and phone update instantly · password requires service role key</p>
+                <h3 className="text-sm font-semibold">{t("Personal Info")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("Name and phone update instantly · password requires service role key")}</p>
               </div>
 
               <FormField
@@ -608,7 +615,7 @@ function EditContent({
                 name="full_name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Name</FormLabel>
+                    <FormLabel>{t("Full Name")}</FormLabel>
                     <FormControl>
                       <Input placeholder="Ahmed Mostafa" autoComplete="off" {...field} />
                     </FormControl>
@@ -622,7 +629,7 @@ function EditContent({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Mobile</FormLabel>
+                    <FormLabel>{t("Mobile")}</FormLabel>
                     <FormControl>
                       <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
                     </FormControl>
@@ -636,7 +643,7 @@ function EditContent({
                 name="new_password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>New Password <span className="text-muted-foreground font-normal">(leave blank to keep current)</span></FormLabel>
+                    <FormLabel>{t("New Password")} <span className="text-muted-foreground font-normal">{t("(leave blank to keep current)")}</span></FormLabel>
                     <FormControl>
                       <div className="relative">
                         <Input
@@ -667,7 +674,7 @@ function EditContent({
             {/* Role & Branch */}
             <div className="space-y-4">
               <div>
-                <h3 className="text-sm font-semibold">Role & Branch</h3>
+                <h3 className="text-sm font-semibold">{t("Role & Branch")}</h3>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -676,19 +683,19 @@ function EditContent({
                   name="role_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>{t("Role")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select role…" />
+                            <SelectValue placeholder={t("Select role…")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {roles.length === 0
-                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">No roles available</div>
+                            ? <div className="px-2 py-1.5 text-sm text-muted-foreground">{t("No roles available")}</div>
                             : roles.map((r) => (
                                 <SelectItem key={r.id} value={r.id} className="capitalize">
-                                  {r.name.replace(/_/g, " ")}
+                                  {ln(r.name.replace(/_/g, " "), r.name_ar)}
                                 </SelectItem>
                               ))
                           }
@@ -704,16 +711,16 @@ function EditContent({
                   name="branch_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Branch</FormLabel>
+                      <FormLabel>{t("Branch")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select branch…" />
+                            <SelectValue placeholder={t("Select branch…")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {branches.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                            <SelectItem key={b.id} value={b.id}>{ln(b.name, b.name_ar)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -735,9 +742,9 @@ function EditContent({
           </div>
 
           <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="button" variant="outline" onClick={onClose}>{t("Cancel")}</Button>
             <Button type="submit" disabled={isSaving}>
-              {isSaving ? "Saving…" : "Save Changes"}
+              {isSaving ? t("Saving…") : t("Save Changes")}
             </Button>
           </div>
         </form>

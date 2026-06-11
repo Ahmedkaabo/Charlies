@@ -31,6 +31,7 @@ import {
 import { toast } from "sonner"
 
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { useGetExpenseCategories } from "@/hooks/useExpenses"
 import {
   useCreateExpenseCategory,
@@ -103,8 +104,10 @@ function CategoryForm({
   category?: ExpenseCategory
   onBack: () => void
 }) {
-  const [name, setName] = useState(category?.name ?? "")
-  const [icon, setIcon] = useState(category?.icon ?? "more-horizontal")
+  const { t } = useLanguage()
+  const [name,   setName]   = useState(category?.name ?? "")
+  const [nameAr, setNameAr] = useState(category?.name_ar ?? "")
+  const [icon,   setIcon]   = useState(category?.icon ?? "more-horizontal")
   const isCogs = category?.is_cogs ?? false
 
   const create = useCreateExpenseCategory()
@@ -113,18 +116,18 @@ function CategoryForm({
 
   async function handleSave() {
     const trimmed = name.trim()
-    if (!trimmed) { toast.error("Name is required"); return }
+    if (!trimmed) { toast.error(t("Name is required")); return }
     try {
       if (category) {
-        await update.mutateAsync({ id: category.id, name: trimmed, icon, is_cogs: isCogs })
-        toast.success("Category updated")
+        await update.mutateAsync({ id: category.id, name: trimmed, name_ar: nameAr.trim() || null, icon, is_cogs: isCogs })
+        toast.success(t("Category updated"))
       } else {
-        await create.mutateAsync({ name: trimmed, icon, is_cogs: isCogs })
-        toast.success("Category added")
+        await create.mutateAsync({ name: trimmed, name_ar: nameAr.trim() || null, icon, is_cogs: isCogs })
+        toast.success(t("Category added"))
       }
       onBack()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save")
+      toast.error(err instanceof Error ? err.message : t("Failed to save"))
     }
   }
 
@@ -135,7 +138,7 @@ function CategoryForm({
     >
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
         <div className="space-y-2">
-          <p className="text-sm font-medium">Name</p>
+          <p className="text-sm font-medium">{t("Name")}</p>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -145,7 +148,18 @@ function CategoryForm({
         </div>
 
         <div className="space-y-2">
-          <p className="text-sm font-medium">Icon</p>
+          <p className="text-sm font-medium">{t("Arabic Name")}</p>
+          <Input
+            value={nameAr}
+            onChange={(e) => setNameAr(e.target.value)}
+            placeholder="مثال: تنظيف"
+            dir="rtl"
+            lang="ar"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm font-medium">{t("Icon")}</p>
           <div className="grid grid-cols-7 gap-1.5">
             {ICON_OPTIONS.map(({ value, icon: Icon, label }) => (
               <button
@@ -170,10 +184,10 @@ function CategoryForm({
 
       <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
         <Button type="button" variant="outline" onClick={onBack} disabled={isPending}>
-          Cancel
+          {t("Cancel")}
         </Button>
         <Button type="submit" disabled={isPending}>
-          {isPending ? "Saving…" : category ? "Save Changes" : "Add Category"}
+          {isPending ? t("Saving…") : category ? t("Save Changes") : t("Add Category")}
         </Button>
       </div>
     </form>
@@ -195,6 +209,7 @@ function CategoryList({
   onEdit: (cat: ExpenseCategory) => void
   onDelete: (cat: ExpenseCategory) => void
 }) {
+  const { t } = useLanguage()
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       <div className="flex-1 overflow-y-auto px-6 py-5 space-y-2">
@@ -213,12 +228,12 @@ function CategoryList({
               <Tag className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium">No categories yet</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Add your first expense category</p>
+              <p className="text-sm font-medium">{t("No categories yet")}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("Add your first expense category")}</p>
             </div>
             <Button onClick={onAdd}>
               <Plus className="h-4 w-4" />
-              Add Category
+              {t("Add Category")}
             </Button>
           </div>
         ) : (
@@ -259,7 +274,7 @@ function CategoryList({
         <div className="shrink-0 border-t bg-background px-6 py-4">
           <Button onClick={onAdd} className="w-full">
             <Plus className="h-4 w-4" />
-            Add Category
+            {t("Add Category")}
           </Button>
         </div>
       )}
@@ -277,6 +292,7 @@ export function ManageCategoriesSheet({
   onOpenChange: (v: boolean) => void
 }) {
   const isMobile = useIsMobile()
+  const { t } = useLanguage()
   const { data: categories = [], isLoading } = useGetExpenseCategories()
   const deleteCategory = useDeleteExpenseCategory()
 
@@ -292,9 +308,9 @@ export function ManageCategoriesSheet({
     if (!deleteTarget) return
     try {
       await deleteCategory.mutateAsync(deleteTarget.id)
-      toast.success("Category deleted")
+      toast.success(t("Category deleted"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete"))
     } finally {
       setDeleteTarget(null)
     }
@@ -321,19 +337,19 @@ export function ManageCategoriesSheet({
                   className="-ml-2 h-8 w-8 shrink-0"
                   onClick={() => setView({ type: "list" })}
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-4 w-4 rtl:rotate-180" />
                 </Button>
               )}
               <div className="min-w-0">
                 <SheetTitle>
                   {isFormView
-                    ? view.category ? "Edit Category" : "New Category"
-                    : "Manage Categories"
+                    ? view.category ? t("Edit Category") : t("New Category")
+                    : t("Manage Categories")
                   }
                 </SheetTitle>
                 {!isFormView && (
                   <SheetDescription>
-                    Add, edit, or remove expense categories
+                    {t("Add, edit, or remove expense categories")}
                   </SheetDescription>
                 )}
               </div>
@@ -360,18 +376,18 @@ export function ManageCategoriesSheet({
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete category?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              "{deleteTarget?.name}" will be removed. Expenses using this category will become uncategorized.
+              "{deleteTarget?.name}" {t("will be removed. Expenses using this category will become uncategorized.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmDelete}
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

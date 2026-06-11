@@ -52,6 +52,7 @@ export interface BranchMember {
   role: {
     id: string
     name: string
+    name_ar?: string | null
     level: number
   } | null
 }

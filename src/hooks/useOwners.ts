@@ -19,9 +19,9 @@ export function useGetOwners() {
         .select(`
           id, profile_id, branch_id, is_active, joined_at,
           role_id, role_ids,
-          role:roles(id, name, level),
+          role:roles(id, name, name_ar, level),
           profile:profiles(id, full_name, name_ar, avatar_url, phone, is_fee_manager),
-          branch:branches(id, name, city)
+          branch:branches(id, name, name_ar, city)
         `)
         .order("joined_at", { ascending: false })
 
@@ -46,7 +46,7 @@ export function useGetOwners() {
           id: string; full_name: string | null; name_ar: string | null
           avatar_url: string | null; phone: string | null; is_fee_manager: boolean | null
         } | null
-        const role    = (row as { role?: unknown }).role   as { id: string; name: string; level: number } | null
+        const role    = (row as { role?: unknown }).role   as { id: string; name: string; name_ar?: string | null; level: number } | null
         const roleId  = (row as { role_id?: string | null }).role_id ?? null
         const roleIds = ((row as { role_ids?: string[] | null }).role_ids ?? [])
 
@@ -70,13 +70,14 @@ export function useGetOwners() {
         }
 
         if (row.is_active) {
-          const branch = (row as { branch?: unknown }).branch as { id: string; name: string; city: string | null } | null
+          const branch = (row as { branch?: unknown }).branch as { id: string; name: string; name_ar?: string | null; city: string | null } | null
           if (branch) {
             map.get(row.profile_id)!.branches.push({
-              assignment_id: row.id,
-              branch_id:     branch.id,
-              branch_name:   branch.name,
-              city:          branch.city,
+              assignment_id:  row.id,
+              branch_id:      branch.id,
+              branch_name:    branch.name,
+              branch_name_ar: branch.name_ar ?? null,
+              city:           branch.city,
               joined_at:     row.joined_at,
               role_ids:      roleIds.length > 0 ? roleIds : (roleId ? [roleId] : []),
               role_id:       roleId,

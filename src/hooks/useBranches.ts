@@ -46,7 +46,7 @@ export function useGetBranchMembers(branchId: string) {
         .select(`
           id, branch_id, profile_id, role_id, joined_at, is_active,
           profile:profiles(id, full_name, avatar_url, phone, is_admin),
-          role:roles(id, name, level)
+          role:roles(id, name, name_ar, level)
         `)
         .eq("branch_id", branchId)
         .eq("is_active", true)

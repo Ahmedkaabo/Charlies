@@ -18,6 +18,7 @@ import {
 import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import type { Supplier } from "@/types/expense"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 import { useFormatters } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
@@ -57,6 +58,7 @@ import { Label } from "@/components/ui/label"
 
 interface SupplierFormValues {
   name: string
+  name_ar: string
   contact_person: string
   phone: string
   email: string
@@ -64,12 +66,13 @@ interface SupplierFormValues {
 }
 
 function emptyForm(): SupplierFormValues {
-  return { name: "", contact_person: "", phone: "", email: "", notes: "" }
+  return { name: "", name_ar: "", contact_person: "", phone: "", email: "", notes: "" }
 }
 
 function toForm(s: Supplier): SupplierFormValues {
   return {
     name:           s.name,
+    name_ar:        s.name_ar ?? "",
     contact_person: s.contact_person ?? "",
     phone:          s.phone ?? "",
     email:          s.email ?? "",
@@ -101,6 +104,7 @@ function AddSupplierDialog({
     try {
       await create.mutateAsync({
         name,
+        name_ar:        form.name_ar.trim() || null,
         contact_person: form.contact_person.trim() || null,
         phone:          form.phone.trim() || null,
         email:          form.email.trim() || null,
@@ -129,6 +133,16 @@ function AddSupplierDialog({
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
               autoFocus
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>{t("Arabic Name")}</Label>
+            <Input
+              placeholder="مثال: شركة كايرو للكهرباء"
+              value={form.name_ar}
+              onChange={(e) => set("name_ar", e.target.value)}
+              dir="rtl"
+              lang="ar"
             />
           </div>
           <div className="space-y-2">
@@ -193,6 +207,7 @@ function SupplierDrawer({
   onDeleted: () => void
 }) {
   const { t } = useLanguage()
+  const ln  = useLocalName()
   const fmt = useFormatters()
   const isMobile = useIsMobile()
   const update   = useUpdateSupplier()
@@ -236,6 +251,7 @@ function SupplierDrawer({
       await update.mutateAsync({
         id:             supplier.id,
         name,
+        name_ar:        form.name_ar.trim() || null,
         contact_person: form.contact_person.trim() || null,
         phone:          form.phone.trim() || null,
         email:          form.email.trim() || null,
@@ -282,7 +298,7 @@ function SupplierDrawer({
               <SheetHeader className="shrink-0 border-b px-6 py-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <SheetTitle className="truncate">{supplier.name}</SheetTitle>
+                    <SheetTitle className="truncate">{ln(supplier.name, supplier.name_ar)}</SheetTitle>
                     <SheetDescription className="text-xs">
                       {editing ? t("Edit supplier details") : t("Supplier details & expenses")}
                     </SheetDescription>
@@ -315,6 +331,16 @@ function SupplierDrawer({
                         <div className="space-y-2">
                           <Label>{t("Name")} <span className="text-destructive">*</span></Label>
                           <Input value={form.name} onChange={(e) => setField("name", e.target.value)} autoFocus />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>{t("Arabic Name")}</Label>
+                          <Input
+                            value={form.name_ar}
+                            onChange={(e) => setField("name_ar", e.target.value)}
+                            placeholder="مثال: شركة كايرو للكهرباء"
+                            dir="rtl"
+                            lang="ar"
+                          />
                         </div>
                         <div className="space-y-2">
                           <Label>{t("Contact Person")}</Label>
@@ -523,6 +549,7 @@ function SupplierDrawer({
 // ── Supplier Card ──────────────────────────────────────────────
 
 function SupplierCard({ supplier, onClick }: { supplier: Supplier; onClick: () => void }) {
+  const ln = useLocalName()
   return (
     <button onClick={onClick} className="group block w-full text-left">
       <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3.5 transition-shadow group-hover:shadow-md">
@@ -530,14 +557,14 @@ function SupplierCard({ supplier, onClick }: { supplier: Supplier; onClick: () =
           <Truck className="h-4 w-4 text-muted-foreground" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">{supplier.name}</p>
+          <p className="text-sm font-medium truncate">{ln(supplier.name, supplier.name_ar)}</p>
           {(supplier.contact_person || supplier.phone) && (
             <p className="text-xs text-muted-foreground truncate mt-0.5">
               {supplier.contact_person ?? supplier.phone}
             </p>
           )}
         </div>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground rtl:rotate-180" />
       </div>
     </button>
   )

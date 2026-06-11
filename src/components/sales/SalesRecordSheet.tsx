@@ -18,6 +18,7 @@ import { toast } from "sonner"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/hooks/useAuth"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { useSalesEditHistory } from "@/hooks/useSales"
 import { useUpsertSalesRecord } from "@/hooks/useSalesMutations"
 import { uploadSalesReceipt } from "@/lib/storage"
@@ -85,6 +86,7 @@ export function SalesRecordSheet({
   record,
   canEdit = false,
 }: SalesRecordSheetProps) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const fmt = useFormatters()
@@ -141,7 +143,7 @@ export function SalesRecordSheet({
       const url = await uploadSalesReceipt(file)
       form.setValue("receipt_url", url, { shouldValidate: true })
     } catch {
-      toast.error("Failed to upload image")
+      toast.error(t("Failed to upload image"))
       setPreviewUrl(record?.receipt_url ?? null)
     } finally {
       setUploading(false)
@@ -169,10 +171,10 @@ export function SalesRecordSheet({
         submitted_by: profile?.id ?? null,
         submitted_at: new Date().toISOString(),
       })
-      toast.success("Sales record saved")
+      toast.success(t("Sales record saved"))
       onOpenChange(false)
     } catch {
-      toast.error("Failed to save record")
+      toast.error(t("Failed to save record"))
     }
   }
 
@@ -191,7 +193,7 @@ export function SalesRecordSheet({
         {isLocked && (
           <span className="flex items-center gap-1">
             <Lock className="h-3 w-3" />
-            Locked
+            {t("Locked")}
           </span>
         )}
       </SheetDescription>
@@ -217,7 +219,7 @@ export function SalesRecordSheet({
 
             {/* Revenue */}
             <div>
-              <p className="text-xs font-medium text-muted-foreground mb-1">Revenue</p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">{t("Revenue")}</p>
               <p className="text-2xl font-bold tabular-nums">
                 {fmt.egp(record.revenue, 2)}
               </p>
@@ -226,7 +228,7 @@ export function SalesRecordSheet({
             {/* Notes */}
             {record.notes && (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-1">Notes</p>
+                <p className="text-xs font-medium text-muted-foreground mb-1">{t("Notes")}</p>
                 <p className="text-sm whitespace-pre-wrap">{record.notes}</p>
               </div>
             )}
@@ -234,7 +236,7 @@ export function SalesRecordSheet({
             {/* Receipt image */}
             {record.receipt_url ? (
               <div>
-                <p className="text-xs font-medium text-muted-foreground mb-2">Receipt</p>
+                <p className="text-xs font-medium text-muted-foreground mb-2">{t("Receipt")}</p>
                 <a
                   href={record.receipt_url}
                   target="_blank"
@@ -251,7 +253,7 @@ export function SalesRecordSheet({
             ) : (
               <div className="flex items-center gap-2 rounded-md border border-dashed px-4 py-3 text-sm text-muted-foreground">
                 <ImageIcon className="h-4 w-4 shrink-0" />
-                No receipt image
+                {t("No receipt image")}
               </div>
             )}
 
@@ -296,7 +298,7 @@ export function SalesRecordSheet({
                     <Skeleton className="h-10 w-full" />
                   </div>
                 ) : !history?.length ? (
-                  <p className="text-sm text-muted-foreground">No edits yet.</p>
+                  <p className="text-sm text-muted-foreground">{t("No edits yet.")}</p>
                 ) : (
                   history.map((h) => (
                     <div key={h.id} className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
@@ -334,12 +336,12 @@ export function SalesRecordSheet({
           {/* ── Footer ─── */}
           <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Close
+              {t("Close")}
             </Button>
             {canEdit && !formReadOnly && (
               <Button onClick={() => setMode("edit")}>
                 <Pencil className="h-4 w-4" />
-                Edit
+                {t("Edit")}
               </Button>
             )}
           </div>
@@ -374,7 +376,7 @@ export function SalesRecordSheet({
                 name="revenue"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Revenue</FormLabel>
+                    <FormLabel>{t("Revenue")}</FormLabel>
                     <FormControl>
                       <div className="relative">
                         <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none pointer-events-none">
@@ -407,10 +409,10 @@ export function SalesRecordSheet({
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Notes</FormLabel>
+                    <FormLabel>{t("Notes")}</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Shift summary, notable events…"
+                        placeholder={t("Shift summary, notable events…")}
                         rows={3}
                         {...field}
                       />
@@ -427,7 +429,7 @@ export function SalesRecordSheet({
                 render={() => (
                   <FormItem>
                     <FormLabel>
-                      Receipt Image
+                      {t("Receipt Image")}
                       <span className="ms-1 text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
@@ -449,7 +451,7 @@ export function SalesRecordSheet({
                             />
                             {uploading && (
                               <div className="absolute inset-0 flex items-center justify-center bg-background/60 text-sm">
-                                Uploading…
+                                {t("Uploading…")}
                               </div>
                             )}
                             <button
@@ -471,7 +473,7 @@ export function SalesRecordSheet({
                             )}
                           >
                             <ImageIcon className="h-8 w-8 text-muted-foreground/50" />
-                            <span>Tap to add receipt image</span>
+                            <span>{t("Tap to add receipt image")}</span>
                           </button>
                         )}
                       </>
@@ -488,13 +490,13 @@ export function SalesRecordSheet({
                   <Alert className="bg-muted/50 border-border py-3">
                     <Info className="h-4 w-4 text-muted-foreground" />
                     <AlertDescription className="text-xs text-muted-foreground leading-snug">
-                      All edits to this record are tracked.{" "}
+                      {t("All edits to this record are tracked.")}{" "}
                       <button
                         type="button"
                         className="font-medium text-foreground underline underline-offset-2 hover:no-underline"
                         onClick={() => setHistoryOpen((v) => !v)}
                       >
-                        {historyOpen ? "Hide" : "View"} edit history
+                        {historyOpen ? t("Hide edit history") : t("View edit history")}
                       </button>
                     </AlertDescription>
                   </Alert>
@@ -506,7 +508,7 @@ export function SalesRecordSheet({
                       >
                         <span className="flex items-center gap-1.5">
                           <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                          Edit history
+                          {t("Edit history")}
                         </span>
                         {historyOpen
                           ? <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -521,7 +523,7 @@ export function SalesRecordSheet({
                           <Skeleton className="h-10 w-full" />
                         </div>
                       ) : !history?.length ? (
-                        <p className="text-sm text-muted-foreground">No edits yet.</p>
+                        <p className="text-sm text-muted-foreground">{t("No edits yet.")}</p>
                       ) : (
                         history.map((h) => (
                           <div key={h.id} className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
@@ -536,15 +538,15 @@ export function SalesRecordSheet({
                             <div className="space-y-0.5 text-muted-foreground">
                               {h.previous_revenue !== h.new_revenue && (
                                 <p>
-                                  Revenue:{" "}
+                                  {t("Revenue")}:{" "}
                                   <span className="line-through">{fmt.egp(h.previous_revenue ?? 0)}</span>
                                   {" "}→ {fmt.egp(h.new_revenue ?? 0)}
                                 </p>
                               )}
-                              {h.previous_notes !== h.new_notes && <p>Notes changed</p>}
+                              {h.previous_notes !== h.new_notes && <p>{t("Notes changed")}</p>}
                               {h.previous_status !== h.new_status && (
                                 <p>
-                                  Status: <span className="capitalize">{h.previous_status}</span>
+                                  {t("Status")}: <span className="capitalize">{h.previous_status}</span>
                                   {" "}→ <span className="capitalize">{h.new_status}</span>
                                 </p>
                               )}
@@ -566,10 +568,10 @@ export function SalesRecordSheet({
                 disabled={isBusy}
                 onClick={() => record ? setMode("view") : onOpenChange(false)}
               >
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={isBusy}>
-                {isBusy ? "Saving…" : "Save"}
+                {isBusy ? t("Saving…") : t("Save")}
               </Button>
             </div>
           </form>

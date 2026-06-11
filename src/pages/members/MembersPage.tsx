@@ -35,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -119,6 +119,7 @@ function EmptyState({ canAdd, onAdd }: { canAdd: boolean; onAdd: () => void }) {
 export function MembersPage() {
   const { t } = useLanguage()
   const fmt = useFormatters()
+  const ln  = useLocalName()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete: canDeletePerm, isOwner } = useUserPermissions()
   const { data: allRolesRaw = [] } = useGetRoles()
@@ -201,14 +202,14 @@ export function MembersPage() {
           className="w-52"
         />
         <MultiSelect
-          options={roles.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
+          options={roles.map((r) => ({ value: r.id, label: ln(r.name.replace(/_/g, " "), r.name_ar) }))}
           selected={roleFilters}
           onChange={setRoleFilters}
           placeholder={t("All roles")}
           className="w-40"
         />
         <MultiSelect
-          options={branches.map((b) => ({ value: b.id, label: b.name }))}
+          options={branches.map((b) => ({ value: b.id, label: ln(b.name, b.name_ar) }))}
           selected={branchFilters}
           onChange={setBranchFilters}
           placeholder={t("All branches")}
@@ -305,7 +306,7 @@ export function MembersPage() {
                       <td className="px-4 py-3 whitespace-nowrap">
                         {first?.role ? (
                           <Badge variant={roleVariant(first.role.level)} className="capitalize">
-                            {first.role.name.replace(/_/g, " ")}
+                            {ln(first.role.name.replace(/_/g, " "), first.role.name_ar)}
                           </Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>

@@ -33,6 +33,7 @@ import { useQueryClient } from "@tanstack/react-query"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAuth } from "@/hooks/useAuth"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { useGetBranches, useGetBranchMembers } from "@/hooks/useBranches"
 import { useGetExpenseCategories } from "@/hooks/useExpenses"
 import { useCreateExpense, useUpdateExpense } from "@/hooks/useExpenseMutations"
@@ -40,7 +41,7 @@ import { useGetCategorySuppliers } from "@/hooks/useSuppliers"
 import { uploadReceipt } from "@/lib/storage"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 import type { Expense } from "@/types/expense"
 
 import { Button } from "@/components/ui/button"
@@ -150,11 +151,13 @@ interface AddExpenseSheetProps {
 // ── Component ──────────────────────────────────────────────
 
 export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }: AddExpenseSheetProps) {
+  const { t } = useLanguage()
   const isEditMode = !!expense
   const isMobile   = useIsMobile()
   const { user }   = useAuth()
   const qc         = useQueryClient()
   const fmt        = useFormatters()
+  const ln         = useLocalName()
 
   const [receiptFile, setReceiptFile]   = useState<File | null>(null)
   const [receiptError, setReceiptError] = useState<string | null>(null)
@@ -343,7 +346,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
 
     // Receipt required only in create mode and not a debt category
     if (!isEditMode && !isDebtCategory && !receiptFile) {
-      setReceiptError("Receipt image is required")
+      setReceiptError(t("Receipt image is required"))
       return
     }
 
@@ -392,7 +395,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
           changes,
           edited_by: user!.id,
         })
-        toast.success("Expense updated")
+        toast.success(t("Expense updated"))
       } else {
         await createExpense.mutateAsync({
           branch_id:   values.branch_id,
@@ -411,12 +414,12 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
           await syncPayrollDebt(values.member_id, values.branch_id, values.amount, values.description)
         }
 
-        toast.success("Expense added")
+        toast.success(t("Expense added"))
       }
 
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save expense")
+      toast.error(err instanceof Error ? err.message : t("Failed to save expense"))
     } finally {
       setUploading(false)
     }
@@ -436,11 +439,11 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
         )}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>{isEditMode ? "Edit Expense" : "Add Expense"}</SheetTitle>
+          <SheetTitle>{isEditMode ? t("Edit Expense") : t("Add Expense")}</SheetTitle>
           <SheetDescription>
             {isEditMode
-              ? "Update this expense. Changes are logged with a timestamp."
-              : "Record a new expense for a branch."}
+              ? t("Update this expense. Changes are logged with a timestamp.")
+              : t("Record a new expense for a branch.")}
           </SheetDescription>
         </SheetHeader>
 
@@ -453,9 +456,9 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
 
               {/* ── Branch & Category ────────────────────── */}
               <div>
-                <h3 className="text-sm font-semibold">Details</h3>
+                <h3 className="text-sm font-semibold">{t("Details")}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Where and what this expense is for
+                  {t("Where and what this expense is for")}
                 </p>
               </div>
 
@@ -465,16 +468,16 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                   name="branch_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Branch</FormLabel>
+                      <FormLabel>{t("Branch")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a branch" />
+                            <SelectValue placeholder={t("Select a branch")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                           {branches.map((b) => (
-                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                            <SelectItem key={b.id} value={b.id}>{ln(b.name, b.name_ar)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -488,11 +491,11 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                   name="category_id"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Category</FormLabel>
+                      <FormLabel>{t("Category")}</FormLabel>
                       <Select value={field.value} onValueChange={field.onChange}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
+                            <SelectValue placeholder={t("Select a category")} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -502,7 +505,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                               <SelectItem key={c.id} value={c.id}>
                                 <span className="flex items-center gap-2">
                                   <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                                  {c.name}
+                                  {ln(c.name, c.name_ar)}
                                 </span>
                               </SelectItem>
                             )
@@ -521,19 +524,19 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                     name="supplier_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Supplier</FormLabel>
+                        <FormLabel>{t("Supplier")}</FormLabel>
                         <Select
                           value={field.value ?? ""}
                           onValueChange={(v) => field.onChange(v || null)}
                         >
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select a supplier" />
+                              <SelectValue placeholder={t("Select a supplier")} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {visibleSuppliers.map((s) => (
-                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                              <SelectItem key={s.id} value={s.id}>{ln(s.name, s.name_ar)}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
@@ -551,7 +554,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          Staff
+                          {t("Staff")}
                           <span className="text-destructive ms-0.5">*</span>
                         </FormLabel>
                         <Select
@@ -562,8 +565,8 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                             <SelectTrigger>
                               <SelectValue placeholder={
                                 !watchedBranchId
-                                  ? "Select a branch first"
-                                  : "Select a staff member"
+                                  ? t("Select a branch first")
+                                  : t("Select a staff member")
                               } />
                             </SelectTrigger>
                           </FormControl>
@@ -586,11 +589,11 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
 
               {/* ── Amount ───────────────────────────────── */}
               <div>
-                <h3 className="text-sm font-semibold">Amount</h3>
+                <h3 className="text-sm font-semibold">{t("Amount")}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {isEditMode
-                    ? "Update the cost of this expense"
-                    : "How much this expense cost (date is recorded as today)"}
+                    ? t("Update the cost of this expense")
+                    : t("How much this expense cost (date is recorded as today)")}
                 </p>
               </div>
 
@@ -599,7 +602,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount ({fmt.sym("EGP")})</FormLabel>
+                    <FormLabel>{t("Amount")} ({fmt.sym("EGP")})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -623,12 +626,12 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
               {/* ── Notes & Receipt ──────────────────────── */}
               <div>
                 <h3 className="text-sm font-semibold">
-                  {isDebtCategory ? "Notes" : "Notes & Receipt"}
+                  {isDebtCategory ? t("Notes") : t("Notes & Receipt")}
                 </h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   {isDebtCategory
-                    ? "Description of this debt"
-                    : "Description and proof of purchase"}
+                    ? t("Description of this debt")
+                    : t("Description and proof of purchase")}
                 </p>
               </div>
 
@@ -638,13 +641,13 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description</FormLabel>
+                      <FormLabel>{t("Description")}</FormLabel>
                       <FormControl>
                         <Textarea
                           placeholder={
                             isDebtCategory
-                              ? "e.g. Salary advance for June"
-                              : "e.g. Monthly electricity bill for downtown branch"
+                              ? t("e.g. Salary advance for June")
+                              : t("e.g. Monthly electricity bill for downtown branch")
                           }
                           rows={3}
                           value={field.value}
@@ -660,7 +663,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                 {!isDebtCategory && (
                   <div className="space-y-2">
                     <FormLabel>
-                      Receipt Image
+                      {t("Receipt Image")}
                       {!isEditMode && <span className="text-destructive ms-0.5">*</span>}
                     </FormLabel>
 
@@ -672,7 +675,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                           className="h-12 w-12 rounded object-cover shrink-0"
                         />
                         <p className="text-xs text-muted-foreground">
-                          Current receipt — upload a new image to replace it
+                          {t("Current receipt — upload a new image to replace it")}
                         </p>
                       </div>
                     )}
@@ -707,10 +710,10 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                 onClick={() => onOpenChange(false)}
                 disabled={isPending}
               >
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {isPending ? "Saving…" : isEditMode ? "Save Changes" : "Add Expense"}
+                {isPending ? t("Saving…") : isEditMode ? t("Save Changes") : t("Add Expense")}
               </Button>
             </div>
           </form>

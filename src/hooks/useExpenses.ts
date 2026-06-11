@@ -38,9 +38,9 @@ export function useGetExpenses(filters: ExpenseFilters) {
         .select(`
           id, branch_id, category_id, supplier_id, amount, currency, description, date,
           added_by, receipt_url, created_at, edited_at, edited_by,
-          branch:branches(id, name),
-          category:expense_categories(id, name, icon),
-          supplier:suppliers(id, name)
+          branch:branches(id, name, name_ar),
+          category:expense_categories(id, name, name_ar, icon, is_cogs),
+          supplier:suppliers(id, name, name_ar)
         `)
         .eq("account_id", accountId!)
         .gte("date", from)
@@ -84,7 +84,7 @@ export function useGetExpenseCategories() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("expense_categories")
-        .select("id, name, icon, is_cogs")
+        .select("id, name, name_ar, icon, is_cogs")
       if (error) throw error
       return sortCategories((data ?? []) as ExpenseCategory[])
     },
@@ -106,7 +106,7 @@ export function useGetExpenseSummaryByCategory(
 
       let query = supabase
         .from("expenses")
-        .select(`amount, category:expense_categories(id, name, icon)`)
+        .select(`amount, category:expense_categories(id, name, name_ar, icon, is_cogs)`)
         .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
@@ -118,11 +118,11 @@ export function useGetExpenseSummaryByCategory(
       const { data, error } = await query
       if (error) throw error
 
-      const map = new Map<string, { name: string; icon: string | null; total: number }>()
+      const map = new Map<string, { name: string; name_ar: string | null; icon: string | null; total: number }>()
       for (const row of data ?? []) {
-        const cat = (row.category as unknown) as { id: string; name: string; icon: string | null } | null
+        const cat = (row.category as unknown) as { id: string; name: string; name_ar?: string | null; icon: string | null } | null
         const key = cat?.id ?? "__uncategorized__"
-        const cur = map.get(key) ?? { name: cat?.name ?? "Uncategorized", icon: cat?.icon ?? null, total: 0 }
+        const cur = map.get(key) ?? { name: cat?.name ?? "Uncategorized", name_ar: cat?.name_ar ?? null, icon: cat?.icon ?? null, total: 0 }
         map.set(key, { ...cur, total: cur.total + (row.amount as number) })
       }
 
@@ -142,17 +142,17 @@ export function useGetExpenseSummaryByBranch(month: number, year: number) {
 
       const { data, error } = await supabase
         .from("expenses")
-        .select(`amount, branch:branches(id, name)`)
+        .select(`amount, branch:branches(id, name, name_ar)`)
         .eq("account_id", accountId!)
         .gte("date", from)
         .lte("date", to)
       if (error) throw error
 
-      const map = new Map<string, { name: string; total: number }>()
+      const map = new Map<string, { name: string; name_ar: string | null; total: number }>()
       for (const row of data ?? []) {
-        const branch = (row.branch as unknown) as { id: string; name: string } | null
+        const branch = (row.branch as unknown) as { id: string; name: string; name_ar?: string | null } | null
         const key = branch?.id ?? "__unknown__"
-        const cur = map.get(key) ?? { name: branch?.name ?? "Unknown", total: 0 }
+        const cur = map.get(key) ?? { name: branch?.name ?? "Unknown", name_ar: branch?.name_ar ?? null, total: 0 }
         map.set(key, { ...cur, total: cur.total + (row.amount as number) })
       }
 

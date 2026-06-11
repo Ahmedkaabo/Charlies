@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { useLocalName } from "@/lib/format"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useLanguage } from "@/contexts/LanguageContext"
 
@@ -227,6 +228,7 @@ function formatRoleName(name: string) {
 
 const roleSchema = z.object({
   name: z.string().min(1, "Required").regex(/^[a-z_]+$/, "Lowercase & underscores only"),
+  name_ar: z.string().optional(),
   hidden_from_assignment: z.boolean(),
 })
 type RoleFormValues = z.infer<typeof roleSchema>
@@ -242,12 +244,12 @@ function AddRoleDialog({
   const createRole = useCreateRole()
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
-    defaultValues: { name: "", hidden_from_assignment: false },
+    defaultValues: { name: "", name_ar: "", hidden_from_assignment: false },
   })
 
   async function onSubmit(values: RoleFormValues) {
     try {
-      await createRole.mutateAsync({ ...values, level: 5 })
+      await createRole.mutateAsync({ ...values, name_ar: values.name_ar?.trim() || null, level: 5 })
       toast.success(t("Role created"))
       form.reset()
       onOpenChange(false)
@@ -275,6 +277,19 @@ function AddRoleDialog({
                   <FormLabel>{t("Name")}</FormLabel>
                   <FormControl>
                     <Input placeholder="branch_manager" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="name_ar"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t("Arabic Name")}</FormLabel>
+                  <FormControl>
+                    <Input placeholder="مثال: مدير الفرع" dir="rtl" lang="ar" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -467,9 +482,23 @@ function RoleDrawer({
   const [confirmDelete, setConfirmDelete]           = useState(false)
   const [localName, setLocalName]                   = useState<string | null>(null)
   const [localHidden, setLocalHidden]               = useState<boolean | null>(null)
+  const [nameArValue, setNameArValue]               = useState(role?.name_ar ?? "")
 
   const displayName   = localName   ?? (role ? role.name : "")
   const displayHidden = localHidden ?? (role?.hidden_from_assignment ?? false)
+
+  async function handleNameArBlur() {
+    if (!role) return
+    const trimmed = nameArValue.trim()
+    const current = role.name_ar ?? ""
+    if (trimmed === current) return
+    try {
+      await updateRole.mutateAsync({ name_ar: trimmed || null })
+    } catch {
+      setNameArValue(current)
+      toast.error(t("Failed to update role"))
+    }
+  }
 
   async function handleToggleHidden(value: boolean) {
     if (!role) return
@@ -496,7 +525,7 @@ function RoleDrawer({
 
   return (
     <>
-      <Sheet open={role !== null} onOpenChange={(v) => { if (!v) { onClose(); setLocalName(null); setLocalHidden(null) } }}>
+      <Sheet open={role !== null} onOpenChange={(v) => { if (!v) { onClose(); setLocalName(null); setLocalHidden(null); setNameArValue("") } }}>
         <SheetContent
           side={isMobile ? "bottom" : "right"}
           className={cn(
@@ -513,6 +542,15 @@ function RoleDrawer({
                     <RenameField
                       role={{ ...role, name: displayName }}
                       onSaved={setLocalName}
+                    />
+                    <input
+                      className="w-full text-sm text-muted-foreground bg-transparent border-b border-transparent hover:border-border focus:border-primary focus:outline-none py-0.5 transition-colors"
+                      value={nameArValue}
+                      onChange={(e) => setNameArValue(e.target.value)}
+                      onBlur={handleNameArBlur}
+                      placeholder={t("Arabic Name")}
+                      dir="rtl"
+                      lang="ar"
                     />
                     <SheetDescription className="text-xs">
                       {t("Changes save automatically")}
@@ -596,13 +634,14 @@ function RoleDrawer({
 // ── Role card ─────────────────────────────────────────────────
 
 function RoleCard({ role, onClick }: { role: Role; onClick: () => void }) {
+  const ln = useLocalName()
   return (
     <button onClick={onClick} className="group block w-full text-left">
       <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3.5 transition-shadow group-hover:shadow-md">
         <span className="flex-1 min-w-0 text-sm font-medium truncate">
-          {formatRoleName(role.name)}
+          {ln(formatRoleName(role.name), role.name_ar)}
         </span>
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground rtl:rotate-180" />
       </div>
     </button>
   )

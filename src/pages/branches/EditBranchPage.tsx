@@ -56,7 +56,7 @@ export function EditBranchPage() {
           to={`/branches/${id}`}
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
           {branch.name}
         </Link>
         <h1 className="text-xl font-semibold">{t("Edit Branch")}</h1>

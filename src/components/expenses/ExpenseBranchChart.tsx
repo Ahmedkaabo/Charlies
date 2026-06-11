@@ -2,7 +2,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, CartesianGrid } from "recha
 import { useGetExpenseSummaryByBranch } from "@/hooks/useExpenses"
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 
 // ── Config (single series, uses chart-2) ──────────────────
 
@@ -35,6 +35,8 @@ interface ExpenseBranchChartProps {
 
 export function ExpenseBranchChart({ month, year }: ExpenseBranchChartProps) {
   const { data, isLoading } = useGetExpenseSummaryByBranch(month, year)
+  const ln = useLocalName()
+  const chartData = (data ?? []).map(d => ({ ...d, name: ln(d.name, d.name_ar) }))
 
   if (isLoading) {
     return (
@@ -46,7 +48,7 @@ export function ExpenseBranchChart({ month, year }: ExpenseBranchChartProps) {
     )
   }
 
-  if (!data?.length) {
+  if (!chartData.length) {
     return (
       <p className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
         No expenses this month
@@ -56,7 +58,7 @@ export function ExpenseBranchChart({ month, year }: ExpenseBranchChartProps) {
 
   return (
     <ChartContainer config={chartConfig} className="h-[220px] w-full">
-      <BarChart data={data} margin={{ top: 4, right: 8, bottom: 24, left: 8 }}>
+      <BarChart data={chartData} margin={{ top: 4, right: 8, bottom: 24, left: 8 }}>
         <CartesianGrid vertical={false} strokeDasharray="3 3" />
         <XAxis
           dataKey="name"
@@ -79,7 +81,7 @@ export function ExpenseBranchChart({ month, year }: ExpenseBranchChartProps) {
         />
         <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))" }} />
         <Bar dataKey="total" radius={[4, 4, 0, 0]} maxBarSize={40}>
-          {data.map((_, i) => (
+          {chartData.map((_, i) => (
             <Cell key={i} fill="var(--chart-2)" />
           ))}
         </Bar>

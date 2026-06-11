@@ -7,7 +7,7 @@ export interface TreasuryTransfer {
   notes: string | null
   added_by: string | null
   created_at: string
-  branch?: { id: string; name: string } | null
+  branch?: { id: string; name: string; name_ar?: string | null } | null
   adder?: { id: string; full_name: string | null } | null
 }
 
@@ -21,13 +21,14 @@ export interface PoolTransfer {
   notes: string | null
   added_by: string | null
   created_at: string
-  branch?: { id: string; name: string } | null
+  branch?: { id: string; name: string; name_ar?: string | null } | null
   adder?: { id: string; full_name: string | null } | null
 }
 
 export interface BranchBalance {
   branchId: string
   branchName: string
+  branchNameAr: string | null
   sales: number
   expenses: number
   transferred: number

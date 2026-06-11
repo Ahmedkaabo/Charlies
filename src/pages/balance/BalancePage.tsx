@@ -35,7 +35,7 @@ import {
   useDeletePoolTransfer,
 } from "@/hooks/useBalance"
 import { useLanguage } from "@/contexts/LanguageContext"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Branch } from "@/types/branch"
@@ -215,6 +215,7 @@ function TransferSheet({
   editTransfer: TreasuryTransfer | null
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const { egp, sym } = useFormatters()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
@@ -273,9 +274,11 @@ function TransferSheet({
 
   const isPending = create.isPending || update.isPending
 
+  const _b = branches.find(b => b.id === branchId)
+  const _eb = editTransfer?.branch
   const activeBranchName = selectedBranchName
-    ?? branches.find(b => b.id === branchId)?.name
-    ?? (editTransfer?.branch as { id: string; name: string } | null)?.name
+    ?? (_b ? ln(_b.name, _b.name_ar) : undefined)
+    ?? (_eb ? ln(_eb.name, _eb.name_ar) : undefined)
 
   return (
     <Sheet open={open} onOpenChange={(v) => { if (!v) { reset(); onOpenChange(false) } }}>
@@ -299,7 +302,7 @@ function TransferSheet({
               <p className="text-sm font-medium">{t("Branch")}</p>
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger><SelectValue placeholder={t("Select branch…")} /></SelectTrigger>
-                <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{ln(b.name, b.name_ar)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           )}
@@ -363,6 +366,7 @@ function PoolTransferSheet({
   editTransfer: PoolTransfer | null
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const { egp, sym } = useFormatters()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
@@ -439,9 +443,11 @@ function PoolTransferSheet({
 
   const isPending = create.isPending || update.isPending
 
+  const _pb = branches.find(b => b.id === branchId)
+  const _epb = editTransfer?.branch
   const activeBranchName = selectedBranchName
-    ?? branches.find(b => b.id === branchId)?.name
-    ?? (editTransfer?.branch as { id: string; name: string } | null)?.name
+    ?? (_pb ? ln(_pb.name, _pb.name_ar) : undefined)
+    ?? (_epb ? ln(_epb.name, _epb.name_ar) : undefined)
 
   const availableBalance  = direction === "sales_to_expenses" ? branchSummary.totalRemaining : poolCredit
   const availableLabel    = direction === "sales_to_expenses" ? t("Branch balance") : t("Expenses pool credit")
@@ -470,7 +476,7 @@ function PoolTransferSheet({
               <p className="text-sm font-medium">{t("Branch")}</p>
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger><SelectValue placeholder={t("Select branch…")} /></SelectTrigger>
-                <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{ln(b.name, b.name_ar)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           )}
@@ -535,6 +541,7 @@ function BranchBreakdownSection({
 }) {
   const { t } = useLanguage()
   const { egp } = useFormatters()
+  const ln = useLocalName()
 
   if (isLoading) {
     return (
@@ -590,7 +597,7 @@ function BranchBreakdownSection({
           <tbody className="divide-y">
             {balances.map((b) => (
               <tr key={b.branchId}>
-                <td className={cn(STICKY_CELL, "font-medium whitespace-nowrap")}>{b.branchName}</td>
+                <td className={cn(STICKY_CELL, "font-medium whitespace-nowrap")}>{ln(b.branchName, b.branchNameAr)}</td>
                 <td className="px-4 py-3 text-start tabular-nums">{egp(b.sales)}</td>
                 <td className="px-4 py-3 text-start tabular-nums text-destructive">{egp(b.expenses)}</td>
                 <td className="px-4 py-3 text-start tabular-nums">{egp(b.transferred)}</td>
@@ -757,13 +764,13 @@ function BalanceContent({
                   </thead>
                   <tbody className="divide-y">
                     {transfers.map((t) => {
-                      const branchObj = t.branch as { id: string; name: string } | null
+                      const branchObj = t.branch as { id: string; name: string; name_ar?: string | null } | null
                       const adderObj  = t.adder  as { id: string; full_name: string | null } | null
                       const isInflow  = t.direction === "inflow"
                       return (
                         <tr key={t.id} className="hover:bg-muted/30">
                           <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</td>
-                          {isAllBranches && <td className="px-4 py-3 text-start font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
+                          {isAllBranches && <td className="px-4 py-3 text-start font-medium whitespace-nowrap">{branchObj ? ln(branchObj.name, branchObj.name_ar) : "—"}</td>}
                           <td className="px-4 py-3 text-start whitespace-nowrap">
                             <div className="flex items-center justify-start gap-1">
                               {isInflow ? <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" /> : <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
@@ -844,13 +851,13 @@ function BalanceContent({
                   </thead>
                   <tbody className="divide-y">
                     {poolTransfers.map((pt) => {
-                      const branchObj  = pt.branch as { id: string; name: string } | null
+                      const branchObj  = pt.branch as { id: string; name: string; name_ar?: string | null } | null
                       const adderObj   = pt.adder  as { id: string; full_name: string | null } | null
                       const toExpenses = pt.from_pool === "sales"
                       return (
                         <tr key={pt.id} className="hover:bg-muted/30">
                           <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(pt.date), "MMM d, yyyy")}</td>
-                          {isAllBranches && <td className="px-4 py-3 text-start font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
+                          {isAllBranches && <td className="px-4 py-3 text-start font-medium whitespace-nowrap">{branchObj ? ln(branchObj.name, branchObj.name_ar) : "—"}</td>}
                           <td className="px-4 py-3 text-start">
                             <span className={cn(
                               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
@@ -941,6 +948,7 @@ function BalanceContent({
 
 export function BalancePage() {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const { profile, isAdmin, isOwner } = useAuth()
   const { canRead, canCreate, canUpdate, canDelete } = useUserPermissions()
 
@@ -960,7 +968,8 @@ export function BalancePage() {
   const branchList = isManagement ? allBranches : myBranches
 
   const activeBranchId   = selectedBranchIds.length === 1 ? selectedBranchIds[0] : undefined
-  const activeBranchName = activeBranchId ? branchList.find(b => b.id === activeBranchId)?.name : undefined
+  const _ab = activeBranchId ? branchList.find(b => b.id === activeBranchId) : undefined
+  const activeBranchName = _ab ? ln(_ab.name, _ab.name_ar) : undefined
   const activeBranchIds  = selectedBranchIds.length > 0 ? selectedBranchIds : branchList.map(b => b.id)
 
   if (!isManagement && branchLoad) {
@@ -994,7 +1003,7 @@ export function BalancePage() {
         </Select>
 
         <MultiSelect
-          options={branchList.map(b => ({ value: b.id, label: b.name }))}
+          options={branchList.map(b => ({ value: b.id, label: ln(b.name, b.name_ar) }))}
           selected={selectedBranchIds}
           onChange={setSelectedBranchIds}
           placeholder={t("All Branches")}

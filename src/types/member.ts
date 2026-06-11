@@ -9,7 +9,7 @@ export interface MemberAssignment {
   branch_name: string
   role_ids: string[]
   role_id: string | null
-  role: { id: string; name: string; level: number } | null
+  role: { id: string; name: string; name_ar?: string | null; level: number } | null
   joined_at: string
   salary: { monthly_salary: number | null; currency: SalaryCurrency; paid_days_off: number } | null
 }
@@ -48,11 +48,13 @@ export interface Member {
   role: {
     id: string
     name: string
+    name_ar?: string | null
     level: number
   } | null
   branch: {
     id: string
     name: string
+    name_ar?: string | null
   } | null
   salary: {
     id: string

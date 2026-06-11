@@ -116,7 +116,7 @@ export function useAllBranchBalances(month: number, year: number, enabled = true
       let expQ   = supabase.from("expenses").select("branch_id, amount").gte("date", from).lte("date", to)
       let trfQ   = supabase.from("treasury_transfers").select("branch_id, amount, direction").eq("account_id", accountId!).gte("date", from).lte("date", to)
       let poolQ  = supabase.from("pool_transfers").select("branch_id, from_pool, to_pool, amount").eq("account_id", accountId!).gte("date", from).lte("date", to)
-      const branchQ = supabase.from("branches").select("id, name").eq("account_id", accountId!)
+      const branchQ = supabase.from("branches").select("id, name, name_ar").eq("account_id", accountId!)
 
       if (branchIds?.length) {
         salesQ = salesQ.in("branch_id", branchIds)
@@ -133,6 +133,7 @@ export function useAllBranchBalances(month: number, year: number, enabled = true
       if (branchRes.error) throw branchRes.error
 
       const names    = new Map<string, string>((branchRes.data ?? []).map((b) => [b.id as string, b.name as string]))
+      const namesAr  = new Map<string, string | null>((branchRes.data ?? []).map((b) => [b.id as string, (b.name_ar as string | null) ?? null]))
       const salesMap = new Map<string, number>()
       const expMap   = new Map<string, number>()
       const trfMap   = new Map<string, number>()
@@ -159,8 +160,9 @@ export function useAllBranchBalances(month: number, year: number, enabled = true
           const transferred = trfMap.get(id)   ?? 0
           const poolCredit  = poolMap.get(id)  ?? 0
           return {
-            branchId:   id,
-            branchName: names.get(id) ?? id,
+            branchId:     id,
+            branchName:   names.get(id) ?? id,
+            branchNameAr: namesAr.get(id) ?? null,
             sales,
             expenses,
             transferred,
@@ -195,7 +197,7 @@ export function useTreasuryTransfers(
         .from("treasury_transfers")
         .select(`
           id, branch_id, amount, direction, date, notes, added_by, created_at,
-          branch:branches(id, name),
+          branch:branches(id, name, name_ar),
           adder:profiles!added_by(id, full_name)
         `)
         .eq("account_id", accountId!)
@@ -230,7 +232,7 @@ export function usePoolTransfers(
         .from("pool_transfers")
         .select(`
           id, branch_id, from_pool, to_pool, amount, date, notes, added_by, created_at,
-          branch:branches(id, name),
+          branch:branches(id, name, name_ar),
           adder:profiles!added_by(id, full_name)
         `)
         .eq("account_id", accountId!)

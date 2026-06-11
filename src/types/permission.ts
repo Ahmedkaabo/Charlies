@@ -14,6 +14,7 @@ export type RoleType = "managerial" | "operational"
 export interface Role {
   id: string
   name: string
+  name_ar?: string | null
   level: number
   is_system?: boolean
   role_type?: RoleType

@@ -3,6 +3,7 @@ import { supabase } from "@/lib/supabase"
 
 interface CategoryPayload {
   name: string
+  name_ar?: string | null
   icon: string | null
   is_cogs: boolean
 }
@@ -14,7 +15,7 @@ export function useCreateExpenseCategory() {
       const { data, error } = await supabase
         .from("expense_categories")
         .insert(payload)
-        .select("id, name, icon, is_cogs")
+        .select("id, name, name_ar, icon, is_cogs")
         .single()
       if (error) throw error
       return data
@@ -31,7 +32,7 @@ export function useUpdateExpenseCategory() {
         .from("expense_categories")
         .update(payload)
         .eq("id", id)
-        .select("id, name, icon, is_cogs")
+        .select("id, name, name_ar, icon, is_cogs")
         .single()
       if (error) throw error
       return data

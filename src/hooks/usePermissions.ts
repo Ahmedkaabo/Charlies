@@ -15,7 +15,7 @@ export function useGetRoles() {
       if (!accountId) return []
       const { data, error } = await supabase
         .from("roles")
-        .select("id, name, level, is_system, role_type, hidden_from_assignment")
+        .select("id, name, name_ar, level, is_system, role_type, hidden_from_assignment")
         .eq("account_id", accountId)
         .order("level", { ascending: true })
       if (!error) return data as Role[]
@@ -48,6 +48,7 @@ export function useGetRoles() {
 
 export interface RoleInput {
   name: string
+  name_ar?: string | null
   level: number
   role_type?: "managerial" | "operational"
   hidden_from_assignment?: boolean

@@ -33,3 +33,10 @@ export function useFormatters() {
     sym:    (code: string)                                  => currencySymbol(code, language),
   }
 }
+
+/** Returns name_ar when in Arabic mode and it exists, otherwise name. */
+export function useLocalName() {
+  const { isRTL } = useLanguage()
+  return (name: string, name_ar?: string | null): string =>
+    isRTL && name_ar ? name_ar : name
+}

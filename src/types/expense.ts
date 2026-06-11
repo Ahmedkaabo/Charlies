@@ -2,6 +2,7 @@ export interface Supplier {
   id: string
   account_id: string
   name: string
+  name_ar?: string | null
   contact_person: string | null
   phone: string | null
   email: string | null
@@ -12,6 +13,7 @@ export interface Supplier {
 export interface ExpenseCategory {
   id: string
   name: string
+  name_ar?: string | null
   icon: string | null
   is_cogs: boolean
 }
@@ -30,9 +32,9 @@ export interface Expense {
   created_at: string
   edited_at: string | null
   edited_by: string | null
-  branch: { id: string; name: string } | null
+  branch: { id: string; name: string; name_ar?: string | null } | null
   category: ExpenseCategory | null
-  supplier: { id: string; name: string } | null
+  supplier: { id: string; name: string; name_ar?: string | null } | null
 }
 
 export interface ExpenseEdit {

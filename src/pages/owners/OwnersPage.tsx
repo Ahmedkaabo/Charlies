@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 
 import {
   useGetOwners,
@@ -80,11 +81,12 @@ function MultiRoleSelect({
   selectedIds,
   onChange,
 }: {
-  roles: { id: string; name: string; level: number }[]
+  roles: { id: string; name: string; name_ar?: string | null; level: number }[]
   selectedIds: string[]
   onChange: (ids: string[]) => void
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const [open, setOpen] = useState(false)
 
   const selected = roles.filter((r) => selectedIds.includes(r.id))
@@ -92,7 +94,7 @@ function MultiRoleSelect({
     selected.length === 0
       ? t("Select roles…")
       : selected.length === 1
-      ? selected[0].name.replace(/_/g, " ")
+      ? ln(selected[0].name.replace(/_/g, " "), selected[0].name_ar)
       : `${selected.length} ${t("roles")}`
 
   function toggle(id: string) {
@@ -131,7 +133,7 @@ function MultiRoleSelect({
                 )}>
                   {checked && <Check className="h-3 w-3" />}
                 </div>
-                <span className="capitalize">{r.name.replace(/_/g, " ")}</span>
+                <span className="capitalize">{ln(r.name.replace(/_/g, " "), r.name_ar)}</span>
               </button>
             )
           })}
@@ -148,18 +150,20 @@ function MultiBranchSelect({
   selectedIds,
   onChange,
 }: {
-  branches: { id: string; name: string }[]
+  branches: { id: string; name: string; name_ar?: string | null }[]
   selectedIds: string[]
   onChange: (ids: string[]) => void
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const [open, setOpen] = useState(false)
 
+  const selected = branches.find((b) => b.id === selectedIds[0])
   const label =
     selectedIds.length === 0
       ? t("Select branches…")
       : selectedIds.length === 1
-      ? (branches.find((b) => b.id === selectedIds[0])?.name ?? t("1 branch"))
+      ? (selected ? ln(selected.name, selected.name_ar) : t("1 branch"))
       : `${selectedIds.length} ${t("branches selected")}`
 
   return (
@@ -198,7 +202,7 @@ function MultiBranchSelect({
                 )}>
                   {checked && <Check className="h-3 w-3" />}
                 </div>
-                {b.name}
+                {ln(b.name, b.name_ar)}
               </button>
             )
           })}
@@ -368,6 +372,7 @@ function OwnerSheet({
   canEdit: boolean
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const isMobile = useIsMobile()
   const { data: owners = [] }      = useGetOwners()
   const { data: allBranches = [] } = useGetBranches()
@@ -448,10 +453,10 @@ function OwnerSheet({
     }
   }
 
-  async function handleRemove(assignmentId: string, branchId: string, branchName: string) {
+  async function handleRemove(assignmentId: string, branchId: string, branchName: string, branchNameAr: string | null) {
     try {
       await removeBranch.mutateAsync({ assignmentId, branchId, profileId })
-      toast.success(`${t("Removed from")} ${branchName}`)
+      toast.success(`${t("Removed from")} ${ln(branchName, branchNameAr)}`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("Failed to remove branch"))
     }
@@ -528,7 +533,7 @@ function OwnerSheet({
                       .filter((r) => selectedRoleIds.includes(r.id))
                       .map((r) => (
                         <span key={r.id} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium capitalize">
-                          {r.name.replace(/_/g, " ")}
+                          {ln(r.name.replace(/_/g, " "), r.name_ar)}
                         </span>
                       ))
                   )}
@@ -556,7 +561,7 @@ function OwnerSheet({
                   const dirty   = draft !== "" && parseFloat(draft) !== current
                   return (
                     <div key={b.assignment_id} className="flex items-center gap-3 rounded-lg border px-4 py-2.5">
-                      <span className="flex-1 text-sm font-medium truncate">{b.branch_name}</span>
+                      <span className="flex-1 text-sm font-medium truncate">{ln(b.branch_name, b.branch_name_ar)}</span>
                       {canEdit && (
                         <>
                           <div className="flex items-center shrink-0 rounded-md border overflow-hidden h-8">
@@ -590,7 +595,7 @@ function OwnerSheet({
                             size="icon" variant="ghost"
                             className="h-7 w-7 text-destructive hover:text-destructive shrink-0"
                             disabled={removeBranch.isPending}
-                            onClick={() => handleRemove(b.assignment_id, b.branch_id, b.branch_name)}
+                            onClick={() => handleRemove(b.assignment_id, b.branch_id, b.branch_name, b.branch_name_ar)}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </Button>
@@ -607,7 +612,7 @@ function OwnerSheet({
                   {availableBranches.map((b) => (
                     pendingBranchId === b.id ? (
                       <div key={b.id} className="rounded-lg border p-3 space-y-2">
-                        <p className="text-sm font-medium">{b.name}</p>
+                        <p className="text-sm font-medium">{ln(b.name, b.name_ar)}</p>
                         <div className="flex items-center gap-2">
                           <div className="flex items-center rounded-md border overflow-hidden h-8">
                             <button
@@ -651,7 +656,7 @@ function OwnerSheet({
                         className="flex w-full items-center gap-2 rounded-lg border border-dashed px-4 py-2.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground transition-colors disabled:opacity-50"
                       >
                         <Plus className="h-3.5 w-3.5 shrink-0" />
-                        {b.name}
+                        {ln(b.name, b.name_ar)}
                       </button>
                     )
                   ))}
@@ -674,6 +679,7 @@ function OwnerSheet({
 
 export function OwnersPage() {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
   const canAddOwner    = canCreate("owners")
   const canEditOwner   = canUpdate("owners")
@@ -816,7 +822,7 @@ export function OwnersPage() {
                           key={b.assignment_id}
                           className="rounded-md border bg-muted/50 px-2 py-0.5 text-xs font-medium whitespace-nowrap"
                         >
-                          {b.branch_name}
+                          {ln(b.branch_name, b.branch_name_ar)}
                         </span>
                       ))}
                     </div>
@@ -835,7 +841,7 @@ export function OwnersPage() {
                         <div className="flex gap-1">
                           {roles.map((r) => (
                             <span key={r.id} className="rounded-md border border-primary/30 bg-primary/5 text-primary px-2 py-0.5 text-xs font-medium capitalize whitespace-nowrap">
-                              {r.name.replace(/_/g, " ")}
+                              {ln(r.name.replace(/_/g, " "), r.name_ar)}
                             </span>
                           ))}
                         </div>

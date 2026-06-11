@@ -92,7 +92,7 @@ export interface StaffPayrollRow {
   branch_id: string
   full_name: string | null
   avatar_url: string | null
-  role: { id: string; name: string; level: number } | null
+  role: { id: string; name: string; name_ar?: string | null; level: number } | null
   base_salary: number | null
   currency: string
   payroll_record_id: string | null

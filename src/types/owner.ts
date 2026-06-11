@@ -1,13 +1,14 @@
 export interface OwnerBranch {
-  assignment_id: string  // owners.id
-  branch_id:     string
-  branch_name:   string
-  city:          string | null
-  joined_at:     string
-  role_ids:      string[]
-  role_id:       string | null
-  role_name:     string | null
-  role_level:    number | null
+  assignment_id:  string  // owners.id
+  branch_id:      string
+  branch_name:    string
+  branch_name_ar: string | null
+  city:           string | null
+  joined_at:      string
+  role_ids:       string[]
+  role_id:        string | null
+  role_name:      string | null
+  role_level:     number | null
 }
 
 export interface Owner {

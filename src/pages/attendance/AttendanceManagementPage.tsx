@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import { format, parseISO, addDays, subDays } from "date-fns"
-import { ChevronLeft, ChevronRight, Image, CalendarDays, Search } from "lucide-react"
+import { Image, CalendarDays, Search } from "lucide-react"
 
 import { useAuth } from "@/hooks/useAuth"
 import { useUserPermissions } from "@/hooks/usePermissions"
@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils"
 import type { AttendanceLogWithProfile } from "@/types/attendance"
 import { useLanguage } from "@/contexts/LanguageContext"
 
+import { ChevronForward, ChevronBack } from "@/components/ui/rtl-chevron"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -127,7 +128,7 @@ const isMobile = useIsMobile()
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <div className="flex items-center rounded-lg border bg-card">
               <Button size="icon" variant="ghost" onClick={prevDay} disabled={parseISO(selectedDate) <= APP_START} className="h-8 w-8 rounded-e-none border-e">
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronBack className="h-4 w-4" />
               </Button>
               <PopoverTrigger asChild>
                 <button className="flex h-8 items-center gap-1.5 px-3 text-sm font-medium hover:bg-muted/50 transition-colors">
@@ -142,7 +143,7 @@ const isMobile = useIsMobile()
                 disabled={selectedDate === format(today, "yyyy-MM-dd")}
                 className="h-8 w-8 rounded-s-none border-s"
               >
-                <ChevronRight className="h-4 w-4" />
+                <ChevronForward className="h-4 w-4" />
               </Button>
             </div>
             <PopoverContent className="w-auto p-0" align="start">

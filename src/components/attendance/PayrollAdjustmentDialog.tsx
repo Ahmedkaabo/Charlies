@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useFormatters } from "@/lib/format"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { useAddAdjustment, useUpsertPayrollRecord } from "@/hooks/useAttendanceMutations"
 import { supabase } from "@/lib/supabase"
 import { useQueryClient } from "@tanstack/react-query"
@@ -91,6 +92,7 @@ export function PayrollAdjustmentDialog({
   month,
   year,
 }: PayrollAdjustmentDialogProps) {
+  const { t } = useLanguage()
   const { profile } = useAuth()
   const isMobile    = useIsMobile()
   const fmt         = useFormatters()
@@ -190,10 +192,10 @@ export function PayrollAdjustmentDialog({
         qc.invalidateQueries({ queryKey: ["expenses"] })
       }
 
-      toast.success("Adjustment saved")
+      toast.success(t("Adjustment saved"))
       handleClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save adjustment")
+      toast.error(err instanceof Error ? err.message : t("Failed to save adjustment"))
     } finally {
       setSaving(false)
     }
@@ -205,7 +207,7 @@ export function PayrollAdjustmentDialog({
     <div className="space-y-4">
       {/* Staff */}
       <div className="space-y-1">
-        <p className="text-xs text-muted-foreground">Staff Member</p>
+        <p className="text-xs text-muted-foreground">{t("Staff Member")}</p>
         <p className="text-sm font-medium">{staffName ?? "—"}</p>
       </div>
 
@@ -217,17 +219,17 @@ export function PayrollAdjustmentDialog({
         name="type"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Type</FormLabel>
+            <FormLabel>{t("Type")}</FormLabel>
             <Select value={field.value} onValueChange={field.onChange}>
               <FormControl>
                 <SelectTrigger className={typeValueColor(watchedType)}>
-                  <SelectValue placeholder="Select type" />
+                  <SelectValue placeholder={t("Select type")} />
                 </SelectTrigger>
               </FormControl>
               <SelectContent>
-                <SelectItem value="bonus"     className="text-emerald-600 dark:text-emerald-400">Bonus</SelectItem>
-                <SelectItem value="deduction" className="text-destructive">Deduction</SelectItem>
-                <SelectItem value="debt">Debt</SelectItem>
+                <SelectItem value="bonus"     className="text-emerald-600 dark:text-emerald-400">{t("Bonus")}</SelectItem>
+                <SelectItem value="deduction" className="text-destructive">{t("Deduction")}</SelectItem>
+                <SelectItem value="debt">{t("Debt")}</SelectItem>
               </SelectContent>
             </Select>
             <FormMessage />
@@ -239,7 +241,7 @@ export function PayrollAdjustmentDialog({
       {(watchedType === "bonus" || watchedType === "deduction") && dailyRate && (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            Quick amounts <span className="opacity-60">· daily rate {fmt.money(Math.round(dailyRate), currency)}</span>
+            {t("Quick amounts")} <span className="opacity-60">· {t("daily rate")} {fmt.money(Math.round(dailyRate), currency)}</span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             {SHORTCUTS.map(({ label, factor }) => {
@@ -266,7 +268,7 @@ export function PayrollAdjustmentDialog({
         name="amount"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Amount ({fmt.sym(currency)})</FormLabel>
+            <FormLabel>{t("Amount")} ({fmt.sym(currency)})</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -290,10 +292,10 @@ export function PayrollAdjustmentDialog({
         name="reason"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Notes <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
+            <FormLabel>{t("Notes")} <span className="font-normal text-muted-foreground">({t("optional")})</span></FormLabel>
             <FormControl>
               <Textarea
-                placeholder="Add a note for this adjustment…"
+                placeholder={t("Add a note for this adjustment…")}
                 className="resize-none"
                 rows={3}
                 {...field}
@@ -316,9 +318,9 @@ export function PayrollAdjustmentDialog({
           className="h-[90svh] rounded-t-2xl flex flex-col gap-0 overflow-hidden p-0"
         >
           <SheetHeader className="shrink-0 border-b px-6 py-4">
-            <SheetTitle className="text-start">Add Adjustment</SheetTitle>
+            <SheetTitle className="text-start">{t("Add Adjustment")}</SheetTitle>
             <SheetDescription className="text-start">
-              {staffName ?? "Staff member"} · {month}/{year}
+              {staffName ?? t("Staff member")} · {month}/{year}
             </SheetDescription>
           </SheetHeader>
 
@@ -332,10 +334,10 @@ export function PayrollAdjustmentDialog({
               </div>
               <div className="shrink-0 border-t bg-background px-6 py-4 flex gap-3">
                 <Button type="button" variant="outline" onClick={handleClose} disabled={saving} className="flex-1">
-                  Cancel
+                  {t("Cancel")}
                 </Button>
                 <Button type="submit" disabled={saving} className="flex-1">
-                  {saving ? "Saving…" : "Save"}
+                  {saving ? t("Saving…") : t("Save")}
                 </Button>
               </div>
             </form>
@@ -351,9 +353,9 @@ export function PayrollAdjustmentDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Adjustment</DialogTitle>
+          <DialogTitle>{t("Add Adjustment")}</DialogTitle>
           <DialogDescription>
-            {staffName ?? "Staff member"} · {month}/{year}
+            {staffName ?? t("Staff member")} · {month}/{year}
           </DialogDescription>
         </DialogHeader>
 
@@ -364,10 +366,10 @@ export function PayrollAdjustmentDialog({
             {fields}
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={handleClose} disabled={saving}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={saving}>
-                {saving ? "Saving…" : "Save Adjustment"}
+                {saving ? t("Saving…") : t("Save Adjustment")}
               </Button>
             </div>
           </form>

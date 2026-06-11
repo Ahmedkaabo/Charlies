@@ -9,7 +9,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -39,6 +39,7 @@ interface ExpenseSummaryChartProps {
 export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryChartProps) {
   const { data, isLoading } = useGetExpenseSummaryByCategory(month, year, branchId)
   const fmt = useFormatters()
+  const ln  = useLocalName()
 
   const pieData = useMemo(
     () =>
@@ -54,7 +55,7 @@ export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryCha
     const cfg: ChartConfig = { total: { label: "Amount" } }
     ;(data ?? []).forEach((item, i) => {
       cfg[toKey(item.name)] = {
-        label: item.name,
+        label: ln(item.name, item.name_ar),
         color: CHART_COLORS[i % CHART_COLORS.length],
       }
     })
@@ -96,7 +97,7 @@ export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryCha
               className="h-2.5 w-2.5 rounded-full shrink-0"
               style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
             />
-            <span className="text-muted-foreground truncate">{item.name}</span>
+            <span className="text-muted-foreground truncate">{ln(item.name, item.name_ar)}</span>
             <span className="ms-auto font-semibold tabular-nums shrink-0">
               {fmt.egp(item.total)}
             </span>

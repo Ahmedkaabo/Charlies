@@ -132,7 +132,7 @@ export function OnboardingPage() {
                     <p className="text-xs text-muted-foreground">{branch.city}</p>
                   )}
                 </div>
-                {isJoining ? <Spinner /> : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                {isJoining ? <Spinner /> : <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground rtl:rotate-180" />}
               </button>
             )
           })}

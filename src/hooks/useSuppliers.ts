@@ -13,7 +13,7 @@ export function useGetSuppliers() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("suppliers")
-        .select("id, account_id, name, contact_person, phone, email, notes, created_at")
+        .select("id, account_id, name, name_ar, contact_person, phone, email, notes, created_at")
         .eq("account_id", accountId!)
         .order("name")
       if (error) throw error
@@ -29,7 +29,7 @@ export function useGetCategorySuppliers(categoryId: string | null) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("category_suppliers")
-        .select("supplier_id, supplier:suppliers(id, account_id, name, contact_person, phone, email, notes, created_at)")
+        .select("supplier_id, supplier:suppliers(id, account_id, name, name_ar, contact_person, phone, email, notes, created_at)")
         .eq("category_id", categoryId!)
       if (error) throw error
       return ((data ?? []).map((r) => r.supplier).filter(Boolean)) as Supplier[]
@@ -59,6 +59,7 @@ export function useGetSupplierExpenses(supplierId: string | null) {
 
 interface SupplierPayload {
   name: string
+  name_ar?: string | null
   contact_person: string | null
   phone: string | null
   email: string | null
@@ -73,7 +74,7 @@ export function useCreateSupplier() {
       const { data, error } = await supabase
         .from("suppliers")
         .insert({ ...payload, account_id: accountId! })
-        .select("id, account_id, name, contact_person, phone, email, notes, created_at")
+        .select("id, account_id, name, name_ar, contact_person, phone, email, notes, created_at")
         .single()
       if (error) throw error
       return data as Supplier
@@ -90,7 +91,7 @@ export function useUpdateSupplier() {
         .from("suppliers")
         .update(payload)
         .eq("id", id)
-        .select("id, account_id, name, contact_person, phone, email, notes, created_at")
+        .select("id, account_id, name, name_ar, contact_person, phone, email, notes, created_at")
         .single()
       if (error) throw error
       return data as Supplier

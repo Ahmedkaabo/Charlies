@@ -140,7 +140,7 @@ export function usePayrollRecords(
         .select(`
           profile_id, branch_id,
           profile:profiles(id, full_name, avatar_url),
-          role:roles(id, name, level)
+          role:roles(id, name, name_ar, level)
         `)
         .eq("is_active", true)
         .eq("account_id", accountId!)
@@ -225,7 +225,7 @@ export function usePayrollRecords(
           profile_id:        m.profile_id,
           branch_id:         m.branch_id,
           full_name:         profile?.full_name  ?? null,
-          role:              (Array.isArray(m.role) ? m.role[0] : m.role) as { id: string; name: string; level: number } | null ?? null,
+          role:              (Array.isArray(m.role) ? m.role[0] : m.role) as { id: string; name: string; name_ar?: string | null; level: number } | null ?? null,
           avatar_url:        profile?.avatar_url ?? null,
           base_salary:       salary?.monthly_salary ?? null,
           currency:          salary?.currency ?? "EGP",

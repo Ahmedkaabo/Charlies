@@ -719,7 +719,7 @@ export function BranchDetailPage() {
           to="/branches"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4 rtl:rotate-180" />
           {t("Branches")}
         </Link>
 

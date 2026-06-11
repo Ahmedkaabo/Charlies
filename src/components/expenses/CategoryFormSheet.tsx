@@ -14,6 +14,7 @@ import {
 } from "@/hooks/useExpenseCategoryMutations"
 import { cn } from "@/lib/utils"
 import type { ExpenseCategory } from "@/types/expense"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -66,9 +67,11 @@ export function CategoryFormSheet({
   category?: ExpenseCategory
 }) {
   const isMobile = useIsMobile()
+  const { t } = useLanguage()
   const isEdit = !!category
 
   const [name,   setName]   = useState(category?.name   ?? "")
+  const [nameAr, setNameAr] = useState(category?.name_ar ?? "")
   const [icon,   setIcon]   = useState(category?.icon   ?? "more-horizontal")
   const [isCogs, setIsCogs] = useState(category?.is_cogs ?? false)
 
@@ -81,30 +84,32 @@ export function CategoryFormSheet({
   if (category?.id !== lastCategoryId) {
     setLastCategoryId(category?.id)
     setName(category?.name ?? "")
+    setNameAr(category?.name_ar ?? "")
     setIcon(category?.icon ?? "more-horizontal")
     setIsCogs(category?.is_cogs ?? false)
   }
 
   function reset() {
     setName(category?.name ?? "")
+    setNameAr(category?.name_ar ?? "")
     setIcon(category?.icon ?? "more-horizontal")
     setIsCogs(category?.is_cogs ?? false)
   }
 
   async function handleSave() {
     const trimmed = name.trim()
-    if (!trimmed) { toast.error("Name is required"); return }
+    if (!trimmed) { toast.error(t("Name is required")); return }
     try {
       if (isEdit) {
-        await update.mutateAsync({ id: category.id, name: trimmed, icon, is_cogs: isCogs })
-        toast.success("Category updated")
+        await update.mutateAsync({ id: category.id, name: trimmed, name_ar: nameAr.trim() || null, icon, is_cogs: isCogs })
+        toast.success(t("Category updated"))
       } else {
-        await create.mutateAsync({ name: trimmed, icon, is_cogs: isCogs })
-        toast.success("Category added")
+        await create.mutateAsync({ name: trimmed, name_ar: nameAr.trim() || null, icon, is_cogs: isCogs })
+        toast.success(t("Category added"))
       }
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save")
+      toast.error(err instanceof Error ? err.message : t("Failed to save"))
     }
   }
 
@@ -118,9 +123,9 @@ export function CategoryFormSheet({
         )}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>{isEdit ? "Edit Category" : "New Category"}</SheetTitle>
+          <SheetTitle>{isEdit ? t("Edit Category") : t("New Category")}</SheetTitle>
           <SheetDescription>
-            {isEdit ? "Update category name, icon, or COGS status." : "Add a new expense category."}
+            {isEdit ? t("Update category name, icon, or COGS status.") : t("Add a new expense category.")}
           </SheetDescription>
         </SheetHeader>
 
@@ -132,7 +137,7 @@ export function CategoryFormSheet({
 
             {/* Name */}
             <div className="space-y-2">
-              <p className="text-sm font-medium">Name</p>
+              <p className="text-sm font-medium">{t("Name")}</p>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -141,11 +146,22 @@ export function CategoryFormSheet({
               />
             </div>
 
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t("Arabic Name")}</p>
+              <Input
+                value={nameAr}
+                onChange={(e) => setNameAr(e.target.value)}
+                placeholder="مثال: تنظيف"
+                dir="rtl"
+                lang="ar"
+              />
+            </div>
+
             <Separator />
 
             {/* Icon picker */}
             <div className="space-y-2">
-              <p className="text-sm font-medium">Icon</p>
+              <p className="text-sm font-medium">{t("Icon")}</p>
               <div className="grid grid-cols-7 gap-1.5">
                 {ICON_OPTIONS.map(({ value, icon: Icon, label }) => (
                   <button
@@ -178,10 +194,10 @@ export function CategoryFormSheet({
               />
               <div className="space-y-0.5 leading-none">
                 <Label htmlFor="is-cogs" className="text-sm font-medium cursor-pointer">
-                  Cost of Goods Sold (COGS)
+                  {t("Cost of Goods Sold (COGS)")}
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Mark if this category directly affects the cost of producing goods or services
+                  {t("Mark if this category directly affects the cost of producing goods or services")}
                 </p>
               </div>
             </div>
@@ -195,10 +211,10 @@ export function CategoryFormSheet({
               onClick={() => { reset(); onOpenChange(false) }}
               disabled={isPending}
             >
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : isEdit ? "Save Changes" : "Add Category"}
+              {isPending ? t("Saving…") : isEdit ? t("Save Changes") : t("Add Category")}
             </Button>
           </div>
         </form>

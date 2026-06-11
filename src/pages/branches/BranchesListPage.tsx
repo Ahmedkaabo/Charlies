@@ -18,6 +18,7 @@ import {
 import type { Branch } from "@/types/branch"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -147,6 +148,7 @@ function BranchEditContent({
 
 export function BranchesListPage() {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
@@ -433,7 +435,7 @@ export function BranchesListPage() {
               <>
                 {drawer.type === "view" ? (
                   <div className="space-y-1.5 min-w-0">
-                    <SheetTitle className="text-left">{activeBranch.name}</SheetTitle>
+                    <SheetTitle className="text-left">{ln(activeBranch.name, activeBranch.name_ar)}</SheetTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant={activeBranch.is_active ? "default" : "secondary"}>
                         {activeBranch.is_active ? t("Active") : t("Inactive")}

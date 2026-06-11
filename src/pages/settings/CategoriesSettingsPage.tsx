@@ -22,6 +22,7 @@ import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import { ICON_OPTIONS } from "@/components/expenses/CategoryFormSheet"
 import type { ExpenseCategory } from "@/types/expense"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -167,6 +168,7 @@ function CategoryDrawer({
   onDeleted: () => void
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const isMobile = useIsMobile()
   const update   = useUpdateExpenseCategory()
   const del      = useDeleteExpenseCategory()
@@ -175,6 +177,7 @@ function CategoryDrawer({
 
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [name,   setName]   = useState(category?.name ?? "")
+  const [nameAr, setNameAr] = useState(category?.name_ar ?? "")
   const [icon,   setIcon]   = useState(category?.icon ?? "more-horizontal")
   const [isCogs, setIsCogs] = useState(category?.is_cogs ?? false)
   const [addingSupplier, setAddingSupplier] = useState<string>("")
@@ -184,6 +187,7 @@ function CategoryDrawer({
   if (category && category.id !== lastId) {
     setLastId(category.id)
     setName(category.name)
+    setNameAr(category.name_ar ?? "")
     setIcon(category.icon ?? "more-horizontal")
     setIsCogs(category.is_cogs)
     setAddingSupplier("")
@@ -205,7 +209,7 @@ function CategoryDrawer({
     const trimmed = name.trim()
     if (!trimmed) { toast.error(t("Name is required")); return }
     try {
-      await update.mutateAsync({ id: category.id, name: trimmed, icon, is_cogs: isCogs })
+      await update.mutateAsync({ id: category.id, name: trimmed, name_ar: nameAr.trim() || null, icon, is_cogs: isCogs })
       toast.success(t("Category updated"))
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("Failed to update"))
@@ -267,7 +271,7 @@ function CategoryDrawer({
                     <SelectedIcon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="min-w-0">
-                    <SheetTitle className="truncate">{category.name}</SheetTitle>
+                    <SheetTitle className="truncate">{ln(category.name, category.name_ar)}</SheetTitle>
                     <SheetDescription className="text-xs">
                       {t("Changes save when you click Save")}
                     </SheetDescription>
@@ -289,6 +293,17 @@ function CategoryDrawer({
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>{t("Arabic Name")}</Label>
+                    <Input
+                      value={nameAr}
+                      onChange={(e) => setNameAr(e.target.value)}
+                      placeholder="مثال: تنظيف"
+                      dir="rtl"
+                      lang="ar"
                     />
                   </div>
 
@@ -364,7 +379,7 @@ function CategoryDrawer({
                     <div className="divide-y rounded-lg border">
                       {linkedSuppliers.map((s) => (
                         <div key={s.id} className="flex items-center gap-3 px-4 py-3">
-                          <span className="flex-1 text-sm font-medium">{s.name}</span>
+                          <span className="flex-1 text-sm font-medium">{ln(s.name, s.name_ar)}</span>
                           <Button
                             size="icon"
                             variant="ghost"
@@ -390,7 +405,7 @@ function CategoryDrawer({
                         </SelectTrigger>
                         <SelectContent>
                           {unlinkedSuppliers.map((s) => (
-                            <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            <SelectItem key={s.id} value={s.id}>{ln(s.name, s.name_ar)}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -471,6 +486,7 @@ function CategoryCard({
   onClick: () => void
 }) {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const Icon = getCategoryIcon(category.icon)
   return (
     <button onClick={onClick} className="group block w-full text-start">
@@ -478,11 +494,11 @@ function CategoryCard({
         <div className="flex h-8 w-8 items-center justify-center rounded bg-muted shrink-0">
           <Icon className="h-4 w-4 text-muted-foreground" />
         </div>
-        <span className="flex-1 min-w-0 text-sm font-medium truncate">{category.name}</span>
+        <span className="flex-1 min-w-0 text-sm font-medium truncate">{ln(category.name, category.name_ar)}</span>
         {category.is_cogs && (
           <Badge variant="secondary" className="text-xs shrink-0">{t("COGS")}</Badge>
         )}
-        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground rtl:rotate-180" />
       </div>
     </button>
   )

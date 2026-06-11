@@ -70,7 +70,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { useFormatters } from "@/lib/format"
+import { useFormatters, useLocalName } from "@/lib/format"
 // ── Drawer state ───────────────────────────────────────────
 
 type DrawerState =
@@ -163,6 +163,7 @@ function ExpenseCard({
 }) {
   const { t } = useLanguage()
   const fmt = useFormatters()
+  const ln  = useLocalName()
   const Icon = getCategoryIcon(expense.category?.icon ?? null)
 
   return (
@@ -183,10 +184,10 @@ function ExpenseCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">
-            {expense.category?.name ?? t("Uncategorized")}
+            {expense.category ? ln(expense.category.name, expense.category.name_ar) : t("Uncategorized")}
           </p>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
-            <span>{expense.branch?.name}</span>
+            <span>{expense.branch ? ln(expense.branch.name, expense.branch.name_ar) : ""}</span>
             <span className="opacity-40">·</span>
             <span>{formatDate(expense.date)}</span>
             {expense.edited_at && <Pencil className="h-2.5 w-2.5 text-amber-500 fill-amber-500 shrink-0" />}
@@ -208,8 +209,8 @@ const APP_START = new Date(2026, 5, 1) // June 2026 — first month of operation
 
 // ── Date-range label ───────────────────────────────────────
 
-function formatDateRangeTrigger(range: DateRange | undefined) {
-  if (!range?.from) return "Pick dates"
+function formatDateRangeTrigger(range: DateRange | undefined, t: (k: string) => string) {
+  if (!range?.from) return t("Pick dates")
   if (!range.to || range.from.toDateString() === range.to.toDateString())
     return format(range.from, "MMM d, yyyy")
   if (
@@ -225,6 +226,7 @@ function formatDateRangeTrigger(range: DateRange | undefined) {
 export function ExpensesListPage() {
   const { t } = useLanguage()
   const fmt = useFormatters()
+  const ln  = useLocalName()
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete } = useUserPermissions()
@@ -367,7 +369,7 @@ export function ExpensesListPage() {
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-8 gap-1.5 text-sm font-normal">
                 <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                {formatDateRangeTrigger(dateRange)}
+                {formatDateRangeTrigger(dateRange, t)}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
@@ -418,7 +420,7 @@ export function ExpensesListPage() {
 
           {/* Branch */}
           <MultiSelect
-            options={branchList.map(b => ({ value: b.id, label: b.name }))}
+            options={branchList.map(b => ({ value: b.id, label: ln(b.name, b.name_ar) }))}
             selected={branchFilters}
             onChange={setBranchFilters}
             placeholder={t("All branches")}
@@ -427,7 +429,7 @@ export function ExpensesListPage() {
 
           {/* Category */}
           <MultiSelect
-            options={categories.map((c) => ({ value: c.id, label: c.name }))}
+            options={categories.map((c) => ({ value: c.id, label: ln(c.name, c.name_ar) }))}
             selected={categoryFilters}
             onChange={setCategoryFilters}
             placeholder={t("All categories")}
@@ -619,12 +621,12 @@ export function ExpensesListPage() {
                         </span>
                       </td>
 
-                      <td className="px-4 py-3">{expense.branch?.name ?? "—"}</td>
+                      <td className="px-4 py-3">{expense.branch ? ln(expense.branch.name, expense.branch.name_ar) : "—"}</td>
 
                       <td className="px-4 py-3">
                         <span className="flex items-center gap-1.5">
                           <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          {expense.category?.name ?? (
+                          {expense.category ? ln(expense.category.name, expense.category.name_ar) : (
                             <span className="text-muted-foreground">{t("Uncategorized")}</span>
                           )}
                         </span>

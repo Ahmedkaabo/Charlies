@@ -18,6 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useLocalName } from "@/lib/format"
 
 // ── Month options ─────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ const MONTH_OPTIONS = generateMonthOptions()
 
 export function SalesPage() {
   const { t } = useLanguage()
+  const ln = useLocalName()
   const { profile } = useAuth()
 
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
@@ -109,10 +111,10 @@ export function SalesPage() {
     return (
       <div className="p-4 md:p-6 space-y-6">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">{branch.name}</h1>
+          <h1 className="text-xl font-semibold">{ln(branch.name, branch.name_ar)}</h1>
           {monthSelect}
         </div>
-        <SalesBranchView branchId={branch.id} branchName={branch.name} month={month} year={year} />
+        <SalesBranchView branchId={branch.id} branchName={ln(branch.name, branch.name_ar)} month={month} year={year} />
       </div>
     )
   }
@@ -129,15 +131,15 @@ export function SalesPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">
             <Button size="icon" variant="ghost" onClick={() => setDrillBranchId(null)}>
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-5 w-5 rtl:rotate-180" />
             </Button>
-            <h1 className="text-xl font-semibold">{drilledBranch.name}</h1>
+            <h1 className="text-xl font-semibold">{ln(drilledBranch.name, drilledBranch.name_ar)}</h1>
             {monthSelect}
           </div>
         </div>
         <SalesBranchView
           branchId={drilledBranch.id}
-          branchName={drilledBranch.name}
+          branchName={ln(drilledBranch.name, drilledBranch.name_ar)}
           month={month}
           year={year}
         />

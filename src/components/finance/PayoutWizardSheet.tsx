@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react"
 import { format } from "date-fns"
-import { ChevronLeft, ChevronRight, Loader2, Building2, ArrowRight, History } from "lucide-react"
+import { Loader2, Building2, ArrowRight, History } from "lucide-react"
 import { toast } from "sonner"
 
 import { useAllBranchFinancials, useRentPaidBranches } from "@/hooks/useFinance"
@@ -19,6 +19,7 @@ import { useFormatters } from "@/lib/format"
 import type { Branch } from "@/types/branch"
 import type { DeductionType, PayoutRunFull } from "@/types/finance"
 
+import { ChevronForward, ChevronBack } from "@/components/ui/rtl-chevron"
 import { Button }    from "@/components/ui/button"
 import { ButtonGroup } from "@/components/ui/button-group"
 import { Input }     from "@/components/ui/input"
@@ -746,7 +747,7 @@ export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, e
             )}>
               1 {t("Configure")}
             </span>
-            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+            <ArrowRight className="h-3 w-3 text-muted-foreground rtl:rotate-180" />
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
               step === 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
@@ -797,14 +798,14 @@ export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, e
                 )}
                 <Button onClick={() => setStep(1)} disabled={configs.length === 0}>
                   {t("Next: Review")}
-                  <ChevronRight className="h-4 w-4 ms-1" />
+                  <ChevronForward className="h-4 w-4 ms-1" />
                 </Button>
               </div>
             </>
           ) : (
             <>
               <Button variant="outline" onClick={() => setStep(0)}>
-                <ChevronLeft className="h-4 w-4 me-1" />
+                <ChevronBack className="h-4 w-4 me-1" />
                 {t("Back")}
               </Button>
               <Button onClick={handleSubmit} disabled={isPending}>
