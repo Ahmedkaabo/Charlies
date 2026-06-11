@@ -920,13 +920,13 @@ function BalanceContent({
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {poolTransfers.map((t) => {
-                      const branchObj  = t.branch as { id: string; name: string } | null
-                      const adderObj   = t.adder  as { id: string; full_name: string | null } | null
-                      const toExpenses = t.from_pool === "sales"
+                    {poolTransfers.map((pt) => {
+                      const branchObj  = pt.branch as { id: string; name: string } | null
+                      const adderObj   = pt.adder  as { id: string; full_name: string | null } | null
+                      const toExpenses = pt.from_pool === "sales"
                       return (
-                        <tr key={t.id} className="hover:bg-muted/30">
-                          <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</td>
+                        <tr key={pt.id} className="hover:bg-muted/30">
+                          <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(pt.date), "MMM d, yyyy")}</td>
                           {isAllBranches && <td className="px-4 py-3 font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
                           <td className="px-4 py-3">
                             <span className={cn(
@@ -936,14 +936,14 @@ function BalanceContent({
                               {toExpenses ? <><ArrowRight className="h-3 w-3" />{t("Sales → Exp.")}</> : <><ArrowLeft className="h-3 w-3" />{t("Exp. → Sales")}</>}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{egp(t.amount)}</td>
-                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{t.notes || "—"}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{egp(pt.amount)}</td>
+                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{pt.notes || "—"}</td>
                           <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
                           {(canPoolUpdate || canPoolDelete) && (
                             <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-1">
-                                {canPoolUpdate && <Button size="icon" variant="ghost" onClick={() => { setEditPool(t); setPoolOpen(true) }}><Pencil className="h-4 w-4" /></Button>}
-                                {canPoolDelete && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDelPoolId(t.id)}><Trash2 className="h-4 w-4" /></Button>}
+                                {canPoolUpdate && <Button size="icon" variant="ghost" onClick={() => { setEditPool(pt); setPoolOpen(true) }}><Pencil className="h-4 w-4" /></Button>}
+                                {canPoolDelete && <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => setDelPoolId(pt.id)}><Trash2 className="h-4 w-4" /></Button>}
                               </div>
                             </td>
                           )}
