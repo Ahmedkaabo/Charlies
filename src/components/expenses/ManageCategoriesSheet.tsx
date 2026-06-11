@@ -105,7 +105,7 @@ function CategoryForm({
 }) {
   const [name, setName] = useState(category?.name ?? "")
   const [icon, setIcon] = useState(category?.icon ?? "more-horizontal")
-  const [isCogs, setIsCogs] = useState(category?.is_cogs ?? false)
+  const isCogs = category?.is_cogs ?? false
 
   const create = useCreateExpenseCategory()
   const update = useUpdateExpenseCategory()
