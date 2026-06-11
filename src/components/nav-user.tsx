@@ -111,6 +111,22 @@ export function NavUser() {
                 {generatingInvite ? "Generating…" : "Invite"}
               </button>
             </div>
+            <div className="flex items-center justify-between px-2 py-1.5">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                {isDark ? <MoonIcon className="size-3" /> : <SunIcon className="size-3" />}
+                <span>{isDark ? "Dark mode" : "Light mode"}</span>
+              </div>
+              <button
+                onClick={() => setTheme(isDark ? "light" : "dark")}
+                className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${isDark ? "bg-primary" : "bg-input"}`}
+                role="switch"
+                aria-checked={isDark}
+              >
+                <span
+                  className={`inline-block h-3 w-3 transform rounded-full bg-white shadow transition-transform ${isDark ? "translate-x-3.5" : "translate-x-0.5"}`}
+                />
+              </button>
+            </div>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               <DropdownMenuItem>
