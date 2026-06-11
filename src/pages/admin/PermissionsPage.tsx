@@ -8,6 +8,7 @@ import { z } from "zod"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import {
   useGetRoles,
@@ -237,6 +238,7 @@ function AddRoleDialog({
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
+  const { t } = useLanguage()
   const createRole = useCreateRole()
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(roleSchema),
@@ -246,11 +248,11 @@ function AddRoleDialog({
   async function onSubmit(values: RoleFormValues) {
     try {
       await createRole.mutateAsync({ ...values, level: 5 })
-      toast.success("Role created")
+      toast.success(t("Role created"))
       form.reset()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create role")
+      toast.error(err instanceof Error ? err.message : t("Failed to create role"))
     }
   }
 
@@ -258,9 +260,9 @@ function AddRoleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>New Role</DialogTitle>
+          <DialogTitle>{t("New Role")}</DialogTitle>
           <DialogDescription>
-            Roles group permissions together and can be assigned to branch staff.
+            {t("Roles group permissions together and can be assigned to branch staff.")}
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -270,7 +272,7 @@ function AddRoleDialog({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>{t("Name")}</FormLabel>
                   <FormControl>
                     <Input placeholder="branch_manager" {...field} />
                   </FormControl>
@@ -285,9 +287,9 @@ function AddRoleDialog({
                 <FormItem>
                   <div className="flex items-center justify-between rounded-lg border px-4 py-3">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-sm">Hide from staff assignment</FormLabel>
+                      <FormLabel className="text-sm">{t("Hide from staff assignment")}</FormLabel>
                       <p className="text-xs text-muted-foreground">
-                        This role won't appear when assigning roles to staff members.
+                        {t("This role won't appear when assigning roles to staff members.")}
                       </p>
                     </div>
                     <FormControl>
@@ -302,10 +304,10 @@ function AddRoleDialog({
             />
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancel
+                {t("Cancel")}
               </Button>
               <Button type="submit" disabled={createRole.isPending}>
-                {createRole.isPending ? "Creating…" : "Create Role"}
+                {createRole.isPending ? t("Creating…") : t("Create Role")}
               </Button>
             </DialogFooter>
           </form>
@@ -324,6 +326,7 @@ function RenameField({
   role: Role
   onSaved: (newName: string) => void
 }) {
+  const { t } = useLanguage()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(role.name)
   const updateRole = useUpdateRole(role.id)
@@ -341,7 +344,7 @@ function RenameField({
       onSaved(trimmed)
       setEditing(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to rename")
+      toast.error(err instanceof Error ? err.message : t("Failed to rename"))
     }
   }
 
@@ -376,7 +379,7 @@ function RenameField({
         variant="ghost"
         className="h-7 w-7 shrink-0 text-muted-foreground"
         onClick={() => setEditing(true)}
-        title="Rename"
+        title={t("Rename")}
       >
         <Pencil className="h-3.5 w-3.5" />
       </Button>
@@ -387,6 +390,7 @@ function RenameField({
 // ── Resource section ──────────────────────────────────────────
 
 function ResourceSection({ role, resource }: { role: Role; resource: Resource }) {
+  const { t } = useLanguage()
   const { data: permissions } = useGetPermissions()
   const upsert   = useUpsertPermission()
   const existing = findPermission(permissions, role.id, resource)
@@ -403,7 +407,7 @@ function ResourceSection({ role, resource }: { role: Role; resource: Resource })
     try {
       await upsert.mutateAsync(buildToggled(existing, role.id, resource, field, value))
     } catch {
-      toast.error("Failed to save permission")
+      toast.error(t("Failed to save permission"))
     }
   }
 
@@ -418,7 +422,7 @@ function ResourceSection({ role, resource }: { role: Role; resource: Resource })
         can_delete: value && "can_delete" in meta.actions,
       })
     } catch {
-      toast.error("Failed to save permissions")
+      toast.error(t("Failed to save permissions"))
     }
   }
 
@@ -429,7 +433,7 @@ function ResourceSection({ role, resource }: { role: Role; resource: Resource })
           checked={headerChecked}
           onCheckedChange={(v) => handleToggleAll(v === true)}
         />
-        <span className="text-sm font-semibold">{meta.label}</span>
+        <span className="text-sm font-semibold">{t(meta.label)}</span>
       </div>
 
       {applicableFields.map(({ key }) => (
@@ -438,7 +442,7 @@ function ResourceSection({ role, resource }: { role: Role; resource: Resource })
             checked={existing?.[key] ?? false}
             onCheckedChange={(v) => handleToggle(key, v === true)}
           />
-          <span className="text-sm">{meta.actions[key]}</span>
+          <span className="text-sm">{t(meta.actions[key]!)}</span>
         </div>
       ))}
     </div>
@@ -456,6 +460,7 @@ function RoleDrawer({
   onClose: () => void
   onDeleted: () => void
 }) {
+  const { t } = useLanguage()
   const isMobile   = useIsMobile()
   const deleteRole = useDeleteRole()
   const updateRole = useUpdateRole(role?.id ?? "")
@@ -473,7 +478,7 @@ function RoleDrawer({
       await updateRole.mutateAsync({ hidden_from_assignment: value })
     } catch {
       setLocalHidden(!value)
-      toast.error("Failed to update role")
+      toast.error(t("Failed to update role"))
     }
   }
 
@@ -481,11 +486,11 @@ function RoleDrawer({
     if (!role) return
     try {
       await deleteRole.mutateAsync(role.id)
-      toast.success(`"${formatRoleName(role.name)}" deleted`)
+      toast.success(`"${formatRoleName(role.name)}" ${t("deleted")}`)
       setConfirmDelete(false)
       onDeleted()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete"))
     }
   }
 
@@ -510,14 +515,14 @@ function RoleDrawer({
                       onSaved={setLocalName}
                     />
                     <SheetDescription className="text-xs">
-                      Changes save automatically
+                      {t("Changes save automatically")}
                     </SheetDescription>
                   </div>
                   <div className="flex items-center justify-between rounded-lg border px-4 py-3">
                     <div className="space-y-0.5">
-                      <p className="text-sm font-medium">Hide from staff assignment</p>
+                      <p className="text-sm font-medium">{t("Hide from staff assignment")}</p>
                       <p className="text-xs text-muted-foreground">
-                        This role won't appear when assigning roles to staff members.
+                        {t("This role won't appear when assigning roles to staff members.")}
                       </p>
                     </div>
                     <Switch
@@ -535,7 +540,7 @@ function RoleDrawer({
                   <div key={group.label} className="space-y-3">
                     {gi > 0 && <Separator className="mb-3" />}
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
-                      {group.label}
+                      {t(group.label)}
                     </p>
                     {group.resources.map((resource) => (
                       <ResourceSection key={resource} role={role} resource={resource} />
@@ -552,10 +557,10 @@ function RoleDrawer({
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete Role
+                  {t("Delete Role")}
                 </Button>
                 <Button variant="outline" onClick={() => { onClose(); setLocalName(null) }}>
-                  Close
+                  {t("Close")}
                 </Button>
               </div>
             </>
@@ -567,19 +572,19 @@ function RoleDrawer({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete role?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete role?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{role ? formatRoleName(role.name) : ""}</strong> will be removed.
-              Branch staff assigned this role will lose it. This cannot be undone.
+              <strong>{role ? formatRoleName(role.name) : ""}</strong>{" "}
+              {t("will be removed. Branch staff assigned this role will lose it. This cannot be undone.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -622,6 +627,7 @@ function RolesListSkeleton() {
 // ── Page ──────────────────────────────────────────────────────
 
 export function PermissionsPage() {
+  const { t } = useLanguage()
   const { data: roles, isLoading } = useGetRoles()
   const [activeRole, setActiveRole] = useState<Role | null>(null)
   const [addOpen, setAddOpen]       = useState(false)
@@ -631,9 +637,9 @@ export function PermissionsPage() {
 
       {/* ── Header ─────────────────────────────────── */}
       <div>
-        <h1 className="text-xl font-semibold">Roles & Permissions</h1>
+        <h1 className="text-xl font-semibold">{t("Roles & Permissions")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Select a role to configure its permissions.
+          {t("Select a role to configure its permissions.")}
         </p>
       </div>
 
@@ -641,18 +647,18 @@ export function PermissionsPage() {
       <div className="flex items-center gap-2.5 rounded-lg border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
         <ShieldCheck className="h-4 w-4 shrink-0" />
         <span>
-          <span className="font-medium text-foreground">Owner</span> always has full access
-          and is not affected by role permissions.
+          <span className="font-medium text-foreground">{t("Owner")}</span>{" "}
+          {t("always has full access and is not affected by role permissions.")}
         </span>
       </div>
 
       {/* ── Roles list ─────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base font-semibold">Roles</h2>
+          <h2 className="text-base font-semibold">{t("Roles")}</h2>
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add Role
+            {t("Add Role")}
           </Button>
         </div>
 
@@ -669,7 +675,7 @@ export function PermissionsPage() {
             ))}
             {!roles?.length && (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                No roles yet. Add one to get started.
+                {t("No roles yet. Add one to get started.")}
               </p>
             )}
           </div>

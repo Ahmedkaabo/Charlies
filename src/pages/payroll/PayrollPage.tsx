@@ -23,6 +23,7 @@ import { PayrollAdjustmentDialog } from "@/components/attendance/PayrollAdjustme
 import { StaffPayrollSheet } from "@/components/attendance/StaffPayrollSheet"
 import type { StaffPayrollRow } from "@/types/attendance"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -95,6 +96,7 @@ function AttendanceBreakdown({
   baseSalary: number | null
   paidDaysOff: number
 }) {
+  const { t } = useLanguage()
   const { data: logs, isLoading } = useStaffMonthlyAttendance(profileId, branchId, month, year)
 
   if (isLoading) {
@@ -108,7 +110,7 @@ function AttendanceBreakdown({
   if (!logs || logs.length === 0) {
     return (
       <div className="px-10 py-4 bg-muted/30 border-b text-sm text-muted-foreground">
-        No attendance records this month.
+        {t("No attendance records this month.")}
       </div>
     )
   }
@@ -125,12 +127,12 @@ function AttendanceBreakdown({
       <div className="rounded-lg border text-xs overflow-x-auto">
         {/* Header */}
         <div className="grid grid-cols-[1fr_80px_80px_60px_60px_80px] bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
-          <span>Date</span>
-          <span className="text-right">Check-in</span>
-          <span className="text-right">Check-out</span>
-          <span className="text-right">Hours</span>
-          <span className="text-right">Day</span>
-          <span className="text-right">Status</span>
+          <span>{t("Date")}</span>
+          <span className="text-right">{t("Check-in")}</span>
+          <span className="text-right">{t("Check-out")}</span>
+          <span className="text-right">{t("Hours")}</span>
+          <span className="text-right">{t("Day")}</span>
+          <span className="text-right">{t("Status")}</span>
         </div>
 
         {/* Log rows */}
@@ -169,7 +171,7 @@ function AttendanceBreakdown({
 
         {/* Totals row */}
         <div className="grid grid-cols-[1fr_80px_80px_60px_60px_80px] items-center bg-muted/50 border-t px-3 py-2 font-semibold">
-          <span>{logs.length} days attended</span>
+          <span>{logs.length} {t("days attended")}</span>
           <span />
           <span />
           <span className="tabular-nums text-right">{totalHours.toFixed(1)}h</span>
@@ -181,15 +183,15 @@ function AttendanceBreakdown({
       {/* Earning formula */}
       {dailyRate != null && earnedTotal != null && (
         <p className="mt-2 px-1 text-xs text-muted-foreground">
-          Earned:{" "}
+          {t("Earned:")}{"  "}
           <span className="font-medium text-foreground">
-            {totalDayValue.toFixed(2)} days attended
+            {totalDayValue.toFixed(2)} {t("days attended")}
           </span>
           {paidDaysOff > 0 && (
-            <> + <span className="font-medium text-foreground">{paidDaysOff} paid leave</span></>
+            <> + <span className="font-medium text-foreground">{paidDaysOff} {t("paid leave")}</span></>
           )}
           {" "}&times;{" "}
-          <span className="font-medium text-foreground">{currency(dailyRate, curr)}/day</span>
+          <span className="font-medium text-foreground">{currency(dailyRate, curr)}{t("/day")}</span>
           {" "}={" "}
           <span className="font-semibold text-foreground">{currency(earnedTotal, curr)}</span>
         </p>
@@ -231,6 +233,7 @@ function SummaryCard({
 // ── Page ──────────────────────────────────────────────────────
 
 export function PayrollPage() {
+  const { t } = useLanguage()
   const { profile } = useAuth()
   const { canCreate, canUpdate } = useUserPermissions()
 
@@ -310,7 +313,7 @@ export function PayrollPage() {
       {/* ── Header ───────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Payroll</h1>
+          <h1 className="text-xl font-semibold">{t("Payroll")}</h1>
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
             <SelectTrigger className="w-[150px] h-8 text-sm">
               <SelectValue />
@@ -330,7 +333,7 @@ export function PayrollPage() {
           <div className="relative w-full sm:w-[160px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search staff…"
+              placeholder={t("Search staff…")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -341,7 +344,7 @@ export function PayrollPage() {
             options={branchDropdownList.map((b) => ({ value: b.id, label: b.name }))}
             selected={branchFilters}
             onChange={setBranchFilters}
-            placeholder="All Branches"
+            placeholder={t("All Branches")}
             className="w-[160px]"
           />
 
@@ -349,7 +352,7 @@ export function PayrollPage() {
             options={roleOptions.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
             selected={roleFilters}
             onChange={setRoleFilters}
-            placeholder="All Roles"
+            placeholder={t("All Roles")}
             className="w-[140px]"
           />
         </div>
@@ -372,10 +375,10 @@ export function PayrollPage() {
               ) : (
                 <>
                   {summaryExpanded && [
-                    { label: "Salary Budget", value: currency(summary?.totalSalaryBudget ?? 0), muted: true  },
-                    { label: "Bonuses",       value: currency(summary?.totalBonuses       ?? 0), muted: false },
-                    { label: "Deductions",    value: currency(summary?.totalDeductions    ?? 0), muted: true  },
-                    { label: "Debts",         value: currency(summary?.totalDebts         ?? 0), muted: true  },
+                    { label: t("Salary Budget"), value: currency(summary?.totalSalaryBudget ?? 0), muted: true  },
+                    { label: t("Bonuses"),       value: currency(summary?.totalBonuses       ?? 0), muted: false },
+                    { label: t("Deductions"),    value: currency(summary?.totalDeductions    ?? 0), muted: true  },
+                    { label: t("Debts"),         value: currency(summary?.totalDebts         ?? 0), muted: true  },
                   ].map(({ label, value, muted }) => (
                     <div key={label} className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm text-muted-foreground">{label}</span>
@@ -388,7 +391,7 @@ export function PayrollPage() {
                     onClick={() => setSummaryExpanded((v) => !v)}
                     className="flex w-full items-center justify-between bg-muted/40 px-4 py-3"
                   >
-                    <span className="text-sm font-semibold">Net Payout</span>
+                    <span className="text-sm font-semibold">{t("Net Payout")}</span>
                     <div className="flex items-center gap-2">
                       <span className="text-base font-bold tabular-nums">
                         {currency(summary?.projectedNetPayout ?? 0)}
@@ -415,11 +418,11 @@ export function PayrollPage() {
               ))
             ) : (
               <>
-                <SummaryCard label="Salary Budget" value={currency(summary?.totalSalaryBudget ?? 0)} icon={BadgeDollarSign} />
-                <SummaryCard label="Bonuses"       value={currency(summary?.totalBonuses       ?? 0)} icon={TrendingUp} />
-                <SummaryCard label="Deductions"    value={currency(summary?.totalDeductions    ?? 0)} icon={TrendingDown} muted />
-                <SummaryCard label="Debts"         value={currency(summary?.totalDebts         ?? 0)} icon={Wallet} muted />
-                <SummaryCard label="Net Payout"    value={currency(summary?.projectedNetPayout ?? 0)} icon={Users} />
+                <SummaryCard label={t("Salary Budget")} value={currency(summary?.totalSalaryBudget ?? 0)} icon={BadgeDollarSign} />
+                <SummaryCard label={t("Bonuses")}       value={currency(summary?.totalBonuses       ?? 0)} icon={TrendingUp} />
+                <SummaryCard label={t("Deductions")}    value={currency(summary?.totalDeductions    ?? 0)} icon={TrendingDown} muted />
+                <SummaryCard label={t("Debts")}         value={currency(summary?.totalDebts         ?? 0)} icon={Wallet} muted />
+                <SummaryCard label={t("Net Payout")}    value={currency(summary?.projectedNetPayout ?? 0)} icon={Users} />
               </>
             )}
           </div>
@@ -431,16 +434,16 @@ export function PayrollPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Base</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Attendance</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Leave</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Earned</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Bonus</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Deduction</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Debt</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Net</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Actions</th>
+              <th className="sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Base")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Attendance")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Leave")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Earned")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Bonus")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Deduction")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Debt")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Net")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -458,7 +461,7 @@ export function PayrollPage() {
             {!payrollLoading && filteredRows.length === 0 && (
               <tr>
                 <td colSpan={10} className="px-4 py-8 text-center text-muted-foreground">
-                  No staff records for this period
+                  {t("No staff records for this period")}
                 </td>
               </tr>
             )}
@@ -529,7 +532,7 @@ export function PayrollPage() {
                           onClick={(e) => { e.stopPropagation(); setAdjustTarget(row) }}
                         >
                           <SlidersHorizontal className="h-3.5 w-3.5" />
-                          Adjust
+                          {t("Adjust")}
                         </Button>
                       )}
                     </td>

@@ -19,6 +19,7 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { useGetBranch, useGetBranchMembers } from "@/hooks/useBranches"
 import { useBranchOwnership } from "@/hooks/useBranchOwnership"
@@ -100,6 +101,8 @@ function ShiftCard({
   onDuplicate: (s: BranchShift) => void
   onDelete: (s: BranchShift) => void
 }) {
+  const { t } = useLanguage()
+
   return (
     <Card className="py-0">
       <CardContent className="p-5 space-y-4">
@@ -112,7 +115,7 @@ function ShiftCard({
               variant={shift.is_active ? "default" : "secondary"}
               className="shrink-0"
             >
-              {shift.is_active ? "Active" : "Inactive"}
+              {shift.is_active ? t("Active") : t("Inactive")}
             </Badge>
           </div>
           <div className="flex items-center gap-0.5 shrink-0 -mt-1 -mr-1">
@@ -120,7 +123,7 @@ function ShiftCard({
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="Duplicate shift"
+              title={t("Duplicate shift")}
               onClick={() => onDuplicate(shift)}
             >
               <Copy className="h-3.5 w-3.5" />
@@ -129,7 +132,7 @@ function ShiftCard({
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              title="Edit shift"
+              title={t("Edit shift")}
               onClick={() => onEdit(shift)}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -138,7 +141,7 @@ function ShiftCard({
               size="icon"
               variant="ghost"
               className="h-8 w-8 text-destructive hover:text-destructive"
-              title="Delete shift"
+              title={t("Delete shift")}
               onClick={() => onDelete(shift)}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -153,7 +156,7 @@ function ShiftCard({
             {formatShiftTime(shift.shift_start)} – {formatShiftTime(shift.shift_end)}
           </span>
           <span className="text-muted-foreground">
-            · ±{shift.checkin_window_minutes} min window
+            · ±{shift.checkin_window_minutes} {t("min window")}
           </span>
         </div>
 
@@ -162,17 +165,17 @@ function ShiftCard({
           <div className="grid grid-cols-3 divide-x divide-border text-center">
             <div className="px-2 py-2.5">
               <p className="text-muted-foreground">{"< "}{shift.full_day_hours}h</p>
-              <p className="font-semibold mt-0.5">0 days</p>
+              <p className="font-semibold mt-0.5">{t("0 days")}</p>
             </div>
             <div className="px-2 py-2.5 bg-muted/20">
               <p className="text-muted-foreground">
                 {shift.full_day_hours}–{shift.overtime_hours}h
               </p>
-              <p className="font-semibold mt-0.5">1.0 day</p>
+              <p className="font-semibold mt-0.5">{t("1.0 day")}</p>
             </div>
             <div className="px-2 py-2.5">
               <p className="text-muted-foreground">≥ {shift.overtime_hours}h</p>
-              <p className="font-semibold mt-0.5">1.5 days</p>
+              <p className="font-semibold mt-0.5">{t("1.5 days")}</p>
             </div>
           </div>
         </div>
@@ -184,9 +187,9 @@ function ShiftCard({
           <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2.5 text-xs">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-600 dark:text-amber-400" />
             <span className="text-amber-800 dark:text-amber-300">
-              Late deduction: every {shift.late_per_minutes} min late
+              {t("Late deduction: every")} {shift.late_per_minutes} {t("min late")}
               {shift.late_grace_minutes > 0
-                ? ` (after ${shift.late_grace_minutes} min grace)`
+                ? ` (${t("after")} ${shift.late_grace_minutes} ${t("min grace")})`
                 : ""}
               {" "}→ −{shift.late_deduct_hours}h
             </span>
@@ -205,6 +208,7 @@ type ShiftSheet =
   | { type: "edit"; shift: BranchShift }
 
 function ShiftsTab({ branchId }: { branchId: string }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { data: shifts, isLoading, isError, error } = useGetBranchShifts(branchId)
   const createShift = useCreateShift()
@@ -219,13 +223,13 @@ function ShiftsTab({ branchId }: { branchId: string }) {
 
   async function handleCreate(values: ShiftFormValues) {
     await createShift.mutateAsync({ ...values, branch_id: branchId })
-    toast.success("Shift created!")
+    toast.success(t("Shift created!"))
     setSheet({ type: "none" })
   }
 
   async function handleUpdate(values: ShiftFormValues) {
     await editShift.mutateAsync(values)
-    toast.success("Shift updated!")
+    toast.success(t("Shift updated!"))
     setSheet({ type: "none" })
   }
 
@@ -245,9 +249,9 @@ function ShiftsTab({ branchId }: { branchId: string }) {
         late_deduct_hours:      shift.late_deduct_hours,
         is_active:              false,
       })
-      toast.success("Shift duplicated — it's inactive by default")
+      toast.success(t("Shift duplicated — it's inactive by default"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to duplicate shift")
+      toast.error(err instanceof Error ? err.message : t("Failed to duplicate shift"))
     }
   }
 
@@ -255,9 +259,9 @@ function ShiftsTab({ branchId }: { branchId: string }) {
     if (!deleting) return
     try {
       await deleteShift.mutateAsync(deleting.id)
-      toast.success("Shift deleted")
+      toast.success(t("Shift deleted"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete shift")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete shift"))
     } finally {
       setDeleting(null)
     }
@@ -282,8 +286,9 @@ function ShiftsTab({ branchId }: { branchId: string }) {
   if (isError) {
     return (
       <div className="mt-4 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-        Failed to load shifts:{" "}
-        {error instanceof Error ? error.message : "Unknown error"}
+        {t("Failed to load shifts:")}
+        {" "}
+        {error instanceof Error ? error.message : t("Unknown error")}
       </div>
     )
   }
@@ -293,11 +298,11 @@ function ShiftsTab({ branchId }: { branchId: string }) {
       {/* ── Toolbar ─────────────────────────────────── */}
       <div className="mt-4 flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
-          {shifts?.length ?? 0} shift{shifts?.length !== 1 ? "s" : ""}
+          {shifts?.length ?? 0} {t("shift")}{shifts?.length !== 1 ? t("s") : ""}
         </p>
         <Button onClick={() => setSheet({ type: "create" })}>
           <Plus className="h-4 w-4" />
-          Add Shift
+          {t("Add Shift")}
         </Button>
       </div>
 
@@ -308,14 +313,14 @@ function ShiftsTab({ branchId }: { branchId: string }) {
             <Clock className="h-6 w-6 text-muted-foreground" />
           </div>
           <div>
-            <p className="font-medium text-sm">No shifts yet</p>
+            <p className="font-medium text-sm">{t("No shifts yet")}</p>
             <p className="text-sm text-muted-foreground mt-0.5">
-              Add a shift to define check-in windows and attendance rules
+              {t("Add a shift to define check-in windows and attendance rules")}
             </p>
           </div>
           <Button onClick={() => setSheet({ type: "create" })}>
             <Plus className="h-4 w-4" />
-            Add Shift
+            {t("Add Shift")}
           </Button>
         </div>
       )}
@@ -349,11 +354,11 @@ function ShiftsTab({ branchId }: { branchId: string }) {
         >
           <SheetHeader className="shrink-0 border-b px-6 py-4">
             <SheetTitle className="text-left">
-              {sheet.type === "create" ? "New Shift" : "Edit Shift"}
+              {sheet.type === "create" ? t("New Shift") : t("Edit Shift")}
             </SheetTitle>
             <SheetDescription className="text-left">
               {sheet.type === "create"
-                ? "Configure check-in times and attendance rules"
+                ? t("Configure check-in times and attendance rules")
                 : sheet.type === "edit"
                 ? sheet.shift.name
                 : ""}
@@ -364,7 +369,7 @@ function ShiftsTab({ branchId }: { branchId: string }) {
             <ShiftForm
               onSubmit={handleCreate}
               onCancel={() => setSheet({ type: "none" })}
-              submitLabel="Create Shift"
+              submitLabel={t("Create Shift")}
             />
           )}
           {sheet.type === "edit" && (
@@ -384,7 +389,7 @@ function ShiftsTab({ branchId }: { branchId: string }) {
               }}
               onSubmit={handleUpdate}
               onCancel={() => setSheet({ type: "none" })}
-              submitLabel="Save Changes"
+              submitLabel={t("Save Changes")}
             />
           )}
         </SheetContent>
@@ -397,19 +402,18 @@ function ShiftsTab({ branchId }: { branchId: string }) {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete shift?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete shift?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              "{deleting?.name}" will be permanently deleted. Existing attendance
-              logs linked to this shift will not be affected.
+              "{deleting?.name}" {t("will be permanently deleted. Existing attendance logs linked to this shift will not be affected.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -421,6 +425,7 @@ function ShiftsTab({ branchId }: { branchId: string }) {
 // ── Overview tab (details + location left, members right) ─────
 
 function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => void }) {
+  const { t } = useLanguage()
   const { data: branch } = useGetBranch(branchId)
   const { data: members, isLoading: membersLoading } = useGetBranchMembers(branchId)
 
@@ -438,22 +443,22 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Details
+              {t("Details")}
             </CardTitle>
           </CardHeader>
           <CardContent className="divide-y divide-border pt-0">
             {branch.address && (
-              <InfoRow icon={Building2} label="Address" value={branch.address} />
+              <InfoRow icon={Building2} label={t("Address")} value={branch.address} />
             )}
             {branch.city && (
-              <InfoRow icon={MapPin} label="City" value={branch.city} />
+              <InfoRow icon={MapPin} label={t("City")} value={branch.city} />
             )}
             {branch.phone && (
-              <InfoRow icon={Phone} label="Phone" value={branch.phone} />
+              <InfoRow icon={Phone} label={t("Phone")} value={branch.phone} />
             )}
             <InfoRow
               icon={Calendar}
-              label="Created"
+              label={t("Created")}
               value={format(new Date(branch.created_at), "d MMM yyyy")}
             />
           </CardContent>
@@ -463,7 +468,7 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Location
+              {t("Location")}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0">
@@ -472,12 +477,12 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
                 <div className="divide-y divide-border">
                   <InfoRow
                     icon={MapPin}
-                    label="Coordinates"
+                    label={t("Coordinates")}
                     value={`${branch.latitude!.toFixed(6)}, ${branch.longitude!.toFixed(6)}`}
                   />
                   <InfoRow
                     icon={MapPin}
-                    label="Check-in Radius"
+                    label={t("Check-in Radius")}
                     value={`${branch.location_radius_meters}m`}
                   />
                 </div>
@@ -489,25 +494,25 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
                   className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
                 >
                   <ExternalLink className="h-3.5 w-3.5" />
-                  View on Google Maps
+                  {t("View on Google Maps")}
                 </a>
                 <p className="text-xs text-muted-foreground">
-                  Staff must be within{" "}
+                  {t("Staff must be within")}{" "}
                   <span className="font-medium text-foreground">
                     {branch.location_radius_meters}m
                   </span>{" "}
-                  of this location to check in
+                  {t("of this location to check in")}
                 </p>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
                 <MapPin className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">No location set</p>
+                <p className="text-sm text-muted-foreground">{t("No location set")}</p>
                 {onEdit ? (
-                  <Button variant="outline" onClick={onEdit}>Add Location</Button>
+                  <Button variant="outline" onClick={onEdit}>{t("Add Location")}</Button>
                 ) : (
                   <Button variant="outline" asChild>
-                    <Link to={`/branches/${branchId}/edit`}>Add Location</Link>
+                    <Link to={`/branches/${branchId}/edit`}>{t("Add Location")}</Link>
                   </Button>
                 )}
               </div>
@@ -521,7 +526,7 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Staff
+              {t("Staff")}
             </CardTitle>
             {!membersLoading && (
               <span className="text-xs text-muted-foreground">
@@ -546,7 +551,7 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
           ) : !members || members.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center">
               <Users className="h-7 w-7 text-muted-foreground/40" />
-              <p className="text-sm text-muted-foreground">No staff yet</p>
+              <p className="text-sm text-muted-foreground">{t("No staff yet")}</p>
             </div>
           ) : (
             members.map((member) => (
@@ -559,7 +564,7 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium">
-                    {member.profile?.full_name ?? "Staff"}
+                    {member.profile?.full_name ?? t("Staff")}
                   </span>
                   {member.role && (
                     <span className="text-xs text-muted-foreground capitalize">
@@ -579,6 +584,7 @@ function OverviewTab({ branchId, onEdit }: { branchId: string; onEdit?: () => vo
 // ── Owners tab — read-only equity view (managed from Owners module) ──
 
 function OwnersTab({ branchId }: { branchId: string }) {
+  const { t } = useLanguage()
   const { data: ownerships = [], isLoading } = useBranchOwnership(branchId)
   const totalStocks = ownerships.reduce((s, o) => s + o.stocks, 0)
 
@@ -597,13 +603,13 @@ function OwnersTab({ branchId }: { branchId: string }) {
       ) : ownerships.length === 0 ? (
         <div className="flex flex-col items-center gap-2 rounded-lg border py-12 text-center">
           <Users className="h-7 w-7 text-muted-foreground/40" />
-          <p className="text-sm text-muted-foreground">No ownership configured.</p>
-          <p className="text-xs text-muted-foreground">Assign owners and their equity from the Owners module.</p>
+          <p className="text-sm text-muted-foreground">{t("No ownership configured.")}</p>
+          <p className="text-xs text-muted-foreground">{t("Assign owners and their equity from the Owners module.")}</p>
         </div>
       ) : (
         <>
           <p className="text-xs text-muted-foreground">
-            {ownerships.length} owner{ownerships.length !== 1 ? "s" : ""} · manage from the Owners module
+            {ownerships.length} {t("owner")}{ownerships.length !== 1 ? t("s") : ""} · {t("manage from the Owners module")}
           </p>
           <div className="space-y-2">
             {ownerships.map((o) => {
@@ -615,8 +621,8 @@ function OwnersTab({ branchId }: { branchId: string }) {
                     {getInitials(profile?.full_name)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{profile?.full_name ?? "Unknown"}</p>
-                    <p className="text-xs text-muted-foreground">{o.stocks} stocks · {pct}% equity</p>
+                    <p className="text-sm font-medium truncate">{profile?.full_name ?? t("Unknown")}</p>
+                    <p className="text-xs text-muted-foreground">{o.stocks} {t("stocks")} · {pct}% {t("equity")}</p>
                   </div>
                 </div>
               )
@@ -637,6 +643,7 @@ export function BranchDetailPanel({
   branchId: string
   onEdit?: () => void
 }) {
+  const { t } = useLanguage()
   const { data: branch, isLoading, isError } = useGetBranch(branchId)
 
   if (isLoading) {
@@ -650,16 +657,16 @@ export function BranchDetailPanel({
 
   if (isError || !branch) {
     return (
-      <p className="text-sm text-destructive">Branch not found.</p>
+      <p className="text-sm text-destructive">{t("Branch not found.")}</p>
     )
   }
 
   return (
     <Tabs defaultValue="overview">
       <TabsList>
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="shifts">Shifts</TabsTrigger>
-        <TabsTrigger value="owners">Owners</TabsTrigger>
+        <TabsTrigger value="overview">{t("Overview")}</TabsTrigger>
+        <TabsTrigger value="shifts">{t("Shifts")}</TabsTrigger>
+        <TabsTrigger value="owners">{t("Owners")}</TabsTrigger>
       </TabsList>
       <TabsContent value="overview">
         <OverviewTab branchId={branchId} onEdit={onEdit} />
@@ -677,6 +684,7 @@ export function BranchDetailPanel({
 // ── Page ──────────────────────────────────────────────────────
 
 export function BranchDetailPage() {
+  const { t } = useLanguage()
   const { id = "" } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const defaultTab = searchParams.get("tab") ?? "overview"
@@ -697,7 +705,7 @@ export function BranchDetailPage() {
   if (isError || !branch) {
     return (
       <div className="p-4 md:p-6">
-        <p className="text-sm text-destructive">Branch not found.</p>
+        <p className="text-sm text-destructive">{t("Branch not found.")}</p>
       </div>
     )
   }
@@ -712,7 +720,7 @@ export function BranchDetailPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"
         >
           <ChevronLeft className="h-4 w-4" />
-          Branches
+          {t("Branches")}
         </Link>
 
         <div className="flex items-start justify-between gap-4">
@@ -720,7 +728,7 @@ export function BranchDetailPage() {
             <h1 className="text-xl font-semibold">{branch.name}</h1>
             <div className="flex items-center gap-2">
               <Badge variant={branch.is_active ? "default" : "secondary"}>
-                {branch.is_active ? "Active" : "Inactive"}
+                {branch.is_active ? t("Active") : t("Inactive")}
               </Badge>
               {branch.city && (
                 <span className="text-sm text-muted-foreground">{branch.city}</span>
@@ -728,7 +736,7 @@ export function BranchDetailPage() {
             </div>
           </div>
           <Button variant="outline" asChild className="shrink-0">
-            <Link to={`/branches/${id}/edit`}>Edit Branch</Link>
+            <Link to={`/branches/${id}/edit`}>{t("Edit Branch")}</Link>
           </Button>
         </div>
       </div>
@@ -738,9 +746,9 @@ export function BranchDetailPage() {
       {/* ── Tabs ────────────────────────────────────── */}
       <Tabs defaultValue={defaultTab}>
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="shifts">Shifts</TabsTrigger>
-          <TabsTrigger value="owners">Owners</TabsTrigger>
+          <TabsTrigger value="overview">{t("Overview")}</TabsTrigger>
+          <TabsTrigger value="shifts">{t("Shifts")}</TabsTrigger>
+          <TabsTrigger value="owners">{t("Owners")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">

@@ -6,20 +6,22 @@ import { useAuth } from "@/hooks/useAuth"
 import { useCreateBranch } from "@/hooks/useBranches"
 import { BranchForm } from "./BranchForm"
 import type { BranchFormValues } from "./BranchForm"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export function CreateBranchPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const createBranch = useCreateBranch()
+  const { t } = useLanguage()
 
   async function handleSubmit(values: BranchFormValues) {
     if (!user) return
     try {
       const branch = await createBranch.mutateAsync({ ...values, owner_id: user.id })
-      toast.success("Branch created! Now add a shift.")
+      toast.success(t("Branch created! Now add a shift."))
       navigate(`/branches/${branch.id}?tab=shifts`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to create branch"))
       throw err
     }
   }
@@ -33,11 +35,11 @@ export function CreateBranchPage() {
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mb-3"
         >
           <ChevronLeft className="h-4 w-4" />
-          Branches
+          {t("Branches")}
         </Link>
-        <h1 className="text-xl font-semibold">New Branch</h1>
+        <h1 className="text-xl font-semibold">{t("New Branch")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Add a new location to your network
+          {t("Add a new location to your network")}
         </p>
       </div>
 
@@ -45,7 +47,7 @@ export function CreateBranchPage() {
         <BranchForm
           onSubmit={handleSubmit}
           onCancel={() => navigate("/branches")}
-          submitLabel="Create Branch"
+          submitLabel={t("Create Branch")}
         />
       </div>
     </div>

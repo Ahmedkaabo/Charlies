@@ -11,6 +11,7 @@ import { exportLogsToCSV, formatShiftTime, calculateDayValue } from "@/lib/atten
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import type { AttendanceLogWithProfile } from "@/types/attendance"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -52,6 +53,7 @@ const APP_START = new Date(2026, 5, 1) // June 2026 — first month of operation
 // ── Page ──────────────────────────────────────────────────────
 
 export function AttendanceManagementPage() {
+  const { t } = useLanguage()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate } = useUserPermissions()
   const today = new Date()
@@ -127,7 +129,7 @@ export function AttendanceManagementPage() {
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Attendance</h1>
+          <h1 className="text-xl font-semibold">{t("Attendance")}</h1>
           {/* Day navigation */}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <div className="flex items-center rounded-lg border bg-card">
@@ -173,7 +175,7 @@ export function AttendanceManagementPage() {
           <div className="relative w-full sm:w-[160px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search staff…"
+              placeholder={t("Search staff…")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -185,7 +187,7 @@ export function AttendanceManagementPage() {
             options={branchDropdownList.map((b) => ({ value: b.id, label: b.name }))}
             selected={branchFilters}
             onChange={setBranchFilters}
-            placeholder="All Branches"
+            placeholder={t("All Branches")}
             className="w-[160px]"
           />
 
@@ -195,7 +197,7 @@ export function AttendanceManagementPage() {
               options={(members ?? []).map((m) => ({ value: m.profile_id, label: m.profile?.full_name ?? "—" }))}
               selected={staffFilters}
               onChange={setStaffFilters}
-              placeholder="All Staff"
+              placeholder={t("All Staff")}
               className="w-[160px]"
             />
           )}
@@ -203,7 +205,7 @@ export function AttendanceManagementPage() {
           {canExport && (
             <Button variant="outline" onClick={handleExport}>
               <Download className="h-4 w-4" />
-              Export CSV
+              {t("Export CSV")}
             </Button>
           )}
         </div>
@@ -215,15 +217,15 @@ export function AttendanceManagementPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branch</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Shift</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Check In</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Late?</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Check Out</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Hours</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Days</th>
-              <th className="px-4 py-3 text-center font-medium text-muted-foreground">Selfie</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branch")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Shift")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Check In")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Late?")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Check Out")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Hours")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Days")}</th>
+              <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("Selfie")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -241,7 +243,7 @@ export function AttendanceManagementPage() {
             {!logsLoading && filteredLogs.length === 0 && (
               <tr>
                 <td colSpan={9} className="px-4 py-8 text-center text-muted-foreground">
-                  {search.trim() ? "No staff match your search" : "No attendance records for this day"}
+                  {search.trim() ? t("No staff match your search") : t("No attendance records for this day")}
                 </td>
               </tr>
             )}
@@ -347,11 +349,11 @@ export function AttendanceManagementPage() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setSelfieUrl(log.selfie_url) }}
                         className="inline-block"
-                        title="View selfie"
+                        title={t("View selfie")}
                       >
                         <img
                           src={log.selfie_url}
-                          alt="Selfie"
+                          alt={t("Selfie")}
                           className="h-8 w-8 rounded-md object-cover border hover:ring-2 hover:ring-primary transition-all"
                         />
                       </button>
@@ -404,14 +406,14 @@ export function AttendanceManagementPage() {
 
                 {/* Branch & Shift */}
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Location & Shift</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Location & Shift")}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Branch</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{t("Branch")}</p>
                       <p className="text-sm font-medium">{log.branch?.name ?? "—"}</p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Shift</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{t("Shift")}</p>
                       {log.shift ? (
                         <>
                           <p className="text-sm font-medium">{log.shift.name}</p>
@@ -432,21 +434,21 @@ export function AttendanceManagementPage() {
 
                 {/* Timing */}
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Timing</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Timing")}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Check In</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{t("Check In")}</p>
                       <p className="text-sm font-medium tabular-nums">
                         {log.check_in_at ? format(parseISO(log.check_in_at), "h:mm a") : "—"}
                       </p>
                       {log.is_late && (
                         <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                          +{log.late_minutes} min late
+                          +{log.late_minutes} {t("min late")}
                         </p>
                       )}
                     </div>
                     <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Check Out</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{t("Check Out")}</p>
                       <p className="text-sm font-medium tabular-nums">
                         {log.check_out_at ? format(parseISO(log.check_out_at), "h:mm a") : "—"}
                       </p>
@@ -458,22 +460,22 @@ export function AttendanceManagementPage() {
 
                 {/* Performance */}
                 <div className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Performance</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Performance")}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Hours Worked</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{t("Hours Worked")}</p>
                       <p className={cn("text-sm font-medium tabular-nums", underMin ? "text-destructive" : overMax ? "text-amber-600 dark:text-amber-400" : "")}>
                         {hrs !== null ? `${hrs.toFixed(1)} h` : "—"}
                       </p>
                     </div>
                     <div className="rounded-lg border bg-muted/30 px-4 py-3">
-                      <p className="text-xs text-muted-foreground mb-0.5">Day Value</p>
+                      <p className="text-xs text-muted-foreground mb-0.5">{t("Day Value")}</p>
                       {storedDayValue != null ? (
                         <>
                           <p className="text-sm font-medium">{storedDayValue.toFixed(2)}</p>
                           {dayDeduction > 0 && (
                             <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">
-                              −{dayDeduction.toFixed(2)} late deduction
+                              −{dayDeduction.toFixed(2)} {t("late deduction")}
                             </p>
                           )}
                         </>
@@ -489,12 +491,12 @@ export function AttendanceManagementPage() {
                   <>
                     <Separator />
                     <div className="space-y-3">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Selfie</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Selfie")}</p>
                       <button
                         className="w-full overflow-hidden rounded-lg border hover:opacity-90 transition-opacity"
                         onClick={() => setSelfieUrl(log.selfie_url)}
                       >
-                        <img src={log.selfie_url} alt="Attendance selfie" className="w-full object-cover max-h-64" />
+                        <img src={log.selfie_url} alt={t("Attendance selfie")} className="w-full object-cover max-h-64" />
                       </button>
                     </div>
                   </>
@@ -509,10 +511,10 @@ export function AttendanceManagementPage() {
       <Dialog open={!!selfieUrl} onOpenChange={(open) => { if (!open) setSelfieUrl(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Attendance Selfie</DialogTitle>
+            <DialogTitle>{t("Attendance Selfie")}</DialogTitle>
           </DialogHeader>
           {selfieUrl && (
-            <img src={selfieUrl} alt="Attendance selfie" className="w-full rounded-lg object-cover" />
+            <img src={selfieUrl} alt={t("Attendance selfie")} className="w-full rounded-lg object-cover" />
           )}
         </DialogContent>
       </Dialog>

@@ -15,6 +15,7 @@ import { useSalesRecords } from "@/hooks/useSales"
 import { getCurrentSalesDate, isDayEditable } from "@/lib/sales"
 import { SalesRecordSheet } from "@/components/sales/SalesRecordSheet"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -41,6 +42,7 @@ interface SalesBranchViewProps {
 // ── Component ─────────────────────────────────────────────────
 
 export function SalesBranchView({ branchId, branchName, month, year }: SalesBranchViewProps) {
+  const { t } = useLanguage()
   const { isAdmin } = useAuth()
   const { canCreate, canUpdate } = useUserPermissions()
   const canCreateSales = isAdmin || canCreate("sales")
@@ -112,7 +114,7 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
   const calendarView = (
     <div className="space-y-1">
       <div className="grid grid-cols-7 text-center text-[10px] font-medium text-muted-foreground uppercase tracking-wide pb-1">
-        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
+        {[t("Sun"), t("Mon"), t("Tue"), t("Wed"), t("Thu"), t("Fri"), t("Sat")].map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
@@ -202,10 +204,10 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
       <table className="w-full text-sm">
         <thead className="border-b bg-muted/40">
           <tr>
-            <th className={stickyHead}>Date</th>
-            <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">Revenue</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">Notes</th>
-            <th className="px-4 py-3 text-center font-medium text-muted-foreground">Receipt</th>
+            <th className={stickyHead}>{t("Date")}</th>
+            <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Revenue")}</th>
+            <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("Notes")}</th>
+            <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("Receipt")}</th>
           </tr>
         </thead>
         <tbody className="divide-y">

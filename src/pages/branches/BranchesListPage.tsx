@@ -17,6 +17,7 @@ import {
 } from "@/hooks/useBranches"
 import type { Branch } from "@/types/branch"
 import { cn } from "@/lib/utils"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -68,6 +69,7 @@ function BranchCreateContent({
   onDone: (newId: string) => void
   onCancel: () => void
 }) {
+  const { t } = useLanguage()
   const { user } = useAuth()
   const createBranch = useCreateBranch()
 
@@ -75,15 +77,15 @@ function BranchCreateContent({
     if (!user) return
     try {
       const branch = await createBranch.mutateAsync({ ...values, owner_id: user.id })
-      toast.success("Branch created!")
+      toast.success(t("Branch created!"))
       onDone(branch.id)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to create branch"))
       throw err
     }
   }
 
-  return <BranchForm onSubmit={handleSubmit} onCancel={onCancel} submitLabel="Create Branch" />
+  return <BranchForm onSubmit={handleSubmit} onCancel={onCancel} submitLabel={t("Create Branch")} />
 }
 
 function BranchEditContent({
@@ -95,16 +97,17 @@ function BranchEditContent({
   onDone: () => void
   onCancel: () => void
 }) {
+  const { t } = useLanguage()
   const { data: branch, isLoading } = useGetBranch(branchId)
   const updateBranch = useUpdateBranch(branchId)
 
   async function handleSubmit(values: BranchFormValues) {
     try {
       await updateBranch.mutateAsync(values)
-      toast.success("Branch updated!")
+      toast.success(t("Branch updated!"))
       onDone()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to update branch"))
       throw err
     }
   }
@@ -135,7 +138,7 @@ function BranchEditContent({
       }}
       onSubmit={handleSubmit}
       onCancel={onCancel}
-      submitLabel="Save Changes"
+      submitLabel={t("Save Changes")}
     />
   )
 }
@@ -143,6 +146,7 @@ function BranchEditContent({
 // ── Page ──────────────────────────────────────────────────────
 
 export function BranchesListPage() {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
@@ -184,9 +188,9 @@ export function BranchesListPage() {
     if (!pendingDelete) return
     try {
       await deleteBranch.mutateAsync(pendingDelete.id)
-      toast.success("Branch deleted")
+      toast.success(t("Branch deleted"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete branch"))
     } finally {
       setPendingDelete(null)
     }
@@ -195,9 +199,9 @@ export function BranchesListPage() {
   async function handleDuplicate(branch: Branch) {
     try {
       const copy = await duplicateBranch.mutateAsync(branch.id)
-      toast.success(`"${copy.name}" created — inactive by default`)
+      toast.success(`"${copy.name}" ${t("created — inactive by default")}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to duplicate branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to duplicate branch"))
     }
   }
 
@@ -207,17 +211,17 @@ export function BranchesListPage() {
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Branches</h1>
+          <h1 className="text-xl font-semibold">{t("Branches")}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">
             {isLoading
-              ? "Loading…"
-              : `${branches?.length ?? 0} total · ${activeCount} active`}
+              ? t("Loading…")
+              : `${branches?.length ?? 0} ${t("total")} · ${activeCount} ${t("active")}`}
           </p>
         </div>
         {canAddBranch && (
           <Button onClick={() => setDrawer({ type: "create" })}>
             <Plus className="h-4 w-4" />
-            Add Branch
+            {t("Add Branch")}
           </Button>
         )}
       </div>
@@ -227,7 +231,7 @@ export function BranchesListPage() {
         <div className="relative w-full sm:w-[240px]">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
           <Input
-            placeholder="Search branches…"
+            placeholder={t("Search branches…")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-8"
@@ -238,7 +242,7 @@ export function BranchesListPage() {
       {/* ── Error ───────────────────────────────────────── */}
       {isError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Failed to load branches. Please refresh and try again.
+          {t("Failed to load branches. Please refresh and try again.")}
         </div>
       )}
 
@@ -249,12 +253,12 @@ export function BranchesListPage() {
             <Store className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <p className="text-sm font-medium">No branches found</p>
-            <p className="text-xs text-muted-foreground mt-0.5">Add your first branch to get started</p>
+            <p className="text-sm font-medium">{t("No branches found")}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("Add your first branch to get started")}</p>
           </div>
           <Button onClick={() => setDrawer({ type: "create" })}>
             <Plus className="h-4 w-4" />
-            Add Branch
+            {t("Add Branch")}
           </Button>
         </div>
       )}
@@ -265,12 +269,12 @@ export function BranchesListPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Branch</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Location</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Shifts</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Owners</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Staff</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Branch")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Location")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Shifts")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Owners")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Staff")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Status")}</th>
                 {hasActions && <th className="px-4 py-3 w-10" />}
               </tr>
             </thead>
@@ -296,8 +300,8 @@ export function BranchesListPage() {
                             <Store className="h-5 w-5 text-muted-foreground" />
                           </div>
                           <div>
-                            <p className="text-sm font-medium">No branches found</p>
-                            <p className="text-xs text-muted-foreground mt-0.5">Try adjusting your search</p>
+                            <p className="text-sm font-medium">{t("No branches found")}</p>
+                            <p className="text-xs text-muted-foreground mt-0.5">{t("Try adjusting your search")}</p>
                           </div>
                         </div>
                       </td>
@@ -321,10 +325,10 @@ export function BranchesListPage() {
                         {branch.latitude !== null ? (
                           <span className="inline-flex items-center gap-1.5">
                             <MapPin className="h-3 w-3 shrink-0" />
-                            {branch.location_radius_meters}m radius
+                            {branch.location_radius_meters}{t("m radius")}
                           </span>
                         ) : (
-                          "Not set"
+                          t("Not set")
                         )}
                       </td>
                       <td className="px-4 py-3 tabular-nums text-muted-foreground">
@@ -338,7 +342,7 @@ export function BranchesListPage() {
                       </td>
                       <td className="px-4 py-3">
                         <Badge variant={branch.is_active ? "default" : "secondary"}>
-                          {branch.is_active ? "Active" : "Inactive"}
+                          {branch.is_active ? t("Active") : t("Inactive")}
                         </Badge>
                       </td>
                       {hasActions && (
@@ -363,7 +367,7 @@ export function BranchesListPage() {
                                   }}
                                 >
                                   <Pencil className="h-4 w-4" />
-                                  Edit
+                                  {t("Edit")}
                                 </DropdownMenuItem>
                               )}
                               {canAddBranch && (
@@ -374,7 +378,7 @@ export function BranchesListPage() {
                                   }}
                                 >
                                   <Copy className="h-4 w-4" />
-                                  Duplicate
+                                  {t("Duplicate")}
                                 </DropdownMenuItem>
                               )}
                               {canDeleteBranch && (
@@ -388,7 +392,7 @@ export function BranchesListPage() {
                                     }}
                                   >
                                     <Trash2 className="h-4 w-4" />
-                                    Delete
+                                    {t("Delete")}
                                   </DropdownMenuItem>
                                 </>
                               )}
@@ -419,9 +423,9 @@ export function BranchesListPage() {
           <SheetHeader className="shrink-0 border-b px-6 py-4">
             {drawer.type === "create" && (
               <>
-                <SheetTitle className="text-left">New Branch</SheetTitle>
+                <SheetTitle className="text-left">{t("New Branch")}</SheetTitle>
                 <SheetDescription className="text-left">
-                  Add a new location to your network
+                  {t("Add a new location to your network")}
                 </SheetDescription>
               </>
             )}
@@ -432,7 +436,7 @@ export function BranchesListPage() {
                     <SheetTitle className="text-left">{activeBranch.name}</SheetTitle>
                     <div className="flex items-center gap-2">
                       <Badge variant={activeBranch.is_active ? "default" : "secondary"}>
-                        {activeBranch.is_active ? "Active" : "Inactive"}
+                        {activeBranch.is_active ? t("Active") : t("Inactive")}
                       </Badge>
                       {activeBranch.city && (
                         <span className="text-sm text-muted-foreground">{activeBranch.city}</span>
@@ -441,7 +445,7 @@ export function BranchesListPage() {
                   </div>
                 ) : (
                   <>
-                    <SheetTitle className="text-left">Edit Branch</SheetTitle>
+                    <SheetTitle className="text-left">{t("Edit Branch")}</SheetTitle>
                     <SheetDescription className="text-left">{activeBranch.name}</SheetDescription>
                   </>
                 )}
@@ -479,7 +483,7 @@ export function BranchesListPage() {
                   }
                 >
                   <Pencil className="h-4 w-4" />
-                  Edit Branch
+                  {t("Edit Branch")}
                 </Button>
               </div>
             </>
@@ -505,19 +509,18 @@ export function BranchesListPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete branch?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete branch?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              "{pendingDelete?.name}" and all its associated data will be permanently
-              deleted. This action cannot be undone.
+              "{pendingDelete?.name}" {t("and all its associated data will be permanently deleted. This action cannot be undone.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

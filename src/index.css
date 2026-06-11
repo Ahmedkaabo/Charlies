@@ -5,6 +5,12 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Arabic font override */
+:root[lang="ar"] {
+  --font-sans: 'IBM Plex Sans Arabic', sans-serif;
+  --font-heading: 'IBM Plex Sans Arabic', sans-serif;
+}
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Inter Variable', sans-serif;

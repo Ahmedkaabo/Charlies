@@ -35,6 +35,7 @@ import {
   useUpdatePoolTransfer,
   useDeletePoolTransfer,
 } from "@/hooks/useBalance"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { cn } from "@/lib/utils"
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Branch } from "@/types/branch"
@@ -170,6 +171,7 @@ function BalanceOverview({
   canPoolRead: boolean
   loading: boolean
 }) {
+  const { t } = useLanguage()
   const { totalSales, totalExpenses, totalTransferred, totalRemaining } = summary
   const poolRemaining = poolCredit - totalExpenses
 
@@ -178,24 +180,24 @@ function BalanceOverview({
       {/* Sales group — treasury row always shown, value hidden if no permission */}
       <OverviewCard
         icon={TrendingUp}
-        title="Sales"
+        title={t("Sales")}
         loading={loading}
         rows={[
-          { label: "Total Revenue",           value: totalSales,       hidden: !canTreasuryRead },
-          { label: "Transferred to Treasury", value: totalTransferred, hidden: !canTreasuryRead },
-          { label: "Remaining in Sales",      value: totalRemaining,   bold: true, separator: true },
+          { label: t("Total Revenue"),           value: totalSales,       hidden: !canTreasuryRead },
+          { label: t("Transferred to Treasury"), value: totalTransferred, hidden: !canTreasuryRead },
+          { label: t("Remaining in Sales"),      value: totalRemaining,   bold: true, separator: true },
         ]}
       />
 
       {/* Expenses group */}
       <OverviewCard
         icon={TrendingDown}
-        title="Expenses"
+        title={t("Expenses")}
         loading={loading}
         rows={[
-          ...(canPoolRead ? [{ label: "Budget",            value: poolCredit }] : []),
-          {                  label: "Spent",               value: totalExpenses, red: true },
-          ...(canPoolRead ? [{ label: "Remaining in Pool", value: poolRemaining, separator: true, bold: true }] : []),
+          ...(canPoolRead ? [{ label: t("Budget"),            value: poolCredit }] : []),
+          {                  label: t("Spent"),               value: totalExpenses, red: true },
+          ...(canPoolRead ? [{ label: t("Remaining in Pool"), value: poolRemaining, separator: true, bold: true }] : []),
         ]}
       />
     </div>
@@ -223,6 +225,7 @@ function TransferSheet({
   year: number
   editTransfer: TreasuryTransfer | null
 }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const create = useCreateTreasuryTransfer()
@@ -267,19 +270,19 @@ function TransferSheet({
   }
 
   async function handleSave() {
-    if (!branchId) { toast.error("Select a branch"); return }
+    if (!branchId) { toast.error(t("Select a branch")); return }
     const amt = parseFloat(amount)
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return }
+    if (!amt || amt <= 0) { toast.error(t("Enter a valid amount")); return }
     try {
       if (isEditing && editTransfer) {
         await update.mutateAsync({ id: editTransfer.id, amount: amt, direction, date, notes: notes.trim() || null })
-        toast.success("Transfer updated")
+        toast.success(t("Transfer updated"))
       } else {
         await create.mutateAsync({ branch_id: branchId, amount: amt, direction, date, notes: notes.trim() || null, added_by: profile?.id ?? null })
-        toast.success("Transfer added")
+        toast.success(t("Transfer added"))
       }
       reset(); onOpenChange(false)
-    } catch { toast.error("Failed to save") }
+    } catch { toast.error(t("Failed to save")) }
   }
 
   const isPending = create.isPending || update.isPending
@@ -295,11 +298,11 @@ function TransferSheet({
         className={cn("flex flex-col gap-0 overflow-hidden p-0", isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-md")}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>{isEditing ? "Edit Transfer" : "Add Treasury Transfer"}</SheetTitle>
+          <SheetTitle>{isEditing ? t("Edit Transfer") : t("Add Treasury Transfer")}</SheetTitle>
           <SheetDescription>
             {activeBranchName
-              ? `Branch: ${activeBranchName}`
-              : "Select a branch to record a treasury transfer"}
+              ? `${t("Branch")}: ${activeBranchName}`
+              : t("Select a branch to record a treasury transfer")}
           </SheetDescription>
         </SheetHeader>
 
@@ -307,9 +310,9 @@ function TransferSheet({
           {/* Branch selector — only when no branch is pre-selected */}
           {!selectedBranchId && !isEditing && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Branch</p>
+              <p className="text-sm font-medium">{t("Branch")}</p>
               <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger><SelectValue placeholder="Select branch…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("Select branch…")} /></SelectTrigger>
                 <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -317,20 +320,20 @@ function TransferSheet({
 
           {/* Direction */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Direction</p>
+            <p className="text-sm font-medium">{t("Direction")}</p>
             <Select value={direction} onValueChange={(v) => setDirection(v as "outflow" | "inflow")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="outflow">
                   <span className="flex items-center gap-2">
                     <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600" />
-                    Branch → Treasury (outflow)
+                    {t("Branch → Treasury (outflow)")}
                   </span>
                 </SelectItem>
                 <SelectItem value="inflow">
                   <span className="flex items-center gap-2">
                     <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" />
-                    Treasury → Branch (inflow)
+                    {t("Treasury → Branch (inflow)")}
                   </span>
                 </SelectItem>
               </SelectContent>
@@ -339,26 +342,26 @@ function TransferSheet({
 
           {/* Amount */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Amount</p>
+            <p className="text-sm font-medium">{t("Amount")}</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
               <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             {branchId && direction === "outflow" && (
               <p className={cn("text-xs pl-1", branchSummary.totalRemaining <= 0 ? "text-destructive" : "text-muted-foreground")}>
-                Branch balance: <span className="font-medium">{egp(branchSummary.totalRemaining)}</span>
+                {t("Branch balance")}: <span className="font-medium">{egp(branchSummary.totalRemaining)}</span>
               </p>
             )}
           </div>
 
           {/* Date */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Date</p>
+            <p className="text-sm font-medium">{t("Date")}</p>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : "Pick a date"}
+                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : t("Pick a date")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -369,14 +372,14 @@ function TransferSheet({
 
           {/* Notes */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Notes <span className="font-normal text-muted-foreground">(optional)</span></p>
-            <Textarea placeholder={direction === "outflow" ? "Why was this transferred?" : "What is this money for?"} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <p className="text-sm font-medium">{t("Notes")} <span className="font-normal text-muted-foreground">({t("optional")})</span></p>
+            <Textarea placeholder={direction === "outflow" ? t("Why was this transferred?") : t("What is this money for?")} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
-          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isPending}>{isPending ? "Saving…" : "Save"}</Button>
+          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>{t("Cancel")}</Button>
+          <Button onClick={handleSave} disabled={isPending}>{isPending ? t("Saving…") : t("Save")}</Button>
         </div>
       </SheetContent>
     </Sheet>
@@ -404,6 +407,7 @@ function PoolTransferSheet({
   year: number
   editTransfer: PoolTransfer | null
 }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const create = useCreatePoolTransfer()
@@ -451,9 +455,9 @@ function PoolTransferSheet({
   }
 
   async function handleSave() {
-    if (!branchId) { toast.error("Select a branch"); return }
+    if (!branchId) { toast.error(t("Select a branch")); return }
     const amt = parseFloat(amount)
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return }
+    if (!amt || amt <= 0) { toast.error(t("Enter a valid amount")); return }
 
     // For edits, the original amount is already reflected in the current balances,
     // so add it back to get the true available headroom.
@@ -462,8 +466,8 @@ function PoolTransferSheet({
       : 0
     const limit = availableBalance + originalAmt
     if (amt > limit) {
-      const label = direction === "sales_to_expenses" ? "branch balance" : "pool credit"
-      toast.error(`Amount exceeds available ${label} (${egp(limit)})`)
+      const label = direction === "sales_to_expenses" ? t("branch balance") : t("pool credit")
+      toast.error(`${t("Amount exceeds available")} ${label} (${egp(limit)})`)
       return
     }
 
@@ -472,13 +476,13 @@ function PoolTransferSheet({
     try {
       if (isEditing && editTransfer) {
         await update.mutateAsync({ id: editTransfer.id, amount: amt, from_pool, to_pool, date, notes: notes.trim() || null })
-        toast.success("Pool transfer updated")
+        toast.success(t("Pool transfer updated"))
       } else {
         await create.mutateAsync({ branch_id: branchId, amount: amt, from_pool, to_pool, date, notes: notes.trim() || null, added_by: profile?.id ?? null })
-        toast.success("Pool transfer added")
+        toast.success(t("Pool transfer added"))
       }
       reset(); onOpenChange(false)
-    } catch { toast.error("Failed to save") }
+    } catch { toast.error(t("Failed to save")) }
   }
 
   const isPending = create.isPending || update.isPending
@@ -488,7 +492,7 @@ function PoolTransferSheet({
     ?? (editTransfer?.branch as { id: string; name: string } | null)?.name
 
   const availableBalance  = direction === "sales_to_expenses" ? branchSummary.totalRemaining : poolCredit
-  const availableLabel    = direction === "sales_to_expenses" ? "Branch balance" : "Expenses pool credit"
+  const availableLabel    = direction === "sales_to_expenses" ? t("Branch balance") : t("Expenses pool credit")
   const enteredAmt        = parseFloat(amount) || 0
   const exceedsLimit      = !!branchId && enteredAmt > 0 && enteredAmt > availableBalance
 
@@ -499,11 +503,11 @@ function PoolTransferSheet({
         className={cn("flex flex-col gap-0 overflow-hidden p-0", isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-md")}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>{isEditing ? "Edit Pool Transfer" : "Add Pool Transfer"}</SheetTitle>
+          <SheetTitle>{isEditing ? t("Edit Pool Transfer") : t("Add Pool Transfer")}</SheetTitle>
           <SheetDescription>
             {activeBranchName
-              ? `Branch: ${activeBranchName}`
-              : "Select a branch to record a pool transfer"}
+              ? `${t("Branch")}: ${activeBranchName}`
+              : t("Select a branch to record a pool transfer")}
           </SheetDescription>
         </SheetHeader>
 
@@ -511,9 +515,9 @@ function PoolTransferSheet({
           {/* Branch */}
           {!selectedBranchId && !isEditing && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Branch</p>
+              <p className="text-sm font-medium">{t("Branch")}</p>
               <Select value={branchId} onValueChange={setBranchId}>
-                <SelectTrigger><SelectValue placeholder="Select branch…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("Select branch…")} /></SelectTrigger>
                 <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
@@ -521,20 +525,20 @@ function PoolTransferSheet({
 
           {/* Direction */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Direction</p>
+            <p className="text-sm font-medium">{t("Direction")}</p>
             <Select value={direction} onValueChange={(v) => setDirection(v as "sales_to_expenses" | "expenses_to_sales")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="sales_to_expenses">
                   <span className="flex items-center gap-2">
                     <ArrowRight className="h-3.5 w-3.5 text-indigo-500" />
-                    Sales → Expenses (allocate)
+                    {t("Sales → Expenses (allocate)")}
                   </span>
                 </SelectItem>
                 <SelectItem value="expenses_to_sales">
                   <span className="flex items-center gap-2">
                     <ArrowLeft className="h-3.5 w-3.5 text-amber-500" />
-                    Expenses → Sales (return)
+                    {t("Expenses → Sales (return)")}
                   </span>
                 </SelectItem>
               </SelectContent>
@@ -543,7 +547,7 @@ function PoolTransferSheet({
 
           {/* Amount */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Amount</p>
+            <p className="text-sm font-medium">{t("Amount")}</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
               <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -551,19 +555,19 @@ function PoolTransferSheet({
             {branchId && (
               <p className={cn("text-xs pl-1", exceedsLimit ? "text-destructive" : availableBalance <= 0 ? "text-destructive" : "text-muted-foreground")}>
                 {availableLabel}: <span className="font-medium">{egp(availableBalance)}</span>
-                {exceedsLimit && <span className="ml-1 font-semibold"> — exceeds limit</span>}
+                {exceedsLimit && <span className="ml-1 font-semibold"> — {t("exceeds limit")}</span>}
               </p>
             )}
           </div>
 
           {/* Date */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Date</p>
+            <p className="text-sm font-medium">{t("Date")}</p>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : "Pick a date"}
+                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : t("Pick a date")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -574,14 +578,14 @@ function PoolTransferSheet({
 
           {/* Notes */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Notes <span className="font-normal text-muted-foreground">(optional)</span></p>
-            <Textarea placeholder="Reason for this transfer…" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <p className="text-sm font-medium">{t("Notes")} <span className="font-normal text-muted-foreground">({t("optional")})</span></p>
+            <Textarea placeholder={t("Reason for this transfer…")} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
-          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isPending || exceedsLimit}>{isPending ? "Saving…" : "Save"}</Button>
+          <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={isPending}>{t("Cancel")}</Button>
+          <Button onClick={handleSave} disabled={isPending || exceedsLimit}>{isPending ? t("Saving…") : t("Save")}</Button>
         </div>
       </SheetContent>
     </Sheet>
@@ -608,18 +612,20 @@ function BranchBreakdownSection({
   isLoading: boolean
   canPoolRead: boolean
 }) {
+  const { t } = useLanguage()
+
   if (isLoading) {
     return (
       <div className="rounded-lg border overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className={STICKY_HEAD}>Branch</th>
-              <th className={`${TH} text-right`}>Sales</th>
-              <th className={`${TH} text-right`}>Expenses</th>
-              <th className={`${TH} text-right`}>Transferred</th>
-              {canPoolRead && <th className={`${TH} text-right`}>Pool Credit</th>}
-              <th className={`${TH} text-right`}>Remaining</th>
+              <th className={STICKY_HEAD}>{t("Branch")}</th>
+              <th className={`${TH} text-right`}>{t("Sales")}</th>
+              <th className={`${TH} text-right`}>{t("Expenses")}</th>
+              <th className={`${TH} text-right`}>{t("Transferred")}</th>
+              {canPoolRead && <th className={`${TH} text-right`}>{t("Pool Credit")}</th>}
+              <th className={`${TH} text-right`}>{t("Remaining")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -644,19 +650,19 @@ function BranchBreakdownSection({
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-base font-semibold">Branch Breakdown</h2>
-        <p className="text-sm text-muted-foreground mt-0.5">Per-branch summary for the selected period</p>
+        <h2 className="text-base font-semibold">{t("Branch Breakdown")}</h2>
+        <p className="text-sm text-muted-foreground mt-0.5">{t("Per-branch summary for the selected period")}</p>
       </div>
       <div className="rounded-lg border overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className={STICKY_HEAD}>Branch</th>
-              <th className={`${TH} text-right`}>Sales</th>
-              <th className={`${TH} text-right`}>Expenses</th>
-              <th className={`${TH} text-right`}>Transferred</th>
-              {canPoolRead && <th className={`${TH} text-right`}>Pool Credit</th>}
-              <th className={`${TH} text-right`}>Remaining</th>
+              <th className={STICKY_HEAD}>{t("Branch")}</th>
+              <th className={`${TH} text-right`}>{t("Sales")}</th>
+              <th className={`${TH} text-right`}>{t("Expenses")}</th>
+              <th className={`${TH} text-right`}>{t("Transferred")}</th>
+              {canPoolRead && <th className={`${TH} text-right`}>{t("Pool Credit")}</th>}
+              <th className={`${TH} text-right`}>{t("Remaining")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -671,7 +677,7 @@ function BranchBreakdownSection({
               </tr>
             ))}
             <tr className="border-t-2 bg-muted/20">
-              <td className={cn(STICKY_CELL, "font-bold bg-muted/20")}>Total</td>
+              <td className={cn(STICKY_CELL, "font-bold bg-muted/20")}>{t("Total")}</td>
               <td className="px-4 py-3 text-right tabular-nums font-bold">{egp(summary.totalSales)}</td>
               <td className="px-4 py-3 text-right tabular-nums font-bold text-destructive">{egp(summary.totalExpenses)}</td>
               <td className="px-4 py-3 text-right tabular-nums font-bold">{egp(summary.totalTransferred)}</td>
@@ -720,6 +726,7 @@ function BalanceContent({
   canPoolDelete: boolean
   canBreakdownRead: boolean
 }) {
+  const { t } = useLanguage()
   const [transferOpen,  setTransferOpen]  = useState(false)
   const [editTransfer,  setEditTransfer]  = useState<TreasuryTransfer | null>(null)
   const [delTransferId, setDelTransferId] = useState<string | null>(null)
@@ -782,12 +789,12 @@ function BalanceContent({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-semibold">Treasury Transfers</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Money moved between branches and main treasury</p>
+                <h2 className="text-base font-semibold">{t("Treasury Transfers")}</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("Money moved between branches and main treasury")}</p>
               </div>
               {canTreasuryCreate && transfers.length > 0 && !transfersLoading && (
                 <Button onClick={() => { setEditTransfer(null); setTransferOpen(true) }}>
-                  <Plus className="h-4 w-4" /> Add Transfer
+                  <Plus className="h-4 w-4" /> {t("Add Transfer")}
                 </Button>
               )}
             </div>
@@ -795,7 +802,7 @@ function BalanceContent({
             {transfersLoading ? (
               <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>Date</th>{isAllBranches && <th className={TH}>Branch</th>}<th className={`${TH} text-right`}>Amount</th><th className={TH}>Notes</th><th className={TH}>Added by</th></tr></thead>
+                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>{t("Date")}</th>{isAllBranches && <th className={TH}>{t("Branch")}</th>}<th className={`${TH} text-right`}>{t("Amount")}</th><th className={TH}>{t("Notes")}</th><th className={TH}>{t("Added by")}</th></tr></thead>
                   <tbody className="divide-y">{Array.from({ length: 4 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
                 </table>
               </div>
@@ -803,12 +810,12 @@ function BalanceContent({
               <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
                 <Landmark className="h-8 w-8 text-muted-foreground/40" />
                 <div>
-                  <p className="text-sm font-medium">No treasury transfers this period</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Record money moved between branches and the main treasury</p>
+                  <p className="text-sm font-medium">{t("No treasury transfers this period")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("Record money moved between branches and the main treasury")}</p>
                 </div>
                 {canTreasuryCreate && (
                   <Button onClick={() => { setEditTransfer(null); setTransferOpen(true) }}>
-                    <Plus className="h-4 w-4" /> Add Transfer
+                    <Plus className="h-4 w-4" /> {t("Add Transfer")}
                   </Button>
                 )}
               </div>
@@ -817,11 +824,11 @@ function BalanceContent({
                 <table className="w-full text-sm">
                   <thead className="border-b bg-muted/40">
                     <tr>
-                      <th className={STICKY_HEAD}>Date</th>
-                      {isAllBranches && <th className={TH}>Branch</th>}
-                      <th className={`${TH} text-right`}>Amount</th>
-                      <th className={TH}>Notes</th>
-                      <th className={TH}>Added by</th>
+                      <th className={STICKY_HEAD}>{t("Date")}</th>
+                      {isAllBranches && <th className={TH}>{t("Branch")}</th>}
+                      <th className={`${TH} text-right`}>{t("Amount")}</th>
+                      <th className={TH}>{t("Notes")}</th>
+                      <th className={TH}>{t("Added by")}</th>
                       {(canTreasuryUpdate || canTreasuryDelete) && <th className="px-4 py-3 w-10" />}
                     </tr>
                   </thead>
@@ -868,12 +875,12 @@ function BalanceContent({
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-base font-semibold">Pool Transfers</h2>
-                <p className="text-sm text-muted-foreground mt-0.5">Money moved between sales and expenses pools</p>
+                <h2 className="text-base font-semibold">{t("Pool Transfers")}</h2>
+                <p className="text-sm text-muted-foreground mt-0.5">{t("Money moved between sales and expenses pools")}</p>
               </div>
               {canPoolCreate && poolTransfers.length > 0 && !poolTransfersLoading && (
                 <Button onClick={() => { setEditPool(null); setPoolOpen(true) }}>
-                  <Plus className="h-4 w-4" /> Add Pool Transfer
+                  <Plus className="h-4 w-4" /> {t("Add Pool Transfer")}
                 </Button>
               )}
             </div>
@@ -881,7 +888,7 @@ function BalanceContent({
             {poolTransfersLoading ? (
               <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>Date</th>{isAllBranches && <th className={TH}>Branch</th>}<th className={TH}>Type</th><th className={`${TH} text-right`}>Amount</th><th className={TH}>Notes</th><th className={TH}>Added by</th></tr></thead>
+                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>{t("Date")}</th>{isAllBranches && <th className={TH}>{t("Branch")}</th>}<th className={TH}>{t("Type")}</th><th className={`${TH} text-right`}>{t("Amount")}</th><th className={TH}>{t("Notes")}</th><th className={TH}>{t("Added by")}</th></tr></thead>
                   <tbody className="divide-y">{Array.from({ length: 3 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3"><Skeleton className="h-5 w-28 rounded-full" /></td><td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
                 </table>
               </div>
@@ -889,12 +896,12 @@ function BalanceContent({
               <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-dashed py-10 text-center">
                 <ArrowLeftRight className="h-8 w-8 text-muted-foreground/40" />
                 <div>
-                  <p className="text-sm font-medium">No pool transfers this period</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Pool transfers allocate money between sales and expenses pools</p>
+                  <p className="text-sm font-medium">{t("No pool transfers this period")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("Pool transfers allocate money between sales and expenses pools")}</p>
                 </div>
                 {canPoolCreate && (
                   <Button onClick={() => { setEditPool(null); setPoolOpen(true) }}>
-                    <Plus className="h-4 w-4" /> Add Pool Transfer
+                    <Plus className="h-4 w-4" /> {t("Add Pool Transfer")}
                   </Button>
                 )}
               </div>
@@ -903,12 +910,12 @@ function BalanceContent({
                 <table className="w-full text-sm">
                   <thead className="border-b bg-muted/40">
                     <tr>
-                      <th className={STICKY_HEAD}>Date</th>
-                      {isAllBranches && <th className={TH}>Branch</th>}
-                      <th className={TH}>Type</th>
-                      <th className={`${TH} text-right`}>Amount</th>
-                      <th className={TH}>Notes</th>
-                      <th className={TH}>Added by</th>
+                      <th className={STICKY_HEAD}>{t("Date")}</th>
+                      {isAllBranches && <th className={TH}>{t("Branch")}</th>}
+                      <th className={TH}>{t("Type")}</th>
+                      <th className={`${TH} text-right`}>{t("Amount")}</th>
+                      <th className={TH}>{t("Notes")}</th>
+                      <th className={TH}>{t("Added by")}</th>
                       {(canPoolUpdate || canPoolDelete) && <th className="px-4 py-3 w-10" />}
                     </tr>
                   </thead>
@@ -926,7 +933,7 @@ function BalanceContent({
                               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                               toExpenses ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400",
                             )}>
-                              {toExpenses ? <><ArrowRight className="h-3 w-3" />Sales → Exp.</> : <><ArrowLeft className="h-3 w-3" />Exp. → Sales</>}
+                              {toExpenses ? <><ArrowRight className="h-3 w-3" />{t("Sales → Exp.")}</> : <><ArrowLeft className="h-3 w-3" />{t("Exp. → Sales")}</>}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{egp(t.amount)}</td>
@@ -969,18 +976,18 @@ function BalanceContent({
       <AlertDialog open={!!delTransferId} onOpenChange={(v) => { if (!v) setDelTransferId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete treasury transfer?</AlertDialogTitle>
-            <AlertDialogDescription>This transfer record will be permanently removed.</AlertDialogDescription>
+            <AlertDialogTitle>{t("Delete treasury transfer?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("This transfer record will be permanently removed.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
                 if (!delTransferId) return
-                try { await deleteTreasuryTransfer.mutateAsync(delTransferId); toast.success("Deleted") }
-                catch { toast.error("Failed to delete") }
+                try { await deleteTreasuryTransfer.mutateAsync(delTransferId); toast.success(t("Deleted")) }
+                catch { toast.error(t("Failed to delete")) }
                 finally { setDelTransferId(null) }
-              }}>Delete</AlertDialogAction>
+              }}>{t("Delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -988,18 +995,18 @@ function BalanceContent({
       <AlertDialog open={!!delPoolId} onOpenChange={(v) => { if (!v) setDelPoolId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete pool transfer?</AlertDialogTitle>
-            <AlertDialogDescription>This pool transfer record will be permanently removed.</AlertDialogDescription>
+            <AlertDialogTitle>{t("Delete pool transfer?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("This pool transfer record will be permanently removed.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={async () => {
                 if (!delPoolId) return
-                try { await deletePoolTransfer.mutateAsync(delPoolId); toast.success("Deleted") }
-                catch { toast.error("Failed to delete") }
+                try { await deletePoolTransfer.mutateAsync(delPoolId); toast.success(t("Deleted")) }
+                catch { toast.error(t("Failed to delete")) }
                 finally { setDelPoolId(null) }
-              }}>Delete</AlertDialogAction>
+              }}>{t("Delete")}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1010,6 +1017,7 @@ function BalanceContent({
 // ── Page ──────────────────────────────────────────────────────
 
 export function BalancePage() {
+  const { t } = useLanguage()
   const { profile, isAdmin, isOwner } = useAuth()
   const { canRead, canCreate, canUpdate, canDelete } = useUserPermissions()
 
@@ -1044,7 +1052,7 @@ export function BalancePage() {
     return (
       <div className="p-4 md:p-6 flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
         <Landmark className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">Not assigned to any branch yet.</p>
+        <p className="text-sm text-muted-foreground">{t("Not assigned to any branch yet.")}</p>
       </div>
     )
   }
@@ -1053,7 +1061,7 @@ export function BalancePage() {
     <div className="p-4 md:p-6 space-y-6">
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold mr-1">Balance</h1>
+        <h1 className="text-xl font-semibold mr-1">{t("Balance")}</h1>
 
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
           <SelectTrigger className="w-[150px] h-8 text-sm"><SelectValue /></SelectTrigger>
@@ -1066,7 +1074,7 @@ export function BalancePage() {
           options={branchList.map(b => ({ value: b.id, label: b.name }))}
           selected={selectedBranchIds}
           onChange={setSelectedBranchIds}
-          placeholder="All Branches"
+          placeholder={t("All Branches")}
           className="h-8 text-sm w-[160px]"
         />
       </div>

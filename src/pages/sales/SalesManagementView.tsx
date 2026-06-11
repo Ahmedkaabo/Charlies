@@ -1,5 +1,6 @@
 import { TrendingUp } from "lucide-react"
 
+import { useLanguage } from "@/contexts/LanguageContext"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useSalesRecords, useSalesSummary } from "@/hooks/useSales"
 import { getMissingDays } from "@/lib/sales"
@@ -57,6 +58,8 @@ export function SalesManagementView({
   branchIds,
   canTreasuryRead,
 }: SalesManagementViewProps) {
+  const { t } = useLanguage()
+
   const { data: allBranches, isLoading: branchesLoading } = useGetBranches()
 
   // Scope to the user's assigned branches when provided
@@ -113,9 +116,9 @@ export function SalesManagementView({
         <div className="grid gap-4">
           <SummaryCard
             icon={<TrendingUp className="h-4 w-4" />}
-            label="Total Revenue"
+            label={t("Total Revenue")}
             value={`EGP ${summary.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
-            sub="All branches"
+            sub={t("All branches")}
             loading={summaryLoading}
           />
         </div>
@@ -126,11 +129,11 @@ export function SalesManagementView({
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Branch</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Days Filled</th>
-              {canTreasuryRead && <th className="px-4 py-3 text-right font-medium text-muted-foreground">Total Revenue</th>}
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Missing Days</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">Last Entry</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Branch")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Days Filled")}</th>
+              {canTreasuryRead && <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Total Revenue")}</th>}
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Missing Days")}</th>
+              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Last Entry")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -147,7 +150,7 @@ export function SalesManagementView({
             ) : branchRows.length === 0 ? (
               <tr>
                 <td colSpan={canTreasuryRead ? 5 : 4} className="px-4 py-8 text-center text-muted-foreground">
-                  No branches found
+                  {t("No branches found")}
                 </td>
               </tr>
             ) : (

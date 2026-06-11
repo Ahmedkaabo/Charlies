@@ -3,6 +3,7 @@ import { Users, Plus, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { format } from "date-fns"
 import { toast } from "sonner"
 
+import { useLanguage } from "@/contexts/LanguageContext"
 import { useGetMembersGrouped, useDeleteMember } from "@/hooks/useMembers"
 import { useGetRoles } from "@/hooks/usePermissions"
 import { useGetBranches } from "@/hooks/useBranches"
@@ -52,12 +53,13 @@ function roleVariant(level: number): "default" | "secondary" | "outline" {
 // ── Table skeleton ────────────────────────────────────────────
 
 function TableSkeleton() {
+  const { t } = useLanguage()
   return (
     <div className="rounded-lg border overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="border-b bg-muted/40">
           <tr>
-            {["Staff", "Status", "Branches", "Role", "Salary", "Since", "Last Login", ""].map((h, i) => (
+            {[t("Staff"), t("Status"), t("Branches"), t("Role"), t("Salary"), t("Since"), t("Last Login"), ""].map((h, i) => (
               <th key={i} className={`px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap${i === 0 ? " sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : ""}`}>{h}</th>
             ))}
           </tr>
@@ -89,21 +91,22 @@ function TableSkeleton() {
 // ── Empty ─────────────────────────────────────────────────────
 
 function EmptyState({ canAdd, onAdd }: { canAdd: boolean; onAdd: () => void }) {
+  const { t } = useLanguage()
   return (
     <div className="flex flex-col items-center justify-center py-12 gap-3 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
         <Users className="h-5 w-5 text-muted-foreground" />
       </div>
       <div>
-        <p className="text-sm font-medium">No staff found</p>
+        <p className="text-sm font-medium">{t("No staff found")}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {canAdd ? "Add your first staff member to get started" : "No staff to display"}
+          {canAdd ? t("Add your first staff member to get started") : t("No staff to display")}
         </p>
       </div>
       {canAdd && (
         <Button onClick={onAdd}>
           <Plus className="h-4 w-4" />
-          Add Staff
+          {t("Add Staff")}
         </Button>
       )}
     </div>
@@ -113,6 +116,7 @@ function EmptyState({ canAdd, onAdd }: { canAdd: boolean; onAdd: () => void }) {
 // ── Main page ─────────────────────────────────────────────────
 
 export function MembersPage() {
+  const { t } = useLanguage()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete: canDeletePerm, isOwner } = useUserPermissions()
   const { data: allRolesRaw = [] } = useGetRoles()
@@ -159,7 +163,7 @@ export function MembersPage() {
       await deleteMember.mutateAsync(removeTarget.profileId)
       toast.success(`${removeTarget.name} removed`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove")
+      toast.error(err instanceof Error ? err.message : t("Failed to remove"))
     } finally {
       setRemoveTarget(null)
     }
@@ -171,17 +175,17 @@ export function MembersPage() {
       {/* ── Header ────────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Staff</h1>
+          <h1 className="text-xl font-semibold">{t("Staff")}</h1>
           {visible && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              {visible.length} {visible.length === 1 ? "staff member" : "staff members"}
+              {visible.length} {visible.length === 1 ? t("staff member") : t("staff members")}
             </p>
           )}
         </div>
         {canAdd && (
           <Button onClick={() => setSheet({ type: "create" })}>
             <Plus className="h-4 w-4" />
-            Add Staff
+            {t("Add Staff")}
           </Button>
         )}
       </div>
@@ -189,7 +193,7 @@ export function MembersPage() {
       {/* ── Toolbar ───────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-3">
         <Input
-          placeholder="Search by name…"
+          placeholder={t("Search by name…")}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="w-52"
@@ -198,14 +202,14 @@ export function MembersPage() {
           options={roles.map((r) => ({ value: r.id, label: r.name.replace(/_/g, " ") }))}
           selected={roleFilters}
           onChange={setRoleFilters}
-          placeholder="All roles"
+          placeholder={t("All roles")}
           className="w-40"
         />
         <MultiSelect
           options={branches.map((b) => ({ value: b.id, label: b.name }))}
           selected={branchFilters}
           onChange={setBranchFilters}
-          placeholder="All branches"
+          placeholder={t("All branches")}
           className="w-44"
         />
       </div>
@@ -213,7 +217,7 @@ export function MembersPage() {
       {/* ── Error ─────────────────────────────────────── */}
       {isError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Failed to load staff. Please try again.
+          {t("Failed to load staff. Please try again.")}
         </div>
       )}
 
@@ -231,13 +235,13 @@ export function MembersPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Staff</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Status</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branches</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Role</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Salary</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Since</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Last Login</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Status")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branches")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Role")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Salary")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Since")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Last Login")}</th>
                 {hasActions && <th className="px-4 py-3 w-10" />}
               </tr>
             </thead>
@@ -262,7 +266,7 @@ export function MembersPage() {
                           <div className="min-w-0">
                             <p className="text-sm font-medium truncate">{gm.full_name ?? "—"}</p>
                             {gm.is_admin && (
-                              <p className="text-xs text-muted-foreground">Owner</p>
+                              <p className="text-xs text-muted-foreground">{t("Owner")}</p>
                             )}
                           </div>
                         </div>
@@ -272,11 +276,11 @@ export function MembersPage() {
                       <td className="px-4 py-3">
                         {gm.last_login_at ? (
                           <Badge variant="outline" className="border-emerald-500/40 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400">
-                            Active
+                            {t("Active")}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="border-amber-500/40 bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400">
-                            Pending
+                            {t("Pending")}
                           </Badge>
                         )}
                       </td>
@@ -327,7 +331,7 @@ export function MembersPage() {
                       <td className="px-4 py-3 text-sm text-muted-foreground whitespace-nowrap">
                         {gm.last_login_at
                           ? format(new Date(gm.last_login_at), "d MMM yyyy, HH:mm")
-                          : <span className="text-xs italic">Never</span>
+                          : <span className="text-xs italic">{t("Never")}</span>
                         }
                       </td>
 
@@ -347,7 +351,7 @@ export function MembersPage() {
                                     onClick={() => setSheet({ type: "edit", groupedMember: gm })}
                                   >
                                     <Pencil className="h-4 w-4" />
-                                    Edit
+                                    {t("Edit")}
                                   </DropdownMenuItem>
                                 )}
                                 {canRemove && (
@@ -358,7 +362,7 @@ export function MembersPage() {
                                       onClick={() => setRemoveTarget({ profileId: gm.profile_id, name: gm.full_name ?? "Staff" })}
                                     >
                                       <Trash2 className="h-4 w-4" />
-                                      Remove
+                                      {t("Remove")}
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -376,7 +380,7 @@ export function MembersPage() {
                     colSpan={hasActions ? 8 : 7}
                     className="px-4 py-10 text-center text-sm text-muted-foreground"
                   >
-                    No staff match the current filters
+                    {t("No staff match the current filters")}
                   </td>
                 </tr>
               )}
@@ -395,18 +399,18 @@ export function MembersPage() {
       <AlertDialog open={!!removeTarget} onOpenChange={(v) => { if (!v) setRemoveTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove staff member?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Remove staff member?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{removeTarget?.name}</strong> will be permanently removed from all branches.
+              <strong>{removeTarget?.name}</strong> {t("will be permanently removed from all branches.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmRemove}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remove
+              {t("Remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

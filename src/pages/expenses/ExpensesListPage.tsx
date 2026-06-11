@@ -34,6 +34,7 @@ import { ExpenseDetailSheet } from "@/components/expenses/ExpenseDetailSheet"
 import { ExpenseSummaryChart } from "@/components/expenses/ExpenseSummaryChart"
 import { ExpenseBranchChart } from "@/components/expenses/ExpenseBranchChart"
 import type { Expense, ExpenseFilters } from "@/types/expense"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -93,16 +94,17 @@ function formatDate(dateStr: string) {
 // ── Receipt image viewer ───────────────────────────────────
 
 function ReceiptDialog({ url, open, onOpenChange }: { url: string; open: boolean; onOpenChange: (o: boolean) => void }) {
+  const { t } = useLanguage()
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg" aria-describedby={undefined}>
         <DialogHeader>
-          <DialogTitle>Receipt</DialogTitle>
+          <DialogTitle>{t("Receipt")}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col items-center gap-3">
           <img
             src={url}
-            alt="Receipt"
+            alt={t("Receipt")}
             className="max-h-[60vh] w-full rounded-lg object-contain"
           />
           <a
@@ -111,7 +113,7 @@ function ReceiptDialog({ url, open, onOpenChange }: { url: string; open: boolean
             rel="noopener noreferrer"
             className="text-xs text-muted-foreground hover:text-foreground underline"
           >
-            Open in new tab
+            {t("Open in new tab")}
           </a>
         </div>
       </DialogContent>
@@ -165,6 +167,7 @@ function ExpenseCard({
   expense: Expense
   onView: (e: Expense) => void
 }) {
+  const { t } = useLanguage()
   const Icon = getCategoryIcon(expense.category?.icon ?? null)
 
   return (
@@ -175,7 +178,7 @@ function ExpenseCard({
       <div className="flex items-start gap-3">
         {expense.receipt_url ? (
           <div className="h-10 w-10 shrink-0 overflow-hidden rounded border">
-            <img src={expense.receipt_url} alt="Receipt" className="h-full w-full object-cover" />
+            <img src={expense.receipt_url} alt={t("Receipt")} className="h-full w-full object-cover" />
           </div>
         ) : (
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded border bg-muted">
@@ -185,7 +188,7 @@ function ExpenseCard({
 
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium truncate">
-            {expense.category?.name ?? "Uncategorized"}
+            {expense.category?.name ?? t("Uncategorized")}
           </p>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
             <span>{expense.branch?.name}</span>
@@ -225,6 +228,7 @@ function formatDateRangeTrigger(range: DateRange | undefined) {
 // ── Page ───────────────────────────────────────────────────
 
 export function ExpensesListPage() {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete } = useUserPermissions()
@@ -348,9 +352,9 @@ export function ExpensesListPage() {
         }
       }
 
-      toast.success("Expense deleted")
+      toast.success(t("Expense deleted"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete expense")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete expense"))
     } finally {
       setDeleteTarget(null)
     }
@@ -362,7 +366,7 @@ export function ExpensesListPage() {
       {/* ── Header ─────────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Expenses</h1>
+          <h1 className="text-xl font-semibold">{t("Expenses")}</h1>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="h-8 gap-1.5 text-sm font-normal">
@@ -373,11 +377,11 @@ export function ExpensesListPage() {
             <PopoverContent className="w-auto p-0" align="start">
               <div className="flex flex-wrap gap-1 border-b px-3 py-2">
                 {([
-                  { label: "Today",      from: new Date(),                                     to: new Date() },
-                  { label: "Yesterday",  from: subDays(new Date(), 1),                         to: subDays(new Date(), 1) },
-                  { label: "This week",  from: startOfWeek(new Date(), { weekStartsOn: 6 }),   to: new Date() },
-                  { label: "This month", from: startOfMonth(new Date()),                       to: new Date() },
-                  { label: "Last month", from: startOfMonth(subMonths(new Date(), 1)),         to: endOfMonth(subMonths(new Date(), 1)) },
+                  { label: t("Today"),      from: new Date(),                                     to: new Date() },
+                  { label: t("Yesterday"),  from: subDays(new Date(), 1),                         to: subDays(new Date(), 1) },
+                  { label: t("This week"),  from: startOfWeek(new Date(), { weekStartsOn: 6 }),   to: new Date() },
+                  { label: t("This month"), from: startOfMonth(new Date()),                       to: new Date() },
+                  { label: t("Last month"), from: startOfMonth(subMonths(new Date(), 1)),         to: endOfMonth(subMonths(new Date(), 1)) },
                 ] as { label: string; from: Date; to: Date }[])
                   .filter(({ to }) => to >= APP_START)
                   .map(({ label, from, to }) => (
@@ -409,7 +413,7 @@ export function ExpensesListPage() {
           <div className="relative w-full sm:w-[160px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
-              placeholder="Search expenses…"
+              placeholder={t("Search expenses…")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8"
@@ -421,7 +425,7 @@ export function ExpensesListPage() {
             options={branchList.map(b => ({ value: b.id, label: b.name }))}
             selected={branchFilters}
             onChange={setBranchFilters}
-            placeholder="All branches"
+            placeholder={t("All branches")}
             className="w-[160px]"
           />
 
@@ -430,14 +434,14 @@ export function ExpensesListPage() {
             options={categories.map((c) => ({ value: c.id, label: c.name }))}
             selected={categoryFilters}
             onChange={setCategoryFilters}
-            placeholder="All categories"
+            placeholder={t("All categories")}
             className="w-[160px]"
           />
 
           {!isMobile && canSubmit && (
             <Button onClick={() => setDrawer({ type: "create" })}>
               <Plus className="h-4 w-4" />
-              Add Expense
+              {t("Add Expense")}
             </Button>
           )}
         </div>
@@ -449,13 +453,13 @@ export function ExpensesListPage() {
           <CardHeader className="pb-1">
             <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <TrendingDown className="h-4 w-4" />
-              Total Expenses
+              {t("Total Expenses")}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-xl font-bold tabular-nums">{formatAmount(totalAmount)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {filteredExpenses.length} {filteredExpenses.length === 1 ? "entry" : "entries"}
+              {filteredExpenses.length} {filteredExpenses.length === 1 ? t("entry") : t("entries")}
             </p>
           </CardContent>
         </Card>
@@ -466,7 +470,7 @@ export function ExpensesListPage() {
         <Collapsible open={chartsOpen} onOpenChange={setChartsOpen}>
           <CollapsibleTrigger asChild>
             <button className="flex w-full items-center justify-between rounded-lg border bg-card px-4 py-3 text-sm font-medium transition-colors hover:bg-muted/40">
-              <span>Charts</span>
+              <span>{t("Charts")}</span>
               <ChevronDown
                 className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${chartsOpen ? "rotate-180" : ""}`}
               />
@@ -475,7 +479,7 @@ export function ExpensesListPage() {
           <CollapsibleContent className="space-y-4 pt-3">
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold">By Category</CardTitle>
+                <CardTitle className="text-sm font-semibold">{t("By Category")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ExpenseSummaryChart
@@ -487,7 +491,7 @@ export function ExpensesListPage() {
             </Card>
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-semibold">By Branch</CardTitle>
+                <CardTitle className="text-sm font-semibold">{t("By Branch")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <ExpenseBranchChart month={chartMonth} year={chartYear} />
@@ -499,7 +503,7 @@ export function ExpensesListPage() {
         <div className="grid grid-cols-2 gap-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">By Category</CardTitle>
+              <CardTitle className="text-sm font-semibold">{t("By Category")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ExpenseSummaryChart
@@ -511,7 +515,7 @@ export function ExpensesListPage() {
           </Card>
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-semibold">By Branch</CardTitle>
+              <CardTitle className="text-sm font-semibold">{t("By Branch")}</CardTitle>
             </CardHeader>
             <CardContent>
               <ExpenseBranchChart month={chartMonth} year={chartYear} />
@@ -523,7 +527,7 @@ export function ExpensesListPage() {
       {/* ── Expense list ───────────────────────────────── */}
       {error ? (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Failed to load expenses. Please try again.
+          {t("Failed to load expenses. Please try again.")}
         </div>
       ) : isMobile ? (
         /* ─ Mobile cards ─ */
@@ -537,15 +541,15 @@ export function ExpensesListPage() {
                   <Receipt className="h-5 w-5 text-muted-foreground" />
                 </div>
                 <div>
-                  <p className="text-sm font-medium">No expenses found</p>
+                  <p className="text-sm font-medium">{t("No expenses found")}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Adjust your filters or add your first expense
+                    {t("Adjust your filters or add your first expense")}
                   </p>
                 </div>
                 {canSubmit && (
                   <Button onClick={() => setDrawer({ type: "create" })}>
                     <Plus className="h-4 w-4" />
-                    Add Expense
+                    {t("Add Expense")}
                   </Button>
                 )}
               </div>
@@ -566,12 +570,12 @@ export function ExpensesListPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Date</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branch</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Category</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Description</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-14">Receipt</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">Amount</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Date")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branch")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Category")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Description")}</th>
+                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-14">{t("Receipt")}</th>
+                <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Amount")}</th>
                 <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
@@ -586,15 +590,15 @@ export function ExpensesListPage() {
                         <Receipt className="h-5 w-5 text-muted-foreground" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium">No expenses found</p>
+                        <p className="text-sm font-medium">{t("No expenses found")}</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Adjust your filters or add your first expense
+                          {t("Adjust your filters or add your first expense")}
                         </p>
                       </div>
                       {canSubmit && (
                         <Button onClick={() => setDrawer({ type: "create" })}>
                           <Plus className="h-4 w-4" />
-                          Add Expense
+                          {t("Add Expense")}
                         </Button>
                       )}
                     </div>
@@ -625,7 +629,7 @@ export function ExpensesListPage() {
                         <span className="flex items-center gap-1.5">
                           <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                           {expense.category?.name ?? (
-                            <span className="text-muted-foreground">Uncategorized</span>
+                            <span className="text-muted-foreground">{t("Uncategorized")}</span>
                           )}
                         </span>
                       </td>
@@ -641,7 +645,7 @@ export function ExpensesListPage() {
                             className="block h-10 w-10 overflow-hidden rounded border hover:opacity-80 transition-opacity"
                             onClick={(e) => { e.stopPropagation(); setViewingImage(expense.receipt_url!) }}
                           >
-                            <img src={expense.receipt_url} alt="Receipt" className="h-full w-full object-cover" />
+                            <img src={expense.receipt_url} alt={t("Receipt")} className="h-full w-full object-cover" />
                           </button>
                         ) : (
                           <div className="flex h-10 w-10 items-center justify-center rounded border bg-muted">
@@ -666,7 +670,7 @@ export function ExpensesListPage() {
                               {canEdit && (
                                 <DropdownMenuItem onClick={() => setDrawer({ type: "edit", expense })}>
                                   <Pencil className="h-4 w-4" />
-                                  Edit
+                                  {t("Edit")}
                                 </DropdownMenuItem>
                               )}
                               {canEdit && canDeleteEntry && <DropdownMenuSeparator />}
@@ -676,7 +680,7 @@ export function ExpensesListPage() {
                                   onClick={() => setDeleteTarget(expense)}
                                 >
                                   <Trash2 className="h-4 w-4" />
-                                  Delete
+                                  {t("Delete")}
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
@@ -700,7 +704,7 @@ export function ExpensesListPage() {
           onClick={() => setDrawer({ type: "create" })}
         >
           <Plus className="h-6 w-6" />
-          <span className="sr-only">Add Expense</span>
+          <span className="sr-only">{t("Add Expense")}</span>
         </Button>
       )}
 
@@ -734,18 +738,18 @@ export function ExpensesListPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete expense?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete expense?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The expense record will be permanently removed.
+              {t("This action cannot be undone. The expense record will be permanently removed.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={confirmDelete}
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

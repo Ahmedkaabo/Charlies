@@ -16,7 +16,7 @@ const STORAGE_KEY = "lang"
 export function LanguageProvider({ children }: { children: React.ReactNode }) {
   const [language, setLanguageState] = React.useState<Language>(() => {
     const stored = localStorage.getItem(STORAGE_KEY)
-    return stored === "ar" || stored === "en" ? stored : "en"
+    return stored === "ar" || stored === "en" ? stored : "ar"
   })
 
   const setLanguage = React.useCallback((lang: Language) => {

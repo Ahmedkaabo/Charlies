@@ -6,8 +6,10 @@ import { useGetBranch, useUpdateBranch } from "@/hooks/useBranches"
 import { Skeleton } from "@/components/ui/skeleton"
 import { BranchForm } from "./BranchForm"
 import type { BranchFormValues } from "./BranchForm"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 export function EditBranchPage() {
+  const { t } = useLanguage()
   const { id = "" } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { data: branch, isLoading, isError } = useGetBranch(id)
@@ -16,10 +18,10 @@ export function EditBranchPage() {
   async function handleSubmit(values: BranchFormValues) {
     try {
       await updateBranch.mutateAsync(values)
-      toast.success("Branch updated!")
+      toast.success(t("Branch updated!"))
       navigate(`/branches/${id}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to update branch"))
       throw err
     }
   }
@@ -41,7 +43,7 @@ export function EditBranchPage() {
   if (isError || !branch) {
     return (
       <div className="p-4 md:p-6">
-        <p className="text-sm text-destructive">Branch not found.</p>
+        <p className="text-sm text-destructive">{t("Branch not found.")}</p>
       </div>
     )
   }
@@ -57,7 +59,7 @@ export function EditBranchPage() {
           <ChevronLeft className="h-4 w-4" />
           {branch.name}
         </Link>
-        <h1 className="text-xl font-semibold">Edit Branch</h1>
+        <h1 className="text-xl font-semibold">{t("Edit Branch")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">{branch.name}</p>
       </div>
 
@@ -76,7 +78,7 @@ export function EditBranchPage() {
           }}
           onSubmit={handleSubmit}
           onCancel={() => navigate(`/branches/${id}`)}
-          submitLabel="Save Changes"
+          submitLabel={t("Save Changes")}
         />
       </div>
     </div>

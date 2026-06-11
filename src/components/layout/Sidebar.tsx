@@ -69,7 +69,7 @@ export function CharSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const { theme, setTheme } = useTheme()
-  const { language, setLanguage, t } = useLanguage()
+  const { language, setLanguage, t, isRTL } = useLanguage()
   const isDark = theme === "dark"
 
   async function copyInviteLink() {
@@ -108,7 +108,7 @@ export function CharSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
 
   return (
     <>
-      <Sidebar collapsible="offcanvas" {...props}>
+      <Sidebar collapsible="offcanvas" side={isRTL ? "right" : "left"} {...props}>
 
         {/* ── Logo ──────────────────────────────────── */}
         <SidebarHeader>

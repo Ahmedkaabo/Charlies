@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form"
 import { LocationMapPicker } from "@/components/LocationMapPicker"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // Shift settings and attendance rules are now managed per-shift in branch_shifts.
 
@@ -49,6 +50,7 @@ export function BranchForm({
   onCancel,
   submitLabel = "Save",
 }: BranchFormProps) {
+  const { t } = useLanguage()
   const [locating, setLocating] = useState(false)
 
   const form = useForm<BranchFormValues>({
@@ -74,7 +76,7 @@ export function BranchForm({
 
   function handleGetLocation() {
     if (!navigator.geolocation) {
-      toast.error("Geolocation is not supported by your browser")
+      toast.error(t("Geolocation is not supported by your browser"))
       return
     }
     setLocating(true)
@@ -83,7 +85,7 @@ export function BranchForm({
         form.setValue("latitude", pos.coords.latitude, { shouldValidate: true })
         form.setValue("longitude", pos.coords.longitude, { shouldValidate: true })
         setLocating(false)
-        toast.success("Location detected")
+        toast.success(t("Location detected"))
       },
       (err) => {
         toast.error(`Could not get location: ${err.message}`)
@@ -105,9 +107,9 @@ export function BranchForm({
           {/* Basic Information */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold">Basic Information</h3>
+              <h3 className="text-sm font-semibold">{t("Basic Information")}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                General details about this branch
+                {t("General details about this branch")}
               </p>
             </div>
 
@@ -118,10 +120,10 @@ export function BranchForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Branch Name <span className="text-destructive">*</span>
+                      {t("Branch Name")} <span className="text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g. Downtown Branch" {...field} />
+                      <Input placeholder={t("e.g. Downtown Branch")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -132,7 +134,7 @@ export function BranchForm({
                 name="name_ar"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Arabic Name</FormLabel>
+                    <FormLabel>{t("Arabic Name")}</FormLabel>
                     <FormControl>
                       <Input
                         dir="rtl"
@@ -152,9 +154,9 @@ export function BranchForm({
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Address</FormLabel>
+                  <FormLabel>{t("Address")}</FormLabel>
                   <FormControl>
-                    <Input placeholder="Street address" {...field} />
+                    <Input placeholder={t("Street address")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -167,9 +169,9 @@ export function BranchForm({
                 name="city"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>City</FormLabel>
+                    <FormLabel>{t("City")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="Cairo" {...field} />
+                      <Input placeholder={t("Cairo")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -180,9 +182,9 @@ export function BranchForm({
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Phone</FormLabel>
+                    <FormLabel>{t("Phone")}</FormLabel>
                     <FormControl>
-                      <Input placeholder="010 0000 0000" {...field} />
+                      <Input placeholder={t("010 0000 0000")} {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -197,9 +199,9 @@ export function BranchForm({
           <div className="space-y-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold">Location</h3>
+                <h3 className="text-sm font-semibold">{t("Location")}</h3>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Tap the map or drag the pin — staff must be within the radius to check in
+                  {t("Tap the map or drag the pin — staff must be within the radius to check in")}
                 </p>
               </div>
               <Button
@@ -214,7 +216,7 @@ export function BranchForm({
                   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   : <MapPin className="h-3.5 w-3.5" />
                 }
-                My Location
+                {t("My Location")}
               </Button>
             </div>
 
@@ -237,7 +239,7 @@ export function BranchForm({
               name="location_radius_meters"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Check-in Radius (meters)</FormLabel>
+                  <FormLabel>{t("Check-in Radius (meters)")}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -247,7 +249,7 @@ export function BranchForm({
                       onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
-                  <FormDescription>Min 10m — Max 500m</FormDescription>
+                  <FormDescription>{t("Min 10m — Max 500m")}</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -269,9 +271,9 @@ export function BranchForm({
                   />
                 </FormControl>
                 <div className="space-y-0.5 leading-none">
-                  <FormLabel className="text-sm font-medium">Active</FormLabel>
+                  <FormLabel className="text-sm font-medium">{t("Active")}</FormLabel>
                   <FormDescription>
-                    Branch is open and staff can check in
+                    {t("Branch is open and staff can check in")}
                   </FormDescription>
                 </div>
               </FormItem>
@@ -287,11 +289,11 @@ export function BranchForm({
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-            {submitLabel}
+            {t(submitLabel)}
           </Button>
         </div>
       </form>

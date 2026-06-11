@@ -16,6 +16,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // ── Schema ────────────────────────────────────────────────────
 
@@ -66,6 +67,7 @@ export function ShiftForm({
   onCancel,
   submitLabel = "Save",
 }: ShiftFormProps) {
+  const { t } = useLanguage()
   const form = useForm<ShiftFormValues>({
     resolver: zodResolver(shiftSchema),
     defaultValues: {
@@ -100,9 +102,9 @@ export function ShiftForm({
           {/* Shift Basics */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold">Shift Details</h3>
+              <h3 className="text-sm font-semibold">{t("Shift Details")}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Name this shift and set its time window
+                {t("Name this shift and set its time window")}
               </p>
             </div>
 
@@ -111,9 +113,9 @@ export function ShiftForm({
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Shift Name <span className="text-destructive">*</span></FormLabel>
+                  <FormLabel>{t("Shift Name")} <span className="text-destructive">*</span></FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g. Morning Shift" {...field} />
+                    <Input placeholder={t("e.g. Morning Shift")} {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -126,7 +128,7 @@ export function ShiftForm({
                 name="shift_start"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Start Time</FormLabel>
+                    <FormLabel>{t("Start Time")}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -139,7 +141,7 @@ export function ShiftForm({
                 name="shift_end"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>End Time</FormLabel>
+                    <FormLabel>{t("End Time")}</FormLabel>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
@@ -154,7 +156,7 @@ export function ShiftForm({
               name="checkin_window_minutes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Check-in Window (minutes)</FormLabel>
+                  <FormLabel>{t("Check-in Window (minutes)")}</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
@@ -165,7 +167,9 @@ export function ShiftForm({
                     />
                   </FormControl>
                   <FormDescription>
-                    Staff can check in ±{field.value} min around shift start
+                    {t("Staff can check in ±")}
+                    {field.value}
+                    {t(" min around shift start")}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -181,9 +185,9 @@ export function ShiftForm({
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                   <div className="space-y-0.5 leading-none">
-                    <FormLabel className="text-sm font-medium">Active</FormLabel>
+                    <FormLabel className="text-sm font-medium">{t("Active")}</FormLabel>
                     <FormDescription>
-                      Staff can check in against this shift
+                      {t("Staff can check in against this shift")}
                     </FormDescription>
                   </div>
                 </FormItem>
@@ -196,9 +200,9 @@ export function ShiftForm({
           {/* Hour Rules */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold">Attendance Hour Rules</h3>
+              <h3 className="text-sm font-semibold">{t("Attendance Hour Rules")}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                How many hours determine the daily attendance value
+                {t("How many hours determine the daily attendance value")}
               </p>
             </div>
 
@@ -208,7 +212,7 @@ export function ShiftForm({
                 name="full_day_hours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Full Day Hours</FormLabel>
+                    <FormLabel>{t("Full Day Hours")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -219,7 +223,7 @@ export function ShiftForm({
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>Minimum to count as 1.0 day</FormDescription>
+                    <FormDescription>{t("Minimum to count as 1.0 day")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -229,7 +233,7 @@ export function ShiftForm({
                 name="overtime_hours"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Overtime Hours</FormLabel>
+                    <FormLabel>{t("Overtime Hours")}</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -240,7 +244,7 @@ export function ShiftForm({
                         onChange={(e) => field.onChange(Number(e.target.value))}
                       />
                     </FormControl>
-                    <FormDescription>Counts as 1.5 days</FormDescription>
+                    <FormDescription>{t("Counts as 1.5 days")}</FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -250,16 +254,16 @@ export function ShiftForm({
             {/* Live tier preview */}
             <div className="rounded-lg bg-muted/50 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
               <p>
-                <span className="font-medium text-foreground">0 days</span>
-                {" "}— below {fullDay}h
+                <span className="font-medium text-foreground">{t("0 days")}</span>
+                {" "}{t("— below")}{" "}{fullDay}h
               </p>
               <p>
-                <span className="font-medium text-foreground">1.0 day</span>
+                <span className="font-medium text-foreground">{t("1.0 day")}</span>
                 {" "}— {fullDay}h – {overtime}h
               </p>
               <p>
-                <span className="font-medium text-foreground">1.5 days</span>
-                {" "}— {overtime}h or more
+                <span className="font-medium text-foreground">{t("1.5 days")}</span>
+                {" "}{t("— ")}{overtime}h {t("or more")}
               </p>
             </div>
           </div>
@@ -269,9 +273,9 @@ export function ShiftForm({
           {/* Late Penalty */}
           <div className="space-y-4">
             <div>
-              <h3 className="text-sm font-semibold">Late Penalty</h3>
+              <h3 className="text-sm font-semibold">{t("Late Penalty")}</h3>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Automatically deduct hours from staff who arrive late
+                {t("Automatically deduct hours from staff who arrive late")}
               </p>
             </div>
 
@@ -284,9 +288,9 @@ export function ShiftForm({
                     <Switch checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>
                   <div className="space-y-0.5 leading-none">
-                    <FormLabel className="text-sm font-medium">Enable Late Deduction</FormLabel>
+                    <FormLabel className="text-sm font-medium">{t("Enable Late Deduction")}</FormLabel>
                     <FormDescription>
-                      Deduct hours from total when staff check in late
+                      {t("Deduct hours from total when staff check in late")}
                     </FormDescription>
                   </div>
                 </FormItem>
@@ -300,7 +304,7 @@ export function ShiftForm({
                   name="late_grace_minutes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Grace Period (minutes)</FormLabel>
+                      <FormLabel>{t("Grace Period (minutes)")}</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -311,7 +315,7 @@ export function ShiftForm({
                         />
                       </FormControl>
                       <FormDescription>
-                        Lateness within this window is ignored
+                        {t("Lateness within this window is ignored")}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -319,9 +323,9 @@ export function ShiftForm({
                 />
 
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Deduction Rule</p>
+                  <p className="text-sm font-medium">{t("Deduction Rule")}</p>
                   <div className="flex items-center gap-3 flex-wrap">
-                    <span className="text-sm text-muted-foreground">Per every</span>
+                    <span className="text-sm text-muted-foreground">{t("Per every")}</span>
                     <FormField
                       control={form.control}
                       name="late_per_minutes"
@@ -342,7 +346,7 @@ export function ShiftForm({
                         </FormItem>
                       )}
                     />
-                    <span className="text-sm text-muted-foreground">min late → deduct</span>
+                    <span className="text-sm text-muted-foreground">{t("min late → deduct")}</span>
                     <FormField
                       control={form.control}
                       name="late_deduct_hours"
@@ -364,10 +368,10 @@ export function ShiftForm({
                         </FormItem>
                       )}
                     />
-                    <span className="text-sm text-muted-foreground">hrs</span>
+                    <span className="text-sm text-muted-foreground">{t("hrs")}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Example: late by 45 min with a 30-min rule → deduct{" "}
+                    {t("Example: late by 45 min with a 30-min rule → deduct")}{" "}
                     {form.watch("late_deduct_hours") ?? 0.5}h
                   </p>
                 </div>
@@ -384,11 +388,11 @@ export function ShiftForm({
             onClick={onCancel}
             disabled={isSubmitting}
           >
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-            {submitLabel}
+            {t(submitLabel)}
           </Button>
         </div>
       </form>

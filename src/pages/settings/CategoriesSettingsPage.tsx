@@ -21,6 +21,7 @@ import {
 import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import { ICON_OPTIONS } from "@/components/expenses/CategoryFormSheet"
 import type { ExpenseCategory } from "@/types/expense"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -71,6 +72,7 @@ function AddCategoryDialog({
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
+  const { t } = useLanguage()
   const create = useCreateExpenseCategory()
   const [name,   setName]   = useState("")
   const [icon,   setIcon]   = useState("more-horizontal")
@@ -85,14 +87,14 @@ function AddCategoryDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const trimmed = name.trim()
-    if (!trimmed) { toast.error("Name is required"); return }
+    if (!trimmed) { toast.error(t("Name is required")); return }
     try {
       await create.mutateAsync({ name: trimmed, icon, is_cogs: isCogs })
-      toast.success("Category added")
+      toast.success(t("Category added"))
       reset()
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add category")
+      toast.error(err instanceof Error ? err.message : t("Failed to add category"))
     }
   }
 
@@ -100,14 +102,14 @@ function AddCategoryDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v) }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>New Category</DialogTitle>
-          <DialogDescription>Add a new expense category.</DialogDescription>
+          <DialogTitle>{t("New Category")}</DialogTitle>
+          <DialogDescription>{t("Add a new expense category.")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Name <span className="text-destructive">*</span></Label>
+            <Label>{t("Name")} <span className="text-destructive">*</span></Label>
             <Input
-              placeholder="e.g. Cleaning"
+              placeholder={t("e.g. Cleaning")}
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoFocus
@@ -115,7 +117,7 @@ function AddCategoryDialog({
           </div>
 
           <div className="space-y-2">
-            <Label>Icon</Label>
+            <Label>{t("Icon")}</Label>
             <div className="grid grid-cols-7 gap-1.5">
               {ICON_OPTIONS.map(({ value, icon: Icon, label }) => (
                 <button
@@ -140,17 +142,17 @@ function AddCategoryDialog({
           <div className="flex items-start gap-3 rounded-lg border p-4">
             <Switch id="cogs-new" checked={isCogs} onCheckedChange={setIsCogs} />
             <div className="space-y-0.5 leading-none">
-              <Label htmlFor="cogs-new" className="text-sm font-medium cursor-pointer">COGS</Label>
-              <p className="text-xs text-muted-foreground">Cost of Goods Sold</p>
+              <Label htmlFor="cogs-new" className="text-sm font-medium cursor-pointer">{t("COGS")}</Label>
+              <p className="text-xs text-muted-foreground">{t("Cost of Goods Sold")}</p>
             </div>
           </div>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? "Adding…" : "Add Category"}
+              {create.isPending ? t("Adding…") : t("Add Category")}
             </Button>
           </DialogFooter>
         </form>
@@ -170,6 +172,7 @@ function CategoryDrawer({
   onClose: () => void
   onDeleted: () => void
 }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const update   = useUpdateExpenseCategory()
   const del      = useDeleteExpenseCategory()
@@ -206,12 +209,12 @@ function CategoryDrawer({
   async function handleSave() {
     if (!category) return
     const trimmed = name.trim()
-    if (!trimmed) { toast.error("Name is required"); return }
+    if (!trimmed) { toast.error(t("Name is required")); return }
     try {
       await update.mutateAsync({ id: category.id, name: trimmed, icon, is_cogs: isCogs })
-      toast.success("Category updated")
+      toast.success(t("Category updated"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update")
+      toast.error(err instanceof Error ? err.message : t("Failed to update"))
     }
   }
 
@@ -219,11 +222,11 @@ function CategoryDrawer({
     if (!category) return
     try {
       await del.mutateAsync(category.id)
-      toast.success(`"${category.name}" deleted`)
+      toast.success(`"${category.name}" ${t("deleted")}`)
       setConfirmDelete(false)
       onDeleted()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete"))
     }
   }
 
@@ -233,7 +236,7 @@ function CategoryDrawer({
       await link.mutateAsync({ categoryId: category.id, supplierId: addingSupplier })
       setAddingSupplier("")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to link supplier")
+      toast.error(err instanceof Error ? err.message : t("Failed to link supplier"))
     }
   }
 
@@ -242,7 +245,7 @@ function CategoryDrawer({
     try {
       await unlink.mutateAsync({ categoryId: category.id, supplierId })
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to unlink supplier")
+      toast.error(err instanceof Error ? err.message : t("Failed to unlink supplier"))
     }
   }
 
@@ -272,7 +275,7 @@ function CategoryDrawer({
                   <div className="min-w-0">
                     <SheetTitle className="truncate">{category.name}</SheetTitle>
                     <SheetDescription className="text-xs">
-                      Changes save when you click Save
+                      {t("Changes save when you click Save")}
                     </SheetDescription>
                   </div>
                 </div>
@@ -284,11 +287,11 @@ function CategoryDrawer({
                 {/* Name */}
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-semibold">Details</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Name and type</p>
+                    <h3 className="text-sm font-semibold">{t("Details")}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("Name and type")}</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>Name</Label>
+                    <Label>{t("Name")}</Label>
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
@@ -303,10 +306,10 @@ function CategoryDrawer({
                     />
                     <div className="space-y-0.5 leading-none">
                       <Label htmlFor="is-cogs" className="text-sm font-medium cursor-pointer">
-                        Cost of Goods Sold (COGS)
+                        {t("Cost of Goods Sold (COGS)")}
                       </Label>
                       <p className="text-xs text-muted-foreground">
-                        Mark if this category directly affects product cost
+                        {t("Mark if this category directly affects product cost")}
                       </p>
                     </div>
                   </div>
@@ -317,8 +320,8 @@ function CategoryDrawer({
                 {/* Icon picker */}
                 <div className="space-y-3">
                   <div>
-                    <h3 className="text-sm font-semibold">Icon</h3>
-                    <p className="text-xs text-muted-foreground mt-0.5">Choose an icon for this category</p>
+                    <h3 className="text-sm font-semibold">{t("Icon")}</h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t("Choose an icon for this category")}</p>
                   </div>
                   <div className="grid grid-cols-7 gap-1.5">
                     {ICON_OPTIONS.map(({ value, icon: Icon, label }) => (
@@ -346,9 +349,9 @@ function CategoryDrawer({
                 {/* Suppliers */}
                 <div className="space-y-3">
                   <div>
-                    <h3 className="text-sm font-semibold">Suppliers</h3>
+                    <h3 className="text-sm font-semibold">{t("Suppliers")}</h3>
                     <p className="text-xs text-muted-foreground mt-0.5">
-                      Suppliers linked to this category
+                      {t("Suppliers linked to this category")}
                     </p>
                   </div>
 
@@ -362,7 +365,7 @@ function CategoryDrawer({
                       ))}
                     </div>
                   ) : linkedSuppliers.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No suppliers linked yet.</p>
+                    <p className="text-sm text-muted-foreground">{t("No suppliers linked yet.")}</p>
                   ) : (
                     <div className="divide-y rounded-lg border">
                       {linkedSuppliers.map((s) => (
@@ -389,7 +392,7 @@ function CategoryDrawer({
                         onValueChange={setAddingSupplier}
                       >
                         <SelectTrigger className="flex-1 h-9 text-sm">
-                          <SelectValue placeholder="Add a supplier…" />
+                          <SelectValue placeholder={t("Add a supplier…")} />
                         </SelectTrigger>
                         <SelectContent>
                           {unlinkedSuppliers.map((s) => (
@@ -411,7 +414,7 @@ function CategoryDrawer({
 
                   {allSuppliers.length === 0 && (
                     <p className="text-xs text-muted-foreground">
-                      No suppliers available. Add suppliers from the Suppliers page first.
+                      {t("No suppliers available. Add suppliers from the Suppliers page first.")}
                     </p>
                   )}
                 </div>
@@ -425,14 +428,14 @@ function CategoryDrawer({
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete
+                  {t("Delete")}
                 </Button>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" onClick={() => { onClose(); setAddingSupplier("") }}>
-                    Close
+                    {t("Close")}
                   </Button>
                   <Button onClick={handleSave} disabled={update.isPending}>
-                    {update.isPending ? "Saving…" : "Save Changes"}
+                    {update.isPending ? t("Saving…") : t("Save Changes")}
                   </Button>
                 </div>
               </div>
@@ -444,18 +447,18 @@ function CategoryDrawer({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete category?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete category?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              "{category?.name}" will be removed. Expenses using this category will become uncategorized.
+              "{category?.name}" {t("will be removed. Expenses using this category will become uncategorized.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={handleDelete}
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -473,6 +476,7 @@ function CategoryCard({
   category: ExpenseCategory
   onClick: () => void
 }) {
+  const { t } = useLanguage()
   const Icon = getCategoryIcon(category.icon)
   return (
     <button onClick={onClick} className="group block w-full text-left">
@@ -482,7 +486,7 @@ function CategoryCard({
         </div>
         <span className="flex-1 min-w-0 text-sm font-medium truncate">{category.name}</span>
         {category.is_cogs && (
-          <Badge variant="secondary" className="text-xs shrink-0">COGS</Badge>
+          <Badge variant="secondary" className="text-xs shrink-0">{t("COGS")}</Badge>
         )}
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
       </div>
@@ -509,6 +513,7 @@ function ListSkeleton() {
 // ── Page ───────────────────────────────────────────────────────
 
 export function CategoriesSettingsPage() {
+  const { t } = useLanguage()
   const { data: categories = [], isLoading } = useGetExpenseCategories()
   const [activeCategory, setActiveCategory] = useState<ExpenseCategory | null>(null)
   const [addOpen, setAddOpen]               = useState(false)
@@ -518,19 +523,19 @@ export function CategoriesSettingsPage() {
 
       {/* ── Header ─────────────────────────────────── */}
       <div>
-        <h1 className="text-xl font-semibold">Expense Categories</h1>
+        <h1 className="text-xl font-semibold">{t("Expense Categories")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Manage categories and their linked suppliers.
+          {t("Manage categories and their linked suppliers.")}
         </p>
       </div>
 
       {/* ── List ───────────────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base font-semibold">Categories</h2>
+          <h2 className="text-base font-semibold">{t("Categories")}</h2>
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add Category
+            {t("Add Category")}
           </Button>
         </div>
 
@@ -542,14 +547,14 @@ export function CategoriesSettingsPage() {
               <Tag className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium">No categories yet</p>
+              <p className="text-sm font-medium">{t("No categories yet")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Add your first expense category to get started
+                {t("Add your first expense category to get started")}
               </p>
             </div>
             <Button onClick={() => setAddOpen(true)}>
               <Plus className="h-4 w-4" />
-              Add Category
+              {t("Add Category")}
             </Button>
           </div>
         ) : (

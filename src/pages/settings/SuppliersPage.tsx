@@ -17,6 +17,7 @@ import {
 } from "@/hooks/useSuppliers"
 import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import type { Supplier } from "@/types/expense"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -84,6 +85,7 @@ function AddSupplierDialog({
   open: boolean
   onOpenChange: (v: boolean) => void
 }) {
+  const { t } = useLanguage()
   const create = useCreateSupplier()
   const [form, setForm] = useState<SupplierFormValues>(emptyForm())
 
@@ -94,7 +96,7 @@ function AddSupplierDialog({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const name = form.name.trim()
-    if (!name) { toast.error("Supplier name is required"); return }
+    if (!name) { toast.error(t("Supplier name is required")); return }
     try {
       await create.mutateAsync({
         name,
@@ -103,11 +105,11 @@ function AddSupplierDialog({
         email:          form.email.trim() || null,
         notes:          form.notes.trim() || null,
       })
-      toast.success("Supplier added")
+      toast.success(t("Supplier added"))
       setForm(emptyForm())
       onOpenChange(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add supplier")
+      toast.error(err instanceof Error ? err.message : t("Failed to add supplier"))
     }
   }
 
@@ -115,50 +117,50 @@ function AddSupplierDialog({
     <Dialog open={open} onOpenChange={(v) => { if (!v) setForm(emptyForm()); onOpenChange(v) }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>New Supplier</DialogTitle>
-          <DialogDescription>Add a supplier that can be linked to expense categories.</DialogDescription>
+          <DialogTitle>{t("New Supplier")}</DialogTitle>
+          <DialogDescription>{t("Add a supplier that can be linked to expense categories.")}</DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label>Name <span className="text-destructive">*</span></Label>
+            <Label>{t("Name")} <span className="text-destructive">*</span></Label>
             <Input
-              placeholder="e.g. Cairo Electric Co."
+              placeholder={t("e.g. Cairo Electric Co.")}
               value={form.name}
               onChange={(e) => set("name", e.target.value)}
               autoFocus
             />
           </div>
           <div className="space-y-2">
-            <Label>Contact Person</Label>
+            <Label>{t("Contact Person")}</Label>
             <Input
-              placeholder="e.g. Ahmed Khalil"
+              placeholder={t("e.g. Ahmed Khalil")}
               value={form.contact_person}
               onChange={(e) => set("contact_person", e.target.value)}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Phone</Label>
+              <Label>{t("Phone")}</Label>
               <Input
-                placeholder="+20 10 …"
+                placeholder={t("+20 10 …")}
                 value={form.phone}
                 onChange={(e) => set("phone", e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Email</Label>
+              <Label>{t("Email")}</Label>
               <Input
                 type="email"
-                placeholder="supplier@example.com"
+                placeholder={t("supplier@example.com")}
                 value={form.email}
                 onChange={(e) => set("email", e.target.value)}
               />
             </div>
           </div>
           <div className="space-y-2">
-            <Label>Notes</Label>
+            <Label>{t("Notes")}</Label>
             <Textarea
-              placeholder="Any additional notes…"
+              placeholder={t("Any additional notes…")}
               rows={2}
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
@@ -166,10 +168,10 @@ function AddSupplierDialog({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              {t("Cancel")}
             </Button>
             <Button type="submit" disabled={create.isPending}>
-              {create.isPending ? "Adding…" : "Add Supplier"}
+              {create.isPending ? t("Adding…") : t("Add Supplier")}
             </Button>
           </DialogFooter>
         </form>
@@ -189,6 +191,7 @@ function SupplierDrawer({
   onClose: () => void
   onDeleted: () => void
 }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const update   = useUpdateSupplier()
   const del      = useDeleteSupplier()
@@ -226,7 +229,7 @@ function SupplierDrawer({
   async function handleSave() {
     if (!supplier) return
     const name = form.name.trim()
-    if (!name) { toast.error("Name is required"); return }
+    if (!name) { toast.error(t("Name is required")); return }
     try {
       await update.mutateAsync({
         id:             supplier.id,
@@ -236,10 +239,10 @@ function SupplierDrawer({
         email:          form.email.trim() || null,
         notes:          form.notes.trim() || null,
       })
-      toast.success("Supplier updated")
+      toast.success(t("Supplier updated"))
       setEditing(false)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update")
+      toast.error(err instanceof Error ? err.message : t("Failed to update"))
     }
   }
 
@@ -247,11 +250,11 @@ function SupplierDrawer({
     if (!supplier) return
     try {
       await del.mutateAsync(supplier.id)
-      toast.success(`"${supplier.name}" deleted`)
+      toast.success(`"${supplier.name}" ${t("deleted")}`)
       setConfirmDelete(false)
       onDeleted()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete"))
     }
   }
 
@@ -279,7 +282,7 @@ function SupplierDrawer({
                   <div className="min-w-0">
                     <SheetTitle className="truncate">{supplier.name}</SheetTitle>
                     <SheetDescription className="text-xs">
-                      {editing ? "Edit supplier details" : "Supplier details & expenses"}
+                      {editing ? t("Edit supplier details") : t("Supplier details & expenses")}
                     </SheetDescription>
                   </div>
                   {!editing && (
@@ -303,18 +306,18 @@ function SupplierDrawer({
                   <>
                     <div className="space-y-4">
                       <div>
-                        <h3 className="text-sm font-semibold">Supplier Info</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">Basic details</p>
+                        <h3 className="text-sm font-semibold">{t("Supplier Info")}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("Basic details")}</p>
                       </div>
                       <div className="space-y-3">
                         <div className="space-y-2">
-                          <Label>Name <span className="text-destructive">*</span></Label>
+                          <Label>{t("Name")} <span className="text-destructive">*</span></Label>
                           <Input value={form.name} onChange={(e) => setField("name", e.target.value)} autoFocus />
                         </div>
                         <div className="space-y-2">
-                          <Label>Contact Person</Label>
+                          <Label>{t("Contact Person")}</Label>
                           <Input
-                            placeholder="e.g. Ahmed Khalil"
+                            placeholder={t("e.g. Ahmed Khalil")}
                             value={form.contact_person}
                             onChange={(e) => setField("contact_person", e.target.value)}
                           />
@@ -326,23 +329,23 @@ function SupplierDrawer({
 
                     <div className="space-y-4">
                       <div>
-                        <h3 className="text-sm font-semibold">Contact</h3>
-                        <p className="text-xs text-muted-foreground mt-0.5">Phone and email</p>
+                        <h3 className="text-sm font-semibold">{t("Contact")}</h3>
+                        <p className="text-xs text-muted-foreground mt-0.5">{t("Phone and email")}</p>
                       </div>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-2">
-                          <Label>Phone</Label>
+                          <Label>{t("Phone")}</Label>
                           <Input
-                            placeholder="+20 10 …"
+                            placeholder={t("+20 10 …")}
                             value={form.phone}
                             onChange={(e) => setField("phone", e.target.value)}
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label>Email</Label>
+                          <Label>{t("Email")}</Label>
                           <Input
                             type="email"
-                            placeholder="supplier@example.com"
+                            placeholder={t("supplier@example.com")}
                             value={form.email}
                             onChange={(e) => setField("email", e.target.value)}
                           />
@@ -353,9 +356,9 @@ function SupplierDrawer({
                     <Separator />
 
                     <div className="space-y-2">
-                      <Label>Notes</Label>
+                      <Label>{t("Notes")}</Label>
                       <Textarea
-                        placeholder="Any additional notes…"
+                        placeholder={t("Any additional notes…")}
                         rows={3}
                         value={form.notes}
                         onChange={(e) => setField("notes", e.target.value)}
@@ -391,7 +394,7 @@ function SupplierDrawer({
                         </div>
                       )}
                       {!supplier.contact_person && !supplier.phone && !supplier.email && !supplier.notes && (
-                        <p className="text-sm text-muted-foreground">No contact details on record.</p>
+                        <p className="text-sm text-muted-foreground">{t("No contact details on record.")}</p>
                       )}
                     </div>
 
@@ -401,8 +404,8 @@ function SupplierDrawer({
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <div>
-                          <h3 className="text-sm font-semibold">Expenses</h3>
-                          <p className="text-xs text-muted-foreground mt-0.5">Latest 50 from this supplier</p>
+                          <h3 className="text-sm font-semibold">{t("Expenses")}</h3>
+                          <p className="text-xs text-muted-foreground mt-0.5">{t("Latest 50 from this supplier")}</p>
                         </div>
                         {expenses.length > 0 && (
                           <Badge variant="secondary" className="text-xs shrink-0">
@@ -429,7 +432,7 @@ function SupplierDrawer({
                           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted">
                             <Receipt className="h-4 w-4 text-muted-foreground" />
                           </div>
-                          <p className="text-sm text-muted-foreground">No expenses recorded yet</p>
+                          <p className="text-sm text-muted-foreground">{t("No expenses recorded yet")}</p>
                         </div>
                       ) : (
                         <div className="divide-y rounded-lg border">
@@ -470,20 +473,20 @@ function SupplierDrawer({
                   onClick={() => setConfirmDelete(true)}
                 >
                   <Trash2 className="h-4 w-4" />
-                  Delete
+                  {t("Delete")}
                 </Button>
                 {editing ? (
                   <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={cancelEdit}>
-                      Cancel
+                      {t("Cancel")}
                     </Button>
                     <Button onClick={handleSave} disabled={update.isPending}>
-                      {update.isPending ? "Saving…" : "Save Changes"}
+                      {update.isPending ? t("Saving…") : t("Save Changes")}
                     </Button>
                   </div>
                 ) : (
                   <Button variant="outline" onClick={() => { onClose(); setEditing(false) }}>
-                    Close
+                    {t("Close")}
                   </Button>
                 )}
               </div>
@@ -495,19 +498,18 @@ function SupplierDrawer({
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete supplier?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete supplier?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{supplier?.name}</strong> will be removed. Expenses linked to this supplier
-              will lose their supplier reference. This cannot be undone.
+              <strong>{supplier?.name}</strong> {t("will be removed. Expenses linked to this supplier will lose their supplier reference. This cannot be undone.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -561,6 +563,7 @@ function ListSkeleton() {
 // ── Page ───────────────────────────────────────────────────────
 
 export function SuppliersPage() {
+  const { t } = useLanguage()
   const { data: suppliers = [], isLoading } = useGetSuppliers()
   const [activeSupplier, setActiveSupplier] = useState<Supplier | null>(null)
   const [addOpen, setAddOpen]               = useState(false)
@@ -570,19 +573,19 @@ export function SuppliersPage() {
 
       {/* ── Header ─────────────────────────────────── */}
       <div>
-        <h1 className="text-xl font-semibold">Suppliers</h1>
+        <h1 className="text-xl font-semibold">{t("Suppliers")}</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
-          Manage suppliers linked to expense categories.
+          {t("Manage suppliers linked to expense categories.")}
         </p>
       </div>
 
       {/* ── Suppliers list ─────────────────────────── */}
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-4">
-          <h2 className="text-base font-semibold">All Suppliers</h2>
+          <h2 className="text-base font-semibold">{t("All Suppliers")}</h2>
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add Supplier
+            {t("Add Supplier")}
           </Button>
         </div>
 
@@ -594,14 +597,14 @@ export function SuppliersPage() {
               <Truck className="h-5 w-5 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium">No suppliers yet</p>
+              <p className="text-sm font-medium">{t("No suppliers yet")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Add your first supplier to link it to expense categories
+                {t("Add your first supplier to link it to expense categories")}
               </p>
             </div>
             <Button onClick={() => setAddOpen(true)}>
               <Plus className="h-4 w-4" />
-              Add Supplier
+              {t("Add Supplier")}
             </Button>
           </div>
         ) : (

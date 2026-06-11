@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 // ── Month options ─────────────────────────────────────────────
 
@@ -44,6 +45,7 @@ const MONTH_OPTIONS = generateMonthOptions()
 // ── Page ──────────────────────────────────────────────────────
 
 export function SalesPage() {
+  const { t } = useLanguage()
   const { profile } = useAuth()
 
   const [selectedMonth, setSelectedMonth] = useState(MONTH_OPTIONS[0].value)
@@ -80,7 +82,7 @@ export function SalesPage() {
     return (
       <div className="p-4 md:p-6 flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
         <TrendingUp className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">You're not assigned to any branch yet.</p>
+        <p className="text-sm text-muted-foreground">{t("You're not assigned to any branch yet.")}</p>
       </div>
     )
   }
@@ -148,7 +150,7 @@ export function SalesPage() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <h1 className="text-xl font-semibold">Sales</h1>
+        <h1 className="text-xl font-semibold">{t("Sales")}</h1>
         {monthSelect}
       </div>
       <SalesManagementView

@@ -6,6 +6,7 @@ import { Plus, Minus, Pencil, Trash2, Check, ChevronsUpDown, MoreHorizontal, Use
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { useIsMobile } from "@/hooks/use-mobile"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 import {
   useGetOwners,
@@ -83,15 +84,16 @@ function MultiRoleSelect({
   selectedIds: string[]
   onChange: (ids: string[]) => void
 }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
 
   const selected = roles.filter((r) => selectedIds.includes(r.id))
   const label =
     selected.length === 0
-      ? "Select roles…"
+      ? t("Select roles…")
       : selected.length === 1
       ? selected[0].name.replace(/_/g, " ")
-      : `${selected.length} roles`
+      : `${selected.length} ${t("roles")}`
 
   function toggle(id: string) {
     onChange(selectedIds.includes(id) ? selectedIds.filter((x) => x !== id) : [...selectedIds, id])
@@ -112,7 +114,7 @@ function MultiRoleSelect({
       >
         <div className="max-h-52 overflow-y-auto py-1">
           {roles.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No roles available</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">{t("No roles available")}</p>
           )}
           {roles.map((r) => {
             const checked = selectedIds.includes(r.id)
@@ -150,14 +152,15 @@ function MultiBranchSelect({
   selectedIds: string[]
   onChange: (ids: string[]) => void
 }) {
+  const { t } = useLanguage()
   const [open, setOpen] = useState(false)
 
   const label =
     selectedIds.length === 0
-      ? "Select branches…"
+      ? t("Select branches…")
       : selectedIds.length === 1
-      ? (branches.find((b) => b.id === selectedIds[0])?.name ?? "1 branch")
-      : `${selectedIds.length} branches selected`
+      ? (branches.find((b) => b.id === selectedIds[0])?.name ?? t("1 branch"))
+      : `${selectedIds.length} ${t("branches selected")}`
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -174,7 +177,7 @@ function MultiBranchSelect({
       >
         <div className="max-h-52 overflow-y-auto py-1">
           {branches.length === 0 && (
-            <p className="px-3 py-2 text-xs text-muted-foreground">No branches available</p>
+            <p className="px-3 py-2 text-xs text-muted-foreground">{t("No branches available")}</p>
           )}
           {branches.map((b) => {
             const checked = selectedIds.includes(b.id)
@@ -217,6 +220,7 @@ const createSchema = z.object({
 type CreateValues = z.infer<typeof createSchema>
 
 function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { data: branches = [] } = useGetBranches()
   const { data: allRoles = [] } = useGetRoles()
@@ -239,12 +243,12 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
         branchIds:  selectedBranchIds,
         roleIds:    values.role_ids,
       })
-      toast.success("Owner created")
+      toast.success(t("Owner created"))
       form.reset()
       setSelectedBranchIds([])
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create owner")
+      toast.error(err instanceof Error ? err.message : t("Failed to create owner"))
     }
   }
 
@@ -255,8 +259,8 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
         className={cn("flex flex-col gap-0 overflow-hidden p-0", isMobile ? "h-[90svh] rounded-t-2xl" : "w-full sm:max-w-lg")}
       >
         <SheetHeader className="border-b px-6 py-4">
-          <SheetTitle className="text-left">New Owner</SheetTitle>
-          <SheetDescription className="text-left">Create an owner account with branch access</SheetDescription>
+          <SheetTitle className="text-left">{t("New Owner")}</SheetTitle>
+          <SheetDescription className="text-left">{t("Create an owner account with branch access")}</SheetDescription>
         </SheetHeader>
 
         <Form {...form}>
@@ -265,28 +269,28 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold">Personal Info</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">Account details for the new owner</p>
+                  <h3 className="text-sm font-semibold">{t("Personal Info")}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("Account details for the new owner")}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <FormField control={form.control} name="full_name" render={({ field }) => (
-                    <FormItem><FormLabel>Full Name</FormLabel><FormControl>
+                    <FormItem><FormLabel>{t("Full Name")}</FormLabel><FormControl>
                       <Input placeholder="Ahmed Mostafa" autoComplete="off" {...field} />
                     </FormControl><FormMessage /></FormItem>
                   )} />
                   <FormField control={form.control} name="name_ar" render={({ field }) => (
-                    <FormItem><FormLabel>Arabic Name</FormLabel><FormControl>
+                    <FormItem><FormLabel>{t("Arabic Name")}</FormLabel><FormControl>
                       <Input dir="rtl" lang="ar" placeholder="أحمد مصطفى" autoComplete="off" {...field} />
                     </FormControl><FormMessage /></FormItem>
                   )} />
                 </div>
                 <FormField control={form.control} name="phone" render={({ field }) => (
-                  <FormItem><FormLabel>Phone</FormLabel><FormControl>
+                  <FormItem><FormLabel>{t("Phone")}</FormLabel><FormControl>
                     <Input type="tel" placeholder="010 0000 0000" autoComplete="off" {...field} />
                   </FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="password" render={({ field }) => (
-                  <FormItem><FormLabel>Initial Password</FormLabel><FormControl>
+                  <FormItem><FormLabel>{t("Initial Password")}</FormLabel><FormControl>
                     <Input type="password" placeholder="••••••••" autoComplete="new-password" {...field} />
                   </FormControl><FormMessage /></FormItem>
                 )} />
@@ -296,7 +300,7 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold">Role</h3>
+                  <h3 className="text-sm font-semibold">{t("Role")}</h3>
                 </div>
                 <FormField control={form.control} name="role_ids" render={({ field }) => (
                   <FormItem>
@@ -316,14 +320,14 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
 
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-sm font-semibold">Branch Access</h3>
+                  <h3 className="text-sm font-semibold">{t("Branch Access")}</h3>
                 </div>
 
                 {/* Branch multi-select */}
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium leading-none">
-                    Branches
-                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">(optional)</span>
+                    {t("Branches")}
+                    <span className="ml-1.5 text-xs font-normal text-muted-foreground">({t("optional")})</span>
                   </label>
                   <MultiBranchSelect
                     branches={branches}
@@ -331,16 +335,16 @@ function AddOwnerSheet({ open, onClose }: { open: boolean; onClose: () => void }
                     onChange={setSelectedBranchIds}
                   />
                   <p className="text-xs text-muted-foreground">
-                    You can assign branches later from this page.
+                    {t("You can assign branches later from this page.")}
                   </p>
                 </div>
               </div>
             </div>
 
             <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-3">
-              <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+              <Button type="button" variant="outline" onClick={onClose}>{t("Cancel")}</Button>
               <Button type="submit" disabled={createOwner.isPending}>
-                {createOwner.isPending ? "Creating…" : "Add Owner"}
+                {createOwner.isPending ? t("Creating…") : t("Add Owner")}
               </Button>
             </div>
           </form>
@@ -363,6 +367,7 @@ function OwnerSheet({
   onClose: () => void
   canEdit: boolean
 }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { data: owners = [] }      = useGetOwners()
   const { data: allBranches = [] } = useGetBranches()
@@ -395,7 +400,7 @@ function OwnerSheet({
     try {
       await updateRoles.mutateAsync({ profileId, roleIds: ids })
     } catch {
-      toast.error("Failed to update roles")
+      toast.error(t("Failed to update roles"))
     }
   }
 
@@ -416,7 +421,7 @@ function OwnerSheet({
       await updateStocks.mutateAsync({ branch_id: branchId, profile_id: profileId, stocks: n })
       setStockDrafts((d) => { const c = { ...d }; delete c[branchId]; return c })
     } catch {
-      toast.error("Failed to update stocks")
+      toast.error(t("Failed to update stocks"))
     }
   }
 
@@ -427,7 +432,7 @@ function OwnerSheet({
     updateStocks
       .mutateAsync({ branch_id: branchId, profile_id: profileId, stocks: next })
       .then(() => setStockDrafts((d) => { const c = { ...d }; delete c[branchId]; return c }))
-      .catch(() => toast.error("Failed to update stocks"))
+      .catch(() => toast.error(t("Failed to update stocks")))
   }
 
   async function handleAdd() {
@@ -435,20 +440,20 @@ function OwnerSheet({
     if (!pendingBranchId || isNaN(n) || n <= 0) return
     try {
       await addBranch.mutateAsync({ profileId, branchId: pendingBranchId, stocks: n, roleIds: selectedRoleIds })
-      toast.success("Branch added")
+      toast.success(t("Branch added"))
       setPendingBranchId(null)
       setPendingStocks("")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to add branch"))
     }
   }
 
   async function handleRemove(assignmentId: string, branchId: string, branchName: string) {
     try {
       await removeBranch.mutateAsync({ assignmentId, branchId, profileId })
-      toast.success(`Removed from ${branchName}`)
+      toast.success(`${t("Removed from")} ${branchName}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove branch")
+      toast.error(err instanceof Error ? err.message : t("Failed to remove branch"))
     }
   }
 
@@ -466,7 +471,7 @@ function OwnerSheet({
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <SheetTitle className="text-left">{user?.full_name ?? "Owner"}</SheetTitle>
+                <SheetTitle className="text-left">{user?.full_name ?? t("Owner")}</SheetTitle>
                 {user?.is_master && (
                   <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground shrink-0">
                     master
@@ -497,16 +502,16 @@ function OwnerSheet({
             {/* ── Roles ─────────────────────────────── */}
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold">Roles</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Determines permissions across all branches</p>
+                <h3 className="text-sm font-semibold">{t("Roles")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("Determines permissions across all branches")}</p>
               </div>
 
               {user?.is_master ? (
                 <div className="space-y-1.5">
                   <span className="inline-flex rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium">
-                    Full Access
+                    {t("Full Access")}
                   </span>
-                  <p className="text-xs text-muted-foreground">Master account has unrestricted access to all modules.</p>
+                  <p className="text-xs text-muted-foreground">{t("Master account has unrestricted access to all modules.")}</p>
                 </div>
               ) : canEdit ? (
                 <MultiRoleSelect
@@ -517,7 +522,7 @@ function OwnerSheet({
               ) : (
                 <div className="flex flex-wrap gap-1.5">
                   {selectedRoleIds.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">No roles assigned</p>
+                    <p className="text-sm text-muted-foreground">{t("No roles assigned")}</p>
                   ) : (
                     assignableRoles
                       .filter((r) => selectedRoleIds.includes(r.id))
@@ -536,12 +541,12 @@ function OwnerSheet({
             {/* ── Assigned branches ─────────────────── */}
             <div className="space-y-3">
               <div>
-                <h3 className="text-sm font-semibold">Branch Access & Equity</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">Stocks represent ownership share per branch</p>
+                <h3 className="text-sm font-semibold">{t("Branch Access & Equity")}</h3>
+                <p className="text-xs text-muted-foreground mt-0.5">{t("Stocks represent ownership share per branch")}</p>
               </div>
 
               {user?.branches.length === 0 && (
-                <p className="text-sm text-muted-foreground">No branches assigned yet.</p>
+                <p className="text-sm text-muted-foreground">{t("No branches assigned yet.")}</p>
               )}
 
               <div className="space-y-2">
@@ -630,10 +635,10 @@ function OwnerSheet({
                             </button>
                           </div>
                           <Button size="sm" onClick={handleAdd} disabled={!pendingStocks || addBranch.isPending}>
-                            Add
+                            {t("Add")}
                           </Button>
                           <Button size="sm" variant="ghost" onClick={() => { setPendingBranchId(null); setPendingStocks("1") }}>
-                            Cancel
+                            {t("Cancel")}
                           </Button>
                         </div>
                       </div>
@@ -657,7 +662,7 @@ function OwnerSheet({
           </div>
 
           <div className="shrink-0 border-t bg-background px-6 py-4 flex justify-end">
-            <Button variant="outline" onClick={onClose}>Done</Button>
+            <Button variant="outline" onClick={onClose}>{t("Done")}</Button>
           </div>
         </div>
       </SheetContent>
@@ -668,6 +673,7 @@ function OwnerSheet({
 // ── Main page ─────────────────────────────────────────────────
 
 export function OwnersPage() {
+  const { t } = useLanguage()
   const { canCreate, canUpdate, canDelete: canDeletePerm } = useUserPermissions()
   const canAddOwner    = canCreate("owners")
   const canEditOwner   = canUpdate("owners")
@@ -686,9 +692,9 @@ export function OwnersPage() {
     if (!deleteTarget) return
     try {
       await deleteUser.mutateAsync(deleteTarget.profile_id)
-      toast.success(`${deleteTarget.full_name ?? "User"} removed`)
+      toast.success(`${deleteTarget.full_name ?? t("User")} ${t("removed")}`)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to remove user")
+      toast.error(err instanceof Error ? err.message : t("Failed to remove user"))
     } finally {
       setDeleteTarget(null)
     }
@@ -700,17 +706,17 @@ export function OwnersPage() {
       {/* ── Header ───────────────────────────────────── */}
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold">Owners</h1>
+          <h1 className="text-xl font-semibold">{t("Owners")}</h1>
           {users && (
             <p className="text-sm text-muted-foreground mt-0.5">
-              {users.length} {users.length === 1 ? "owner" : "owners"}
+              {users.length} {users.length === 1 ? t("owner") : t("owners")}
             </p>
           )}
         </div>
         {canAddOwner && (
           <Button onClick={() => setAddOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add Owner
+            {t("Add Owner")}
           </Button>
         )}
       </div>
@@ -718,7 +724,7 @@ export function OwnersPage() {
       {/* ── Error ────────────────────────────────────── */}
       {isError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          Failed to load users. Please try again.
+          {t("Failed to load users. Please try again.")}
         </div>
       )}
 
@@ -727,13 +733,13 @@ export function OwnersPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Owner</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branches</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-36">Role</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Owner")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branches")}</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-36">{t("Role")}</th>
               <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-32">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5" />
-                  Manager
+                  {t("Manager")}
                 </div>
               </th>
               <th className="px-4 py-3 w-20" />
@@ -760,13 +766,13 @@ export function OwnersPage() {
                       <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">No owners found</p>
-                      <p className="text-xs text-muted-foreground mt-0.5">Add your first owner to get started</p>
+                      <p className="text-sm font-medium">{t("No owners found")}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{t("Add your first owner to get started")}</p>
                     </div>
                     {canAddOwner && (
                       <Button onClick={() => setAddOpen(true)}>
                         <Plus className="h-4 w-4" />
-                        Add Owner
+                        {t("Add Owner")}
                       </Button>
                     )}
                   </div>
@@ -804,7 +810,7 @@ export function OwnersPage() {
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex gap-1">
                       {user.branches.length === 0 ? (
-                        <span className="text-xs text-muted-foreground">No branches</span>
+                        <span className="text-xs text-muted-foreground">{t("No branches")}</span>
                       ) : user.branches.map((b) => (
                         <span
                           key={b.assignment_id}
@@ -820,7 +826,7 @@ export function OwnersPage() {
                   <td className="px-4 py-3 whitespace-nowrap">
                     {user.is_master ? (
                       <span className="rounded-md border border-amber-400/30 bg-amber-400/10 text-amber-600 dark:text-amber-400 px-2 py-0.5 text-xs font-medium whitespace-nowrap">
-                        Full Access
+                        {t("Full Access")}
                       </span>
                     ) : (() => {
                       const roles = allRoles.filter((r) => user.role_ids.includes(r.id))
@@ -862,7 +868,7 @@ export function OwnersPage() {
                             {canEditOwner && (
                               <DropdownMenuItem onClick={() => setEditTarget(user)}>
                                 <Pencil className="h-4 w-4" />
-                                Edit
+                                {t("Edit")}
                               </DropdownMenuItem>
                             )}
                             {canDeleteOwner && !user.is_master && (
@@ -873,7 +879,7 @@ export function OwnersPage() {
                                   onClick={() => setDeleteTarget(user)}
                                 >
                                   <Trash2 className="h-4 w-4" />
-                                  Delete
+                                  {t("Delete")}
                                 </DropdownMenuItem>
                               </>
                             )}
@@ -906,19 +912,18 @@ export function OwnersPage() {
       <AlertDialog open={!!deleteTarget} onOpenChange={(v) => { if (!v) setDeleteTarget(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove owner?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Remove owner?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              <strong>{deleteTarget?.full_name ?? "This owner"}</strong> will be removed from all
-              branches. Their account is kept and can be re-added later.
+              <strong>{deleteTarget?.full_name ?? t("This owner")}</strong> {t("will be removed from all branches. Their account is kept and can be re-added later.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              Remove
+              {t("Remove")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

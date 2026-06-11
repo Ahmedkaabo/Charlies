@@ -31,6 +31,7 @@ import {
 } from "@/hooks/useFinance"
 import { usePayoutRuns, useDeletePayoutRun } from "@/hooks/usePayoutRuns"
 import { useGetOwners } from "@/hooks/useOwners"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { cn } from "@/lib/utils"
 import type { Branch } from "@/types/branch"
 import type { PayoutRunFull, PayoutRunBranch } from "@/types/finance"
@@ -118,6 +119,7 @@ function SummaryCard({
   subValue?:     string
   subHighlight?: "positive" | "negative"
 }) {
+  const { t } = useLanguage()
   return (
     <Card>
       <CardHeader className="pb-1">
@@ -141,7 +143,7 @@ function SummaryCard({
                   subHighlight === "positive" ? "text-emerald-600 dark:text-emerald-400" :
                   subHighlight === "negative" ? "text-destructive" : "text-muted-foreground",
                 )}>
-                  After payout: {subValue}
+                  {t("After payout:")}&nbsp;{subValue}
                 </p>
               )}
             </>
@@ -168,6 +170,7 @@ function AdjustSheet({
   month: number
   year: number
 }) {
+  const { t } = useLanguage()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const create = useCreateFinanceRecord()
@@ -206,9 +209,9 @@ function AdjustSheet({
   }
 
   async function handleSave() {
-    if (!branchId) { toast.error("Select a branch"); return }
+    if (!branchId) { toast.error(t("Select a branch")); return }
     const amt = parseFloat(amount)
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return }
+    if (!amt || amt <= 0) { toast.error(t("Enter a valid amount")); return }
     try {
       await create.mutateAsync({
         branch_id:   branchId,
@@ -220,11 +223,11 @@ function AdjustSheet({
         date,
         added_by:    profile?.id ?? null,
       })
-      toast.success(type === "credit" ? "Added" : "Withdrawal saved")
+      toast.success(type === "credit" ? t("Added") : t("Withdrawal saved"))
       reset()
       onOpenChange(false)
     } catch {
-      toast.error("Failed to save")
+      toast.error(t("Failed to save"))
     }
   }
 
@@ -238,8 +241,8 @@ function AdjustSheet({
         )}
       >
         <SheetHeader className="shrink-0 border-b px-6 py-4">
-          <SheetTitle>Add Adjustment</SheetTitle>
-          <SheetDescription>Record a credit or debit for a branch</SheetDescription>
+          <SheetTitle>{t("Add Adjustment")}</SheetTitle>
+          <SheetDescription>{t("Record a credit or debit for a branch")}</SheetDescription>
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
@@ -247,10 +250,10 @@ function AdjustSheet({
           {/* Branch selector (shown when viewing all branches) */}
           {!defaultBranchId && (
             <div className="space-y-2">
-              <p className="text-sm font-medium">Branch</p>
+              <p className="text-sm font-medium">{t("Branch")}</p>
               <Select value={branchId} onValueChange={setBranchId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select branch…" />
+                  <SelectValue placeholder={t("Select branch…")} />
                 </SelectTrigger>
                 <SelectContent>
                   {branches.map((b) => (
@@ -263,23 +266,23 @@ function AdjustSheet({
 
           {/* Type selector */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Type</p>
+            <p className="text-sm font-medium">{t("Type")}</p>
             <div className="flex rounded-md border overflow-hidden">
-              {(["credit", "debit"] as const).map((t) => (
+              {(["credit", "debit"] as const).map((t_) => (
                 <button
-                  key={t}
+                  key={t_}
                   type="button"
-                  onClick={() => { setType(t); if (t === "debit") setIsVisa(false); if (t === "credit") setIsRent(false) }}
+                  onClick={() => { setType(t_); if (t_ === "debit") setIsVisa(false); if (t_ === "credit") setIsRent(false) }}
                   className={cn(
                     "flex-1 py-2 text-sm font-medium transition-colors",
-                    type === t
-                      ? t === "credit"
+                    type === t_
+                      ? t_ === "credit"
                         ? "bg-emerald-600 text-white dark:bg-emerald-700"
                         : "bg-destructive text-white"
                       : "bg-background text-muted-foreground hover:bg-muted",
                   )}
                 >
-                  {t === "credit" ? "Add" : "Withdrawal"}
+                  {t_ === "credit" ? t("Add") : t("Withdrawal")}
                 </button>
               ))}
             </div>
@@ -287,7 +290,7 @@ function AdjustSheet({
 
           {/* Amount */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Amount</p>
+            <p className="text-sm font-medium">{t("Amount")}</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
               <Input
@@ -310,9 +313,9 @@ function AdjustSheet({
               <div className="space-y-0.5 leading-none">
                 <Label htmlFor="is-visa" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
                   <CreditCard className="h-3.5 w-3.5 text-muted-foreground" />
-                  Visa payment
+                  {t("Visa payment")}
                 </Label>
-                <p className="text-xs text-muted-foreground">Mark if this amount was received via Visa card</p>
+                <p className="text-xs text-muted-foreground">{t("Mark if this amount was received via Visa card")}</p>
               </div>
             </div>
           )}
@@ -323,21 +326,21 @@ function AdjustSheet({
               <Switch id="is-rent" checked={isRent} onCheckedChange={setIsRent} />
               <div className="space-y-0.5 leading-none">
                 <Label htmlFor="is-rent" className="text-sm font-medium cursor-pointer flex items-center gap-1.5">
-                  Rent payment
+                  {t("Rent payment")}
                 </Label>
-                <p className="text-xs text-muted-foreground">Disables the Rent field in payout for this branch</p>
+                <p className="text-xs text-muted-foreground">{t("Disables the Rent field in payout for this branch")}</p>
               </div>
             </div>
           )}
 
           {/* Date */}
           <div className="space-y-2">
-            <p className="text-sm font-medium">Date</p>
+            <p className="text-sm font-medium">{t("Date")}</p>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start text-left font-normal">
                   <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : "Pick a date"}
+                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : t("Pick a date")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -353,10 +356,10 @@ function AdjustSheet({
           {/* Description */}
           <div className="space-y-2">
             <p className="text-sm font-medium">
-              Description <span className="font-normal text-muted-foreground">(optional)</span>
+              {t("Description")} <span className="font-normal text-muted-foreground">({t("optional")})</span>
             </p>
             <Textarea
-              placeholder="What is this for?"
+              placeholder={t("What is this for?")}
               rows={3}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -366,10 +369,10 @@ function AdjustSheet({
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
           <Button variant="outline" onClick={() => { reset(); onOpenChange(false) }} disabled={create.isPending}>
-            Cancel
+            {t("Cancel")}
           </Button>
           <Button onClick={handleSave} disabled={create.isPending}>
-            {create.isPending ? "Saving…" : "Save"}
+            {create.isPending ? t("Saving…") : t("Save")}
           </Button>
         </div>
       </SheetContent>
@@ -390,6 +393,7 @@ function PayoutRunDisplay({
   onEdit?:       () => void
   onDelete?:     () => void
 }) {
+  const { t } = useLanguage()
   const [addMgmtFees, setAddMgmtFees] = useState(false)
   const { data: allOwners = [] } = useGetOwners()
 
@@ -447,7 +451,7 @@ function PayoutRunDisplay({
       {/* Run header */}
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
-          Saved {format(new Date(run.created_at), "d MMM yyyy, HH:mm")}
+          {t("Saved")} {format(new Date(run.created_at), "d MMM yyyy, HH:mm")}
           {run.notes && <span className="ml-2 italic">· {run.notes}</span>}
         </p>
         {(onEdit || onDelete) && (
@@ -476,16 +480,16 @@ function PayoutRunDisplay({
         {/* Cols 1–2 — Owner payouts card */}
         <div className="sm:col-span-2 rounded-xl border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Owner Payouts</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Owner Payouts")}</p>
             {totals.mgmtFee > 0 && owners.length > 0 && (
               <Label className="flex items-center gap-2 text-xs font-medium cursor-pointer select-none">
                 <Switch checked={addMgmtFees} onCheckedChange={setAddMgmtFees} />
-                Add management fees
+                {t("Add management fees")}
               </Label>
             )}
           </div>
           {!owners.length ? (
-            <p className="text-xs text-muted-foreground italic">No ownership configured.</p>
+            <p className="text-xs text-muted-foreground italic">{t("No ownership configured.")}</p>
           ) : (
             <div className="space-y-1">
               {owners.map(([profileId, o]) => {
@@ -497,7 +501,7 @@ function PayoutRunDisplay({
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                         {getInitials(o.fullName)}
                       </div>
-                      <p className="flex-1 min-w-0 text-sm font-medium truncate">{o.fullName ?? "Unknown"}</p>
+                      <p className="flex-1 min-w-0 text-sm font-medium truncate">{o.fullName ?? t("Unknown")}</p>
                       <p className={cn(
                         "text-sm font-bold tabular-nums shrink-0",
                         displayed >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
@@ -515,7 +519,7 @@ function PayoutRunDisplay({
                       ))}
                       {addMgmtFees && isFeeManager && (
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>Management fee</span>
+                          <span>{t("Management fee")}</span>
                           <span className="tabular-nums ml-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{egp(mgmtFeePerOwner)}</span>
                         </div>
                       )}
@@ -525,7 +529,7 @@ function PayoutRunDisplay({
               })}
               <Separator className="my-1" />
               <div className="flex items-center gap-3 px-3 py-1">
-                <p className="flex-1 text-sm font-semibold text-muted-foreground">Total</p>
+                <p className="flex-1 text-sm font-semibold text-muted-foreground">{t("Total")}</p>
                 <p className={cn(
                   "text-sm font-bold tabular-nums",
                   totalOwnerPayout >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
@@ -540,24 +544,24 @@ function PayoutRunDisplay({
 
           {/* Totals card */}
           <div className="rounded-xl border bg-card p-4 space-y-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Totals</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Totals")}</p>
             <div className="space-y-1 text-xs">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Rent</span>
+                <span className="text-muted-foreground">{t("Rent")}</span>
                 <span className="tabular-nums font-medium text-destructive">{egp(totals.rent)}</span>
               </div>
               {totals.favor > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Favor</span>
+                  <span className="text-muted-foreground">{t("Favor")}</span>
                   <span className="tabular-nums font-medium text-destructive">{egp(totals.favor)}</span>
                 </div>
               )}
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Co. Share</span>
+                <span className="text-muted-foreground">{t("Co. Share")}</span>
                 <span className="tabular-nums font-medium text-destructive">{egp(totals.companyShare)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Mgmt Fee</span>
+                <span className="text-muted-foreground">{t("Mgmt Fee")}</span>
                 <span className="tabular-nums font-medium text-destructive">{egp(totals.mgmtFee)}</span>
               </div>
             </div>
@@ -565,33 +569,33 @@ function PayoutRunDisplay({
 
           {/* Deductions card */}
           <div className="rounded-xl border bg-card p-4 space-y-3">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deductions</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Deductions")}</p>
             <div className="space-y-3">
               {branches.map((b) => (
                 <div key={b.id} className="space-y-1">
                   <p className="text-xs font-semibold truncate">{b.branch_name}</p>
                   <div className="space-y-0.5 text-xs pl-1">
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Rent</span>
+                      <span>{t("Rent")}</span>
                       <span className="tabular-nums">{egp(Number(b.rent_amount))}</span>
                     </div>
                     {Number(b.favor_amount) > 0 && (
                       <div className="flex justify-between text-muted-foreground">
-                        <span>Favor</span>
+                        <span>{t("Favor")}</span>
                         <span className="tabular-nums">{egp(Number(b.favor_amount))}</span>
                       </div>
                     )}
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Co. Share</span>
+                      <span>{t("Co. Share")}</span>
                       <span className="tabular-nums">{egp(Number(b.company_share_amount))}</span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
-                      <span>Mgmt Fee</span>
+                      <span>{t("Mgmt Fee")}</span>
                       <span className="tabular-nums">{egp(Number(b.mgmt_fee_amount))}</span>
                     </div>
                     <Separator className="my-1" />
                     <div className="flex justify-between font-medium">
-                      <span>Distributable</span>
+                      <span>{t("Distributable")}</span>
                       <span className={cn(
                         "tabular-nums",
                         Number(b.distributable_profit) >= 0
@@ -630,6 +634,7 @@ function FinanceContent({
   isManagement: boolean
   canRunPayout: boolean
 }) {
+  const { t } = useLanguage()
   const { canCreate: canCreateFin, canDelete: canDeleteFin } = useUserPermissions()
   const canAdjust    = canCreateFin("finance")   // "Add credit / debit adjustments"
   const canDeleteRec = canDeleteFin("finance")   // "Delete finance adjustments"
@@ -676,12 +681,12 @@ function FinanceContent({
           ) : (
             <>
               {summaryExpanded && ([
-                { label: "Sales",       value: egp(summary.revenue),       positive: true  },
-                { label: "Expenses",    value: egp(summary.expenses),      positive: false },
-                { label: "Payroll",     value: egp(summary.payrollTotal),  positive: false },
-                { label: "Net Profit",  value: egp(summary.netProfit),     positive: summary.netProfit  >= 0 },
-                { label: "Adjustments", value: egp(summary.adjustments),   positive: summary.adjustments >= 0, muted: summary.adjustments === 0 },
-                { label: "Visa",        value: egp(summary.visaTotal),     positive: true, muted: true },
+                { label: t("Sales"),       value: egp(summary.revenue),       positive: true  },
+                { label: t("Expenses"),    value: egp(summary.expenses),      positive: false },
+                { label: t("Payroll"),     value: egp(summary.payrollTotal),  positive: false },
+                { label: t("Net Profit"),  value: egp(summary.netProfit),     positive: summary.netProfit  >= 0 },
+                { label: t("Adjustments"), value: egp(summary.adjustments),   positive: summary.adjustments >= 0, muted: summary.adjustments === 0 },
+                { label: t("Visa"),        value: egp(summary.visaTotal),     positive: true, muted: true },
               ] as { label: string; value: string; positive: boolean; muted?: boolean }[]).map(({ label, value, positive, muted }) => (
                 <div key={label} className="flex items-center justify-between px-4 py-3">
                   <span className="text-sm text-muted-foreground">{label}</span>
@@ -702,7 +707,7 @@ function FinanceContent({
                 onClick={() => setSummaryExpanded((v) => !v)}
                 className="flex w-full items-center justify-between bg-muted/40 px-4 py-3"
               >
-                <span className="text-sm font-semibold">Adjusted Profit</span>
+                <span className="text-sm font-semibold">{t("Adjusted Profit")}</span>
                 <div className="flex items-center gap-2">
                   <span className={cn(
                     "text-base font-bold tabular-nums",
@@ -725,15 +730,15 @@ function FinanceContent({
 
       {/* ── Summary — desktop grid ──────────────────── */}
       <div className="hidden sm:grid gap-4 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
-        <SummaryCard label="Sales"            value={egp(summary.revenue)}        icon={TrendingUp}   highlight="positive" loading={summaryLoading} />
-        <SummaryCard label="Expenses"        value={egp(summary.expenses)}       icon={TrendingDown} highlight="negative" loading={summaryLoading} />
-        <SummaryCard label="Payroll"         value={egp(summary.payrollTotal)}   icon={Users}        highlight="negative" loading={summaryLoading} />
-        <SummaryCard label="Net Profit"      value={egp(summary.netProfit)}      icon={DollarSign}
+        <SummaryCard label={t("Sales")}            value={egp(summary.revenue)}        icon={TrendingUp}   highlight="positive" loading={summaryLoading} />
+        <SummaryCard label={t("Expenses")}        value={egp(summary.expenses)}       icon={TrendingDown} highlight="negative" loading={summaryLoading} />
+        <SummaryCard label={t("Payroll")}         value={egp(summary.payrollTotal)}   icon={Users}        highlight="negative" loading={summaryLoading} />
+        <SummaryCard label={t("Net Profit")}      value={egp(summary.netProfit)}      icon={DollarSign}
           highlight={summary.netProfit >= 0 ? "positive" : "negative"} loading={summaryLoading} />
-        <SummaryCard label="Adjustments"     value={egp(summary.adjustments)}    icon={PiggyBank}
+        <SummaryCard label={t("Adjustments")}     value={egp(summary.adjustments)}    icon={PiggyBank}
           highlight={summary.adjustments > 0 ? "positive" : summary.adjustments < 0 ? "negative" : "neutral"} loading={summaryLoading} />
-        <SummaryCard label="Visa"            value={egp(summary.visaTotal)}      icon={CreditCard}   highlight="neutral" loading={summaryLoading} />
-        <SummaryCard label="Adjusted Profit" value={egp(summary.adjustedProfit)} icon={DollarSign}
+        <SummaryCard label={t("Visa")}            value={egp(summary.visaTotal)}      icon={CreditCard}   highlight="neutral" loading={summaryLoading} />
+        <SummaryCard label={t("Adjusted Profit")} value={egp(summary.adjustedProfit)} icon={DollarSign}
           highlight={summary.adjustedProfit >= 0 ? "positive" : "negative"} loading={summaryLoading} />
       </div>
 
@@ -743,13 +748,13 @@ function FinanceContent({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold">Adjustments</h2>
-            <p className="text-xs text-muted-foreground mt-0.5">Manual credits and debits for this period</p>
+            <h2 className="text-base font-semibold">{t("Adjustments")}</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("Manual credits and debits for this period")}</p>
           </div>
           {canAdjust && (
             <Button onClick={() => setAdjustOpen(true)}>
               <Plus className="h-4 w-4" />
-              Adjust
+              {t("Adjust")}
             </Button>
           )}
         </div>
@@ -760,7 +765,7 @@ function FinanceContent({
           </div>
         ) : !records?.length ? (
           <div className="flex items-center gap-3 rounded-lg border border-dashed px-4 py-6 text-sm text-muted-foreground">
-            No adjustments this period
+            {t("No adjustments this period")}
           </div>
         ) : (
           <div className="rounded-lg border divide-y">
@@ -777,17 +782,17 @@ function FinanceContent({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <p className="text-sm font-medium">
-                      {r.description ?? (r.type === "credit" ? "Add" : "Withdrawal")}
+                      {r.description ?? (r.type === "credit" ? t("Add") : t("Withdrawal"))}
                     </p>
                     {r.is_visa && (
                       <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                         <CreditCard className="h-2.5 w-2.5" />
-                        Visa
+                        {t("Visa")}
                       </span>
                     )}
                     {r.is_rent && (
                       <span className="inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                        Rent
+                        {t("Rent")}
                       </span>
                     )}
                   </div>
@@ -826,17 +831,17 @@ function FinanceContent({
       <div className="space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-semibold">Owner Payouts</h2>
+            <h2 className="text-base font-semibold">{t("Owner Payouts")}</h2>
             <p className="text-xs text-muted-foreground mt-0.5">
               {visiblePayoutRuns.length > 0
-                ? "Edit or delete the existing payout run to make changes."
-                : "Run a payout to distribute profits to owners with custom deductions."}
+                ? t("Edit or delete the existing payout run to make changes.")
+                : t("Run a payout to distribute profits to owners with custom deductions.")}
             </p>
           </div>
           {canRunPayout && visiblePayoutRuns.length > 0 && !payoutRunsLoading && (
             <Button onClick={() => { setEditRun(undefined); setPayoutOpen(true) }}>
               <Play className="h-4 w-4" />
-              Run Payout
+              {t("Run Payout")}
             </Button>
           )}
         </div>
@@ -849,15 +854,15 @@ function FinanceContent({
           <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed px-4 py-10 text-center">
             <PieChart className="h-8 w-8 text-muted-foreground/40" />
             <div>
-              <p className="text-sm font-medium">No payout runs yet</p>
+              <p className="text-sm font-medium">{t("No payout runs yet")}</p>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Run a payout to distribute profits to owners with custom deductions.
+                {t("Run a payout to distribute profits to owners with custom deductions.")}
               </p>
             </div>
             {canRunPayout && (
               <Button onClick={() => { setEditRun(undefined); setPayoutOpen(true) }}>
                 <Play className="h-3.5 w-3.5" />
-                Run Payout
+                {t("Run Payout")}
               </Button>
             )}
           </div>
@@ -898,21 +903,21 @@ function FinanceContent({
       <AlertDialog open={!!delRecord} onOpenChange={(v) => { if (!v) setDelRecord(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete adjustment?</AlertDialogTitle>
-            <AlertDialogDescription>This record will be permanently removed.</AlertDialogDescription>
+            <AlertDialogTitle>{t("Delete adjustment?")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("This record will be permanently removed.")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={async () => {
                 if (!delRecord) return
-                try { await deleteRec.mutateAsync(delRecord); toast.success("Deleted") }
-                catch { toast.error("Failed to delete") }
+                try { await deleteRec.mutateAsync(delRecord); toast.success(t("Deleted")) }
+                catch { toast.error(t("Failed to delete")) }
                 finally { setDelRecord(null) }
               }}
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -921,28 +926,28 @@ function FinanceContent({
       <AlertDialog open={!!delPayoutId} onOpenChange={(v) => { if (!v) setDelPayoutId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete payout run?</AlertDialogTitle>
+            <AlertDialogTitle>{t("Delete payout run?")}</AlertDialogTitle>
             <AlertDialogDescription>
-              This payout run and all its records will be permanently removed.
+              {t("This payout run and all its records will be permanently removed.")}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-white hover:bg-destructive/90"
               onClick={async () => {
                 if (!delPayoutId) return
                 try {
                   await deletePayoutRun.mutateAsync({ id: delPayoutId, month, year })
-                  toast.success("Payout run deleted")
+                  toast.success(t("Payout run deleted"))
                 } catch {
-                  toast.error("Failed to delete payout run")
+                  toast.error(t("Failed to delete payout run"))
                 } finally {
                   setDelPayoutId(null)
                 }
               }}
             >
-              Delete
+              {t("Delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -954,6 +959,7 @@ function FinanceContent({
 // ── Page ──────────────────────────────────────────────────────
 
 export function FinancePage() {
+  const { t } = useLanguage()
   const { profile, isAdmin } = useAuth()
   const { isOwner, canCreate } = useUserPermissions()
 
@@ -1016,7 +1022,7 @@ export function FinancePage() {
     return (
       <div className="p-4 md:p-6 flex min-h-[40vh] flex-col items-center justify-center gap-2 text-center">
         <DollarSign className="h-10 w-10 text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">Not assigned to any branch yet.</p>
+        <p className="text-sm text-muted-foreground">{t("Not assigned to any branch yet.")}</p>
       </div>
     )
   }
@@ -1027,7 +1033,7 @@ export function FinancePage() {
       {/* ── Header ─────────────────────────────────── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold">Finance</h1>
+          <h1 className="text-xl font-semibold">{t("Finance")}</h1>
           {monthSelect}
         </div>
 
@@ -1037,7 +1043,7 @@ export function FinancePage() {
             options={((myBranches?.length ?? 0) > 0 ? myBranches! : allBranches).map((b) => ({ value: b.id, label: b.name }))}
             selected={selectedBranchIds}
             onChange={setSelectedBranchIds}
-            placeholder="All Branches"
+            placeholder={t("All Branches")}
             className="w-[180px]"
           />
         )}
