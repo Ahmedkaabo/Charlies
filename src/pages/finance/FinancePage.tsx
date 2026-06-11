@@ -292,6 +292,7 @@ function AdjustSheet({
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
               <Input
                 type="number"
+                inputMode="decimal"
                 min={0}
                 step="0.01"
                 placeholder="0.00"

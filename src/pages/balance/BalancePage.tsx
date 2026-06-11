@@ -342,7 +342,7 @@ function TransferSheet({
             <p className="text-sm font-medium">Amount</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
-              <Input type="number" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             {branchId && direction === "outflow" && (
               <p className={cn("text-xs pl-1", branchSummary.totalRemaining <= 0 ? "text-destructive" : "text-muted-foreground")}>
@@ -546,7 +546,7 @@ function PoolTransferSheet({
             <p className="text-sm font-medium">Amount</p>
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
-              <Input type="number" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             {branchId && (
               <p className={cn("text-xs pl-1", exceedsLimit ? "text-destructive" : availableBalance <= 0 ? "text-destructive" : "text-muted-foreground")}>

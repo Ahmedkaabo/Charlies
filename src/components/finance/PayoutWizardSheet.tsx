@@ -139,6 +139,7 @@ function DeductionRow({
 
           <Input
             type="number"
+            inputMode="decimal"
             min={0}
             step={type === "fixed" ? "100" : "0.1"}
             placeholder="0"
