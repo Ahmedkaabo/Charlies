@@ -3,10 +3,12 @@ import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { formatShiftTime } from "@/lib/attendance"
+import { useLanguage } from "@/contexts/LanguageContext"
 import type { StaffBranch } from "@/hooks/useAttendance"
 import { getShiftStatus } from "./ShiftStatusBadge"
 
 export function ShiftsPanel({ branch, now }: { branch: StaffBranch; now: Date }) {
+  const { t } = useLanguage()
   const openShifts = branch.shifts.filter(
     (s) => s.is_active && getShiftStatus(s, now) === "open"
   )
@@ -23,8 +25,8 @@ export function ShiftsPanel({ branch, now }: { branch: StaffBranch; now: Date })
           <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
             <Clock className="h-4 w-4 shrink-0" />
             {branch.shifts.filter((s) => s.is_active).length === 0
-              ? "No shifts configured — contact your manager"
-              : "No check-in window open right now"}
+              ? t("No shifts configured — contact your manager")
+              : t("No check-in window open right now")}
           </div>
         )}
 
@@ -41,12 +43,12 @@ export function ShiftsPanel({ branch, now }: { branch: StaffBranch; now: Date })
               <p className="text-xs text-muted-foreground tabular-nums">
                 {formatShiftTime(shift.shift_start)} – {formatShiftTime(shift.shift_end)}
                 <span className="ml-1.5 opacity-60">
-                  · ±{shift.checkin_window_minutes} min window
+                  · ±{shift.checkin_window_minutes} {t("min window")}
                 </span>
               </p>
             </div>
             <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white shrink-0">
-              Open now
+              {t("Open now")}
             </Badge>
           </div>
         ))}

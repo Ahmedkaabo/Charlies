@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge"
 import { isWithinCheckInWindow } from "@/lib/attendance"
+import { useLanguage } from "@/contexts/LanguageContext"
 import type { ShiftStatus } from "./types"
 
 export function getShiftStatus(
@@ -34,10 +35,12 @@ export function ShiftStatusBadge({
   status: ShiftStatus
   shift: { shift_start: string; checkin_window_minutes: number }
 }) {
+  const { t } = useLanguage()
+
   if (status === "open") {
     return (
       <Badge className="bg-emerald-500 hover:bg-emerald-500 text-white shrink-0">
-        Open now
+        {t("Open now")}
       </Badge>
     )
   }
@@ -51,14 +54,14 @@ export function ShiftStatusBadge({
     const hour12 = wh % 12 || 12
     return (
       <Badge variant="secondary" className="shrink-0">
-        Opens {hour12}:{String(wm).padStart(2, "0")} {period}
+        {t("Opens")} {hour12}:{String(wm).padStart(2, "0")} {period}
       </Badge>
     )
   }
 
   if (status === "in_progress") {
-    return <Badge variant="outline" className="shrink-0">In progress</Badge>
+    return <Badge variant="outline" className="shrink-0">{t("In progress")}</Badge>
   }
 
-  return <Badge variant="secondary" className="shrink-0 opacity-60">Ended</Badge>
+  return <Badge variant="secondary" className="shrink-0 opacity-60">{t("Ended")}</Badge>
 }
