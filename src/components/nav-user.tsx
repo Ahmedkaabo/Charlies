@@ -20,14 +20,17 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon, UserPlusIcon, HashIcon } from "lucide-react"
+import { EllipsisVerticalIcon, CircleUserRoundIcon, CreditCardIcon, BellIcon, LogOutIcon, UserPlusIcon, HashIcon, SunIcon, MoonIcon } from "lucide-react"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
+import { useTheme } from "@/components/theme-provider"
 
 export function NavUser() {
   const { isMobile } = useSidebar()
   const { profile, accountId, accountCode, signOut } = useAuth()
   const [generatingInvite, setGeneratingInvite] = useState(false)
+  const { theme, setTheme } = useTheme()
+  const isDark = theme === "dark"
 
   const name   = profile?.full_name ?? "User"
   const email  = profile?.phone ?? ""

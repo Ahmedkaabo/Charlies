@@ -16,7 +16,7 @@ createRoot(document.getElementById("root")!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
-          <ThemeProvider>
+          <ThemeProvider defaultTheme="light">
             <TooltipProvider>
               <App />
               <Toaster />
