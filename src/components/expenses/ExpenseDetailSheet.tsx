@@ -1,5 +1,5 @@
 import { format, parseISO } from "date-fns"
-import { Pencil, Trash2, ExternalLink, UserCircle } from "lucide-react"
+import { Pencil, Trash2, ExternalLink, UserCircle, Truck } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 
 import { useIsMobile } from "@/hooks/use-mobile"
@@ -140,6 +140,22 @@ export function ExpenseDetailSheet({
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Description</p>
             <p className="text-sm">{expense.description ?? "—"}</p>
           </div>
+
+          {/* Supplier */}
+          {expense.supplier && (
+            <>
+              <Separator />
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Supplier</p>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <Truck className="h-3.5 w-3.5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm font-medium">{expense.supplier.name}</p>
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Receipt */}
           {expense.receipt_url && (
