@@ -13,7 +13,9 @@ import {
   type PayoutRunInput,
 } from "@/hooks/usePayoutRuns"
 import { useAuth } from "@/hooks/useAuth"
+import { useLanguage } from "@/contexts/LanguageContext"
 import { cn } from "@/lib/utils"
+import { useFormatters } from "@/lib/format"
 import type { Branch } from "@/types/branch"
 import type { DeductionType, PayoutRunFull } from "@/types/finance"
 
@@ -30,19 +32,9 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Helpers ───────────────────────────────────────────────────
-
-function egp(n: number) {
-  return `EGP ${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-}
 
 function num(s: string) {
   return Math.max(0, parseFloat(s) || 0)
@@ -111,6 +103,8 @@ function DeductionRow({
   disabled?:      boolean
   disabledNote?:  string
 }) {
+  const fmt = useFormatters()
+  const { t } = useLanguage()
   return (
     <div className="space-y-1.5">
       <Label className={cn(
@@ -122,8 +116,8 @@ function DeductionRow({
 
       {disabled ? (
         <div className="flex h-9 w-full items-center gap-2 rounded-lg border border-input bg-muted/40 px-3 text-sm text-muted-foreground/60 cursor-not-allowed select-none">
-          <span className="flex-1 truncate">{disabledNote ?? "Paid via adjustment"}</span>
-          <span className="tabular-nums text-xs shrink-0">{egp(0)}</span>
+          <span className="flex-1 truncate">{disabledNote ?? t("Paid via adjustment")}</span>
+          <span className="tabular-nums text-xs shrink-0">{fmt.egp(0)}</span>
         </div>
       ) : (
         <ButtonGroup className="w-full">
@@ -151,14 +145,14 @@ function DeductionRow({
       )}
 
       {!disabled && (
-        <p className="text-xs text-muted-foreground pl-1">
-          Deducted:{" "}
+        <p className="text-xs text-muted-foreground ps-1">
+          {t("Deducted:")}{" "}
           <span className={cn("font-medium", amount > 0 ? "text-destructive" : "text-foreground")}>
-            {egp(amount)}
+            {fmt.egp(amount)}
           </span>
           {type === "percentage" && basis > 0 && (
-            <span className="ml-1 text-muted-foreground/70">
-              ({num(value).toFixed(1)}% of {egp(basis)})
+            <span className="ms-1 text-muted-foreground/70">
+              ({num(value).toFixed(1)}% of {fmt.egp(basis)})
             </span>
           )}
         </p>
@@ -181,6 +175,8 @@ function BranchConfigCard({
   onChange:  (field: keyof BranchConfig, value: string) => void
 }) {
   const { rent, favor, companyShare, mgmtFee } = computeAmounts(config)
+  const fmt = useFormatters()
+  const { t } = useLanguage()
 
   function set(field: keyof BranchConfig) {
     return (v: string) => onChange(field, v)
@@ -202,12 +198,12 @@ function BranchConfigCard({
           ) : (
             <div className="mt-0.5 space-y-0.5">
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>Sales <span className="font-medium text-foreground">{egp(config.snapshotSales)}</span></span>
-                <span>Net Profit <span className="font-medium text-foreground">{egp(config.snapshotNetProfit)}</span></span>
+                <span>{t("Sales")} <span className="font-medium text-foreground">{fmt.egp(config.snapshotSales)}</span></span>
+                <span>{t("Net Profit")} <span className="font-medium text-foreground">{fmt.egp(config.snapshotNetProfit)}</span></span>
               </div>
               {hasAdjustments && (
                 <div className="text-xs text-muted-foreground">
-                  Adjustments{" "}
+                  {t("Adjustments")}{" "}
                   <span className={cn(
                     "font-medium",
                     config.snapshotAdjustments >= 0
@@ -215,18 +211,18 @@ function BranchConfigCard({
                       : "text-destructive",
                   )}>
                     {config.snapshotAdjustments >= 0 ? "+" : ""}
-                    {egp(config.snapshotAdjustments)}
+                    {fmt.egp(config.snapshotAdjustments)}
                   </span>
                 </div>
               )}
               <div className="text-xs font-semibold">
-                Adjusted Profit{" "}
+                {t("Adjusted Profit")}{" "}
                 <span className={cn(
                   config.snapshotAdjustedProfit >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-destructive",
                 )}>
-                  {egp(config.snapshotAdjustedProfit)}
+                  {fmt.egp(config.snapshotAdjustedProfit)}
                 </span>
               </div>
             </div>
@@ -236,25 +232,25 @@ function BranchConfigCard({
 
       <div className="p-4 space-y-4">
         <DeductionRow
-          label="Rent"
+          label={t("Rent")}
           type={config.rentType}
           value={config.rentValue}
-          fixedLabel="Fixed"
-          pctLabel="% of sales"
+          fixedLabel={t("Fixed")}
+          pctLabel={t("% of sales")}
           onTypeChange={(v) => onChange("rentType", v)}
           onValueChange={set("rentValue")}
           amount={rentPaid ? 0 : rent}
           basis={config.snapshotSales}
           disabled={rentPaid}
-          disabledNote="Paid via withdrawal adjustment"
+          disabledNote={t("Paid via withdrawal adjustment")}
         />
 
         <DeductionRow
-          label="Favor"
+          label={t("Favor")}
           type={config.favorType}
           value={config.favorValue}
-          fixedLabel="Fixed"
-          pctLabel="% of sales"
+          fixedLabel={t("Fixed")}
+          pctLabel={t("% of sales")}
           onTypeChange={(v) => onChange("favorType", v)}
           onValueChange={set("favorValue")}
           amount={favor}
@@ -262,11 +258,11 @@ function BranchConfigCard({
         />
 
         <DeductionRow
-          label="Company Share"
+          label={t("Company Share")}
           type={config.companyShareType}
           value={config.companyShareValue}
-          fixedLabel="Fixed"
-          pctLabel="% of adj. profit"
+          fixedLabel={t("Fixed")}
+          pctLabel={t("% of adj. profit")}
           onTypeChange={(v) => onChange("companyShareType", v)}
           onValueChange={set("companyShareValue")}
           amount={companyShare}
@@ -274,11 +270,11 @@ function BranchConfigCard({
         />
 
         <DeductionRow
-          label="Management Fee"
+          label={t("Management Fee")}
           type={config.mgmtFeeType}
           value={config.mgmtFeeValue}
-          fixedLabel="Fixed"
-          pctLabel="% of adj. profit"
+          fixedLabel={t("Fixed")}
+          pctLabel={t("% of adj. profit")}
           onTypeChange={(v) => onChange("mgmtFeeType", v)}
           onValueChange={set("mgmtFeeValue")}
           amount={mgmtFee}
@@ -383,6 +379,8 @@ function getInitials(name: string | null | undefined) {
 // ── Review step ───────────────────────────────────────────────
 
 function ReviewStep({ configs, ownerPayouts }: { configs: BranchConfig[]; ownerPayouts: OwnerPayoutRow[] }) {
+  const fmt = useFormatters()
+  const { t } = useLanguage()
   const configsWithAmounts = configs.map((cfg) => ({ ...cfg, ...computeAmounts(cfg) }))
 
   const totals = configsWithAmounts.reduce(
@@ -403,53 +401,53 @@ function ReviewStep({ configs, ownerPayouts }: { configs: BranchConfig[]; ownerP
 
         {/* Col 1: Deductions per branch */}
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Deductions</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Deductions")}</h3>
           <div className="rounded-lg border divide-y">
             {configsWithAmounts.map((cfg) => (
               <div key={cfg.branchId} className="px-3 py-2.5 space-y-1">
                 <p className="text-xs font-semibold truncate">{cfg.branchName}</p>
                 <div className="text-xs text-muted-foreground mb-0.5">
-                  Adj. Profit:{" "}
+                  {t("Adj. Profit:")}{" "}
                   <span className={cn(
                     "font-medium",
                     cfg.snapshotAdjustedProfit >= 0
                       ? "text-emerald-600 dark:text-emerald-400"
                       : "text-destructive",
-                  )}>{egp(cfg.snapshotAdjustedProfit)}</span>
+                  )}>{fmt.egp(cfg.snapshotAdjustedProfit)}</span>
                 </div>
                 <div className="space-y-0.5 text-xs">
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Co. Share</span>
-                    <span className="tabular-nums">{egp(cfg.companyShare)}</span>
+                    <span>{t("Co. Share")}</span>
+                    <span className="tabular-nums">{fmt.egp(cfg.companyShare)}</span>
                   </div>
                   <div className="flex justify-between text-muted-foreground">
-                    <span>Mgmt Fee</span>
-                    <span className="tabular-nums">{egp(cfg.mgmtFee)}</span>
+                    <span>{t("Mgmt Fee")}</span>
+                    <span className="tabular-nums">{fmt.egp(cfg.mgmtFee)}</span>
                   </div>
                   <Separator className="my-1" />
                   <div className="flex justify-between font-medium">
-                    <span>Distributable</span>
+                    <span>{t("Distributable")}</span>
                     <span className={cn(
                       "tabular-nums",
                       cfg.distributable >= 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-destructive",
-                    )}>{egp(cfg.distributable)}</span>
+                    )}>{fmt.egp(cfg.distributable)}</span>
                   </div>
                 </div>
               </div>
             ))}
             {/* Totals row */}
             <div className="px-3 py-2.5 bg-muted/40">
-              <p className="text-xs font-semibold mb-1">Totals</p>
+              <p className="text-xs font-semibold mb-1">{t("Totals")}</p>
               <div className="space-y-0.5 text-xs">
                 <div className="flex justify-between font-medium">
-                  <span className="text-muted-foreground">Co. Share</span>
-                  <span className="tabular-nums text-destructive">{egp(totals.companyShare)}</span>
+                  <span className="text-muted-foreground">{t("Co. Share")}</span>
+                  <span className="tabular-nums text-destructive">{fmt.egp(totals.companyShare)}</span>
                 </div>
                 <div className="flex justify-between font-medium">
-                  <span className="text-muted-foreground">Mgmt Fee</span>
-                  <span className="tabular-nums text-destructive">{egp(totals.mgmtFee)}</span>
+                  <span className="text-muted-foreground">{t("Mgmt Fee")}</span>
+                  <span className="tabular-nums text-destructive">{fmt.egp(totals.mgmtFee)}</span>
                 </div>
               </div>
             </div>
@@ -458,9 +456,9 @@ function ReviewStep({ configs, ownerPayouts }: { configs: BranchConfig[]; ownerP
 
         {/* Col 2: Owner payouts */}
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Owner Payouts</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Owner Payouts")}</h3>
           {!ownerPayouts.length ? (
-            <p className="text-xs text-muted-foreground italic">No ownership configured.</p>
+            <p className="text-xs text-muted-foreground italic">{t("No ownership configured.")}</p>
           ) : (
             <div className="rounded-lg border divide-y">
               {ownerPayouts.map((o) => (
@@ -469,28 +467,28 @@ function ReviewStep({ configs, ownerPayouts }: { configs: BranchConfig[]; ownerP
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
                       {getInitials(o.fullName)}
                     </div>
-                    <p className="flex-1 min-w-0 text-xs font-medium truncate">{o.fullName ?? "Unknown"}</p>
+                    <p className="flex-1 min-w-0 text-xs font-medium truncate">{o.fullName ?? t("Unknown")}</p>
                     <p className={cn(
                       "text-xs font-bold tabular-nums shrink-0",
                       o.totalPayout >= 0
                         ? "text-emerald-600 dark:text-emerald-400"
                         : "text-destructive",
-                    )}>{egp(o.totalPayout)}</p>
+                    )}>{fmt.egp(o.totalPayout)}</p>
                   </div>
-                  <div className="pl-9 space-y-0.5">
+                  <div className="ps-9 space-y-0.5">
                     {o.branches.map((b) => (
                       <div key={b.branchId} className="flex items-center justify-between text-[10px] text-muted-foreground">
                         <span className="truncate">
                           {b.branchName}
-                          <span className="ml-1 text-muted-foreground/60">· {b.stocks}/{b.totalStocks} ({b.percentage.toFixed(1)}%)</span>
+                          <span className="ms-1 text-muted-foreground/60">· {b.stocks}/{b.totalStocks} ({b.percentage.toFixed(1)}%)</span>
                         </span>
-                        <span className="tabular-nums ml-2 shrink-0">{egp(b.payout)}</span>
+                        <span className="tabular-nums ms-2 shrink-0">{fmt.egp(b.payout)}</span>
                       </div>
                     ))}
                     {o.isFeeManager && o.mgmtFeeShare > 0 && (
                       <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                        <span>Management fee</span>
-                        <span className="tabular-nums ml-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{egp(o.mgmtFeeShare)}</span>
+                        <span>{t("Management fee")}</span>
+                        <span className="tabular-nums ms-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{fmt.egp(o.mgmtFeeShare)}</span>
                       </div>
                     )}
                   </div>
@@ -502,37 +500,37 @@ function ReviewStep({ configs, ownerPayouts }: { configs: BranchConfig[]; ownerP
 
         {/* Col 3: Summary */}
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Summary</h3>
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("Summary")}</h3>
           <div className="rounded-lg border divide-y text-xs">
             <div className="px-3 py-2.5 space-y-1">
-              <p className="font-semibold text-muted-foreground">Total Deductions</p>
+              <p className="font-semibold text-muted-foreground">{t("Total Deductions")}</p>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Co. Share</span>
-                <span className="tabular-nums font-medium text-destructive">{egp(totals.companyShare)}</span>
+                <span className="text-muted-foreground">{t("Co. Share")}</span>
+                <span className="tabular-nums font-medium text-destructive">{fmt.egp(totals.companyShare)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Mgmt Fee</span>
-                <span className="tabular-nums font-medium text-destructive">{egp(totals.mgmtFee)}</span>
+                <span className="text-muted-foreground">{t("Mgmt Fee")}</span>
+                <span className="tabular-nums font-medium text-destructive">{fmt.egp(totals.mgmtFee)}</span>
               </div>
             </div>
             <div className="px-3 py-2.5 space-y-1.5">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Distributable</span>
+                <span className="text-muted-foreground">{t("Total Distributable")}</span>
                 <span className={cn(
                   "tabular-nums font-semibold",
                   totals.distributable >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-destructive",
-                )}>{egp(totals.distributable)}</span>
+                )}>{fmt.egp(totals.distributable)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="font-semibold">Total Owner Payout</span>
+                <span className="font-semibold">{t("Total Owner Payout")}</span>
                 <span className={cn(
                   "tabular-nums font-bold",
                   totalOwnerPayout >= 0
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-destructive",
-                )}>{egp(totalOwnerPayout)}</span>
+                )}>{fmt.egp(totalOwnerPayout)}</span>
               </div>
             </div>
           </div>
@@ -575,6 +573,8 @@ function defaultConfig(branch: Branch): BranchConfig {
 
 export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, editRun }: Props) {
   const { profile } = useAuth()
+  const fmt = useFormatters()
+  const { t } = useLanguage()
   const [step, setStep]       = useState<0 | 1>(0)
   const [configs, setConfigs] = useState<BranchConfig[]>([])
 
@@ -717,14 +717,14 @@ export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, e
       const input = buildInput()
       if (isEdit && editRun) {
         await update.mutateAsync({ id: editRun.id, input })
-        toast.success("Payout run updated")
+        toast.success(t("Payout run updated"))
       } else {
         await create.mutateAsync(input)
-        toast.success("Payout run saved")
+        toast.success(t("Payout run saved"))
       }
       onOpenChange(false)
     } catch {
-      toast.error("Failed to save payout run")
+      toast.error(t("Failed to save payout run"))
     }
   }
 
@@ -737,21 +737,21 @@ export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, e
         {/* Header */}
         <SheetHeader className="px-6 pt-6 pb-4 border-b shrink-0">
           <SheetTitle className="flex items-center gap-2">
-            {isEdit ? "Edit Payout Run" : "Run Payout"} — {monthLabel}
+            {isEdit ? t("Edit Payout Run") : t("Run Payout")} — {monthLabel}
           </SheetTitle>
           <SheetDescription className="flex items-center gap-2 text-xs">
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
               step === 0 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
             )}>
-              1 Configure
+              1 {t("Configure")}
             </span>
             <ArrowRight className="h-3 w-3 text-muted-foreground" />
             <span className={cn(
               "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium",
               step === 1 ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
             )}>
-              2 Review
+              2 {t("Review")}
             </span>
           </SheetDescription>
         </SheetHeader>
@@ -765,7 +765,7 @@ export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, e
                   {[1, 2, 3].map((i) => <Skeleton key={i} className="h-72 w-full rounded-xl" />)}
                 </div>
               ) : configs.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No branches found.</p>
+                <p className="text-sm text-muted-foreground">{t("No branches found.")}</p>
               ) : (
                 configs.map((cfg) => (
                   <BranchConfigCard
@@ -787,29 +787,29 @@ export function PayoutWizardSheet({ open, onOpenChange, month, year, branches, e
         <div className="flex items-center justify-between gap-3 px-6 py-4 border-t shrink-0 bg-background">
           {step === 0 ? (
             <>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>{t("Cancel")}</Button>
               <div className="flex items-center gap-2">
                 {hasLastSettings && (
                   <Button variant="outline" onClick={applyLastSettings}>
                     <History className="h-4 w-4" />
-                    Use last settings
+                    {t("Use last settings")}
                   </Button>
                 )}
                 <Button onClick={() => setStep(1)} disabled={configs.length === 0}>
-                  Next: Review
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  {t("Next: Review")}
+                  <ChevronRight className="h-4 w-4 ms-1" />
                 </Button>
               </div>
             </>
           ) : (
             <>
               <Button variant="outline" onClick={() => setStep(0)}>
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Back
+                <ChevronLeft className="h-4 w-4 me-1" />
+                {t("Back")}
               </Button>
               <Button onClick={handleSubmit} disabled={isPending}>
-                {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                {isEdit ? "Save Changes" : "Run Payout"}
+                {isPending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
+                {isEdit ? t("Save Changes") : t("Run Payout")}
               </Button>
             </>
           )}

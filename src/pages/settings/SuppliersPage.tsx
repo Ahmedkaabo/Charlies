@@ -18,6 +18,7 @@ import {
 import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import type { Supplier } from "@/types/expense"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useFormatters } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -192,6 +193,7 @@ function SupplierDrawer({
   onDeleted: () => void
 }) {
   const { t } = useLanguage()
+  const fmt = useFormatters()
   const isMobile = useIsMobile()
   const update   = useUpdateSupplier()
   const del      = useDeleteSupplier()
@@ -409,7 +411,7 @@ function SupplierDrawer({
                         </div>
                         {expenses.length > 0 && (
                           <Badge variant="secondary" className="text-xs shrink-0">
-                            EGP {totalSpend.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            {fmt.egp(totalSpend, 2)}
                           </Badge>
                         )}
                       </div>
@@ -453,7 +455,7 @@ function SupplierDrawer({
                                   </p>
                                 </div>
                                 <span className="text-sm font-medium shrink-0">
-                                  EGP {(exp.amount as number).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+                                  {fmt.egp(exp.amount as number, 2)}
                                 </span>
                               </div>
                             )

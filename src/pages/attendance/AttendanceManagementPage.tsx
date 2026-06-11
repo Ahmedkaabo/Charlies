@@ -1,13 +1,13 @@
 import { useState, useMemo } from "react"
 import { format, parseISO, addDays, subDays } from "date-fns"
-import { ChevronLeft, ChevronRight, Download, Image, CalendarDays, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight, Image, CalendarDays, Search } from "lucide-react"
 
 import { useAuth } from "@/hooks/useAuth"
 import { useUserPermissions } from "@/hooks/usePermissions"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useGetMembers } from "@/hooks/useMembers"
 import { useAttendanceLogs, useMyBranches } from "@/hooks/useAttendance"
-import { exportLogsToCSV, formatShiftTime, calculateDayValue } from "@/lib/attendance"
+import { formatShiftTime, calculateDayValue } from "@/lib/attendance"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
 import type { AttendanceLogWithProfile } from "@/types/attendance"
@@ -55,16 +55,13 @@ const APP_START = new Date(2026, 5, 1) // June 2026 — first month of operation
 export function AttendanceManagementPage() {
   const { t } = useLanguage()
   const { isAdmin, profile } = useAuth()
-  const { canCreate, canUpdate } = useUserPermissions()
+  const { canCreate } = useUserPermissions()
   const today = new Date()
 
   // can_create("attendance") = "View all staff records in assigned branches"
   // Without it the user only sees their own records.
   const canViewAllStaff = isAdmin || canCreate("attendance")
-  // can_update("attendance") = "Export attendance to CSV"
-  const canExport = isAdmin || canUpdate("attendance")
-
-  const isMobile = useIsMobile()
+const isMobile = useIsMobile()
 
   const [branchFilters, setBranchFilters] = useState<string[]>([])
   const [staffFilters, setStaffFilters] = useState<string[]>([])
@@ -119,10 +116,6 @@ export function AttendanceManagementPage() {
     if (next <= today) setSelectedDate(format(next, "yyyy-MM-dd"))
   }
 
-  function handleExport() {
-    exportLogsToCSV(attendanceLogs ?? [], `attendance-${selectedDate}.csv`)
-  }
-
   return (
     <div className="p-4 md:p-6 space-y-5">
 
@@ -133,7 +126,7 @@ export function AttendanceManagementPage() {
           {/* Day navigation */}
           <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
             <div className="flex items-center rounded-lg border bg-card">
-              <Button size="icon" variant="ghost" onClick={prevDay} disabled={parseISO(selectedDate) <= APP_START} className="h-8 w-8 rounded-r-none border-r">
+              <Button size="icon" variant="ghost" onClick={prevDay} disabled={parseISO(selectedDate) <= APP_START} className="h-8 w-8 rounded-e-none border-e">
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <PopoverTrigger asChild>
@@ -147,7 +140,7 @@ export function AttendanceManagementPage() {
                 variant="ghost"
                 onClick={nextDay}
                 disabled={selectedDate === format(today, "yyyy-MM-dd")}
-                className="h-8 w-8 rounded-l-none border-l"
+                className="h-8 w-8 rounded-s-none border-s"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -173,12 +166,12 @@ export function AttendanceManagementPage() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative w-full sm:w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder={t("Search staff…")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              className="ps-8"
             />
           </div>
 
@@ -202,12 +195,6 @@ export function AttendanceManagementPage() {
             />
           )}
 
-          {canExport && (
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4" />
-              {t("Export CSV")}
-            </Button>
-          )}
         </div>
       </div>
 
@@ -217,14 +204,14 @@ export function AttendanceManagementPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branch")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Shift")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Check In")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Late?")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Check Out")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Hours")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Days")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Branch")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Shift")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Check In")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Late?")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Check Out")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Hours")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Days")}</th>
               <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("Selfie")}</th>
             </tr>
           </thead>
@@ -233,7 +220,7 @@ export function AttendanceManagementPage() {
               Array.from({ length: 5 }).map((_, i) => (
                 <tr key={i}>
                   {Array.from({ length: 9 }).map((_, j) => (
-                    <td key={j} className={j === 0 ? "px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : "px-4 py-3"}>
+                    <td key={j} className={j === 0 ? "px-4 py-3 text-start sticky start-0 z-10 bg-background relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : "px-4 py-3"}>
                       <Skeleton className="h-3 w-full" />
                     </td>
                   ))}
@@ -267,7 +254,7 @@ export function AttendanceManagementPage() {
               return (
                 <tr key={log.id} className="hover:bg-muted/30 cursor-pointer group" onClick={() => setDetailLog(log)}>
                   {/* Staff */}
-                  <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                  <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                     <div className="flex items-center gap-2">
                       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                         {initials(log.profile?.full_name ?? null)}
@@ -323,14 +310,14 @@ export function AttendanceManagementPage() {
                   </td>
 
                   {/* Hours — coloured when outside shift range */}
-                  <td className={`px-4 py-3 text-right tabular-nums font-medium ${
+                  <td className={`px-4 py-3 text-end tabular-nums font-medium ${
                     underMin ? "text-destructive" : overMax ? "text-amber-600 dark:text-amber-400" : ""
                   }`}>
                     {hrs !== null ? `${hrs.toFixed(1)} h` : "—"}
                   </td>
 
                   {/* Days — credited day value after any late deduction */}
-                  <td className="px-4 py-3 text-right tabular-nums">
+                  <td className="px-4 py-3 text-end tabular-nums">
                     {storedDayValue != null ? (
                       <div className="flex flex-col items-end leading-tight">
                         <span className="font-medium">{storedDayValue.toFixed(2)}</span>
@@ -394,8 +381,8 @@ export function AttendanceManagementPage() {
                     {initials(log.profile?.full_name ?? null)}
                   </div>
                   <div>
-                    <SheetTitle className="text-left">{log.profile?.full_name ?? "—"}</SheetTitle>
-                    <SheetDescription className="text-left">
+                    <SheetTitle className="text-start">{log.profile?.full_name ?? "—"}</SheetTitle>
+                    <SheetDescription className="text-start">
                       {format(parseISO(log.date), "EEEE, d MMMM yyyy")}
                     </SheetDescription>
                   </div>

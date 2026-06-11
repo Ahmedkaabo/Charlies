@@ -16,6 +16,7 @@ import { getCurrentSalesDate, isDayEditable } from "@/lib/sales"
 import { SalesRecordSheet } from "@/components/sales/SalesRecordSheet"
 import { cn } from "@/lib/utils"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useFormatters } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -43,6 +44,7 @@ interface SalesBranchViewProps {
 
 export function SalesBranchView({ branchId, branchName, month, year }: SalesBranchViewProps) {
   const { t } = useLanguage()
+  const fmt = useFormatters()
   const { isAdmin } = useAuth()
   const { canCreate, canUpdate } = useUserPermissions()
   const canCreateSales = isAdmin || canCreate("sales")
@@ -205,8 +207,8 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
         <thead className="border-b bg-muted/40">
           <tr>
             <th className={stickyHead}>{t("Date")}</th>
-            <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Revenue")}</th>
-            <th className="px-4 py-3 text-left font-medium text-muted-foreground">{t("Notes")}</th>
+            <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Revenue")}</th>
+            <th className="px-4 py-3 text-start font-medium text-muted-foreground">{t("Notes")}</th>
             <th className="px-4 py-3 text-center font-medium text-muted-foreground">{t("Receipt")}</th>
           </tr>
         </thead>
@@ -254,9 +256,9 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
                     </td>
 
                     {/* Revenue */}
-                    <td className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
+                    <td className="px-4 py-3 text-end tabular-nums whitespace-nowrap">
                       {record
-                        ? <span className="font-semibold">EGP {record.revenue.toLocaleString()}</span>
+                        ? <span className="font-semibold">{fmt.egp(record.revenue)}</span>
                         : <span className="text-muted-foreground">—</span>
                       }
                     </td>
@@ -308,13 +310,13 @@ export function SalesBranchView({ branchId, branchName, month, year }: SalesBran
 // ── Sticky column helpers ─────────────────────────────────────
 
 const stickyBase =
-  "sticky left-0 z-10 bg-background px-4 py-3 " +
-  "after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
+  "sticky start-0 z-10 bg-background px-4 py-3 text-start " +
+  "after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
 
 function stickyCell(extra: string) {
   return cn(stickyBase, extra)
 }
 
 const stickyHead =
-  "sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground " +
-  "after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
+  "sticky start-0 z-10 bg-muted/40 px-4 py-3 text-start font-medium text-muted-foreground " +
+  "after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"

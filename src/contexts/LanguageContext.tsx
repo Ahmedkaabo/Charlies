@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import * as React from "react"
 import { translations, type Language } from "@/i18n/translations"
+import { DirectionProvider } from "@/components/ui/direction"
 
 type LanguageContextType = {
   language: Language
@@ -44,7 +45,9 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <LanguageContext.Provider value={value}>
-      {children}
+      <DirectionProvider dir={isRTL ? "rtl" : "ltr"}>
+        {children}
+      </DirectionProvider>
     </LanguageContext.Provider>
   )
 }

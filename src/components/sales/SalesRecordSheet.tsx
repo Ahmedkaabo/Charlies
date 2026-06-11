@@ -23,6 +23,7 @@ import { useUpsertSalesRecord } from "@/hooks/useSalesMutations"
 import { uploadSalesReceipt } from "@/lib/storage"
 import { formatSalesDate } from "@/lib/sales"
 import { cn } from "@/lib/utils"
+import { useFormatters } from "@/lib/format"
 import type { SalesRecord } from "@/types/sales"
 
 import { Button } from "@/components/ui/button"
@@ -86,6 +87,7 @@ export function SalesRecordSheet({
 }: SalesRecordSheetProps) {
   const isMobile = useIsMobile()
   const { profile } = useAuth()
+  const fmt = useFormatters()
 
   // view → reading existing record; edit → filling the form
   const [mode, setMode]           = useState<"view" | "edit">("view")
@@ -217,7 +219,7 @@ export function SalesRecordSheet({
             <div>
               <p className="text-xs font-medium text-muted-foreground mb-1">Revenue</p>
               <p className="text-2xl font-bold tabular-nums">
-                EGP {record.revenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {fmt.egp(record.revenue, 2)}
               </p>
             </div>
 
@@ -310,8 +312,8 @@ export function SalesRecordSheet({
                         {h.previous_revenue !== h.new_revenue && (
                           <p>
                             Revenue:{" "}
-                            <span className="line-through">EGP {h.previous_revenue?.toLocaleString()}</span>
-                            {" "}→ EGP {h.new_revenue?.toLocaleString()}
+                            <span className="line-through">{fmt.egp(h.previous_revenue ?? 0)}</span>
+                            {" "}→ {fmt.egp(h.new_revenue ?? 0)}
                           </p>
                         )}
                         {h.previous_notes !== h.new_notes && <p>Notes changed</p>}
@@ -375,8 +377,8 @@ export function SalesRecordSheet({
                     <FormLabel>Revenue</FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none pointer-events-none">
-                          EGP
+                        <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground select-none pointer-events-none">
+                          {fmt.sym("EGP")}
                         </span>
                         <Input
                           type="number"
@@ -384,7 +386,7 @@ export function SalesRecordSheet({
                           min={0}
                           step="0.01"
                           placeholder="0.00"
-                          className="pl-12"
+                          className="ps-12"
                           value={field.value ?? ""}
                           onChange={(e) =>
                             field.onChange(
@@ -426,7 +428,7 @@ export function SalesRecordSheet({
                   <FormItem>
                     <FormLabel>
                       Receipt Image
-                      <span className="ml-1 text-destructive">*</span>
+                      <span className="ms-1 text-destructive">*</span>
                     </FormLabel>
                     <FormControl>
                       <>
@@ -453,7 +455,7 @@ export function SalesRecordSheet({
                             <button
                               type="button"
                               onClick={clearImage}
-                              className="absolute top-2 right-2 rounded-full bg-background/80 p-1 shadow-sm hover:bg-background"
+                              className="absolute top-2 end-2 rounded-full bg-background/80 p-1 shadow-sm hover:bg-background"
                             >
                               <X className="h-3.5 w-3.5" />
                             </button>
@@ -535,8 +537,8 @@ export function SalesRecordSheet({
                               {h.previous_revenue !== h.new_revenue && (
                                 <p>
                                   Revenue:{" "}
-                                  <span className="line-through">EGP {h.previous_revenue?.toLocaleString()}</span>
-                                  {" "}→ EGP {h.new_revenue?.toLocaleString()}
+                                  <span className="line-through">{fmt.egp(h.previous_revenue ?? 0)}</span>
+                                  {" "}→ {fmt.egp(h.new_revenue ?? 0)}
                                 </p>
                               )}
                               {h.previous_notes !== h.new_notes && <p>Notes changed</p>}

@@ -46,13 +46,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -106,7 +100,7 @@ function SalarySection({
     <div className="space-y-4">
       <div>
         <h3 className="text-sm font-semibold">
-          Salary{required && <span className="text-destructive ml-1">*</span>}
+          Salary{required && <span className="text-destructive ms-1">*</span>}
         </h3>
         <p className="text-xs text-muted-foreground mt-0.5">
           {required ? "Required for this role" : "Optional — can be left at 0"}
@@ -145,7 +139,7 @@ function SalarySection({
               <Select value={field.value} onValueChange={field.onChange}>
                 <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                 <SelectContent>
-                  <SelectItem value="EGP">EGP</SelectItem>
+                  <SelectItem value="EGP">ج.م. (EGP)</SelectItem>
                   <SelectItem value="USD">USD</SelectItem>
                 </SelectContent>
               </Select>
@@ -164,7 +158,7 @@ function SalarySection({
             <Popover open={calendarOpen} onOpenChange={onCalendarOpen}>
               <PopoverTrigger asChild>
                 <FormControl>
-                  <Button variant="outline" className="w-full justify-start text-left">
+                  <Button variant="outline" className="w-full justify-start text-start">
                     <CalendarIcon className="h-4 w-4 shrink-0" />
                     {field.value ? format(field.value, "d MMM yyyy") : "Pick a date"}
                   </Button>
@@ -211,7 +205,7 @@ function SalarySection({
 
 const createSchema = z.object({
   full_name:      z.string().min(2, "Name must be at least 2 characters"),
-  name_ar:        z.string(),
+  name_ar:        z.string().min(1, "Arabic name is required"),
   phone:          z.string().min(7, "Enter a valid phone number"),
   password:       z.string().min(8, "Password must be at least 8 characters"),
   branch_id:      z.string().min(1, "Select a branch"),
@@ -305,8 +299,8 @@ function CreateContent({
   return (
     <>
       <SheetHeader className="border-b px-6 py-4">
-        <SheetTitle className="text-left">New Staff</SheetTitle>
-        <SheetDescription className="text-left">
+        <SheetTitle className="text-start">New Staff</SheetTitle>
+        <SheetDescription className="text-start">
           Create an account and assign them to a branch
         </SheetDescription>
       </SheetHeader>
@@ -341,7 +335,7 @@ function CreateContent({
                   name="name_ar"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Arabic Name</FormLabel>
+                      <FormLabel>Arabic Name <span className="text-destructive">*</span></FormLabel>
                       <FormControl>
                         <Input dir="rtl" lang="ar" placeholder="أحمد مصطفى" autoComplete="off" {...field} />
                       </FormControl>
@@ -583,7 +577,7 @@ function EditContent({
             {getInitials(groupedMember.full_name)}
           </div>
           <div className="min-w-0 flex-1 space-y-1">
-            <SheetTitle className="text-left">{groupedMember.full_name ?? "Staff"}</SheetTitle>
+            <SheetTitle className="text-start">{groupedMember.full_name ?? "Staff"}</SheetTitle>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
               {groupedMember.is_admin && (
                 <Badge variant="default" className="text-xs gap-1">
@@ -649,13 +643,13 @@ function EditContent({
                           type={showPassword ? "text" : "password"}
                           placeholder="••••••••"
                           autoComplete="new-password"
-                          className="pr-10"
+                          className="pe-10"
                           {...field}
                         />
                         <button
                           type="button"
                           onClick={() => setShowPassword((v) => !v)}
-                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                          className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                           tabIndex={-1}
                         >
                           {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}

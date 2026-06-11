@@ -25,7 +25,7 @@ import { useLanguage } from "@/contexts/LanguageContext"
 
 export const branchSchema = z.object({
   name: z.string().min(1, "Branch name is required"),
-  name_ar: z.string(),
+  name_ar: z.string().min(1, "Arabic name is required"),
   address: z.string(),
   city: z.string(),
   phone: z.string(),
@@ -134,7 +134,9 @@ export function BranchForm({
                 name="name_ar"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t("Arabic Name")}</FormLabel>
+                    <FormLabel>
+                      {t("Arabic Name")} <span className="text-destructive">*</span>
+                    </FormLabel>
                     <FormControl>
                       <Input
                         dir="rtl"

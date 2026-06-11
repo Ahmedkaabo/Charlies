@@ -70,6 +70,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import { useFormatters } from "@/lib/format"
 // ── Drawer state ───────────────────────────────────────────
 
 type DrawerState =
@@ -79,13 +80,6 @@ type DrawerState =
   | { type: "edit"; expense: Expense }
 
 // ── Helpers ────────────────────────────────────────────────
-
-function formatAmount(amount: number) {
-  return `EGP ${amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`
-}
 
 function formatDate(dateStr: string) {
   return format(parseISO(dateStr), "MMM d, yyyy")
@@ -128,13 +122,13 @@ function TableSkeleton() {
     <>
       {Array.from({ length: 6 }).map((_, i) => (
         <tr key={i}>
-          <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-24" /></td>
+          <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-24" /></td>
           <td className="px-4 py-3"><Skeleton className="h-4 w-28" /></td>
           <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
           <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
           <td className="px-4 py-3"><Skeleton className="h-10 w-10 rounded" /></td>
-          <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
-          <td className="px-4 py-3"><Skeleton className="h-6 w-6 ml-auto" /></td>
+          <td className="px-4 py-3 text-end"><Skeleton className="h-4 w-20 ms-auto" /></td>
+          <td className="px-4 py-3"><Skeleton className="h-6 w-6 ms-auto" /></td>
         </tr>
       ))}
     </>
@@ -168,11 +162,12 @@ function ExpenseCard({
   onView: (e: Expense) => void
 }) {
   const { t } = useLanguage()
+  const fmt = useFormatters()
   const Icon = getCategoryIcon(expense.category?.icon ?? null)
 
   return (
     <button
-      className="w-full px-4 py-3 border-b last:border-0 text-left hover:bg-muted/40 transition-colors"
+      className="w-full px-4 py-3 border-b last:border-0 text-start hover:bg-muted/40 transition-colors"
       onClick={() => onView(expense)}
     >
       <div className="flex items-start gap-3">
@@ -201,7 +196,7 @@ function ExpenseCard({
           )}
         </div>
 
-        <span className="text-sm font-semibold tabular-nums shrink-0">{formatAmount(expense.amount)}</span>
+        <span className="text-sm font-semibold tabular-nums shrink-0">{fmt.egp(expense.amount, 2)}</span>
       </div>
     </button>
   )
@@ -229,6 +224,7 @@ function formatDateRangeTrigger(range: DateRange | undefined) {
 
 export function ExpensesListPage() {
   const { t } = useLanguage()
+  const fmt = useFormatters()
   const isMobile = useIsMobile()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete } = useUserPermissions()
@@ -411,12 +407,12 @@ export function ExpensesListPage() {
         <div className="flex flex-wrap items-center gap-2">
           {/* Search */}
           <div className="relative w-full sm:w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder={t("Search expenses…")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              className="ps-8"
             />
           </div>
 
@@ -457,7 +453,7 @@ export function ExpensesListPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-xl font-bold tabular-nums">{formatAmount(totalAmount)}</p>
+            <p className="text-xl font-bold tabular-nums">{fmt.egp(totalAmount)}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {filteredExpenses.length} {filteredExpenses.length === 1 ? t("entry") : t("entries")}
             </p>
@@ -570,12 +566,12 @@ export function ExpensesListPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Date")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branch")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Category")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Description")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-14">{t("Receipt")}</th>
-                <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Amount")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Date")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Branch")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Category")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Description")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap w-14">{t("Receipt")}</th>
+                <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Amount")}</th>
                 <th className="px-4 py-3 w-10" />
               </tr>
             </thead>
@@ -614,7 +610,7 @@ export function ExpensesListPage() {
                       onClick={() => setDrawer({ type: "view", expense })}
                     >
                       {/* Date — orange Pencil when edited */}
-                      <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 whitespace-nowrap relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 whitespace-nowrap relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         <span className="flex items-center gap-1.5">
                           {formatDate(expense.date)}
                           {expense.edited_at && (
@@ -654,8 +650,8 @@ export function ExpensesListPage() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 text-right font-semibold tabular-nums whitespace-nowrap">
-                        {formatAmount(expense.amount)}
+                      <td className="px-4 py-3 text-end font-semibold tabular-nums whitespace-nowrap">
+                        {fmt.egp(expense.amount)}
                       </td>
 
                       {(canEdit || canDeleteEntry) && (
@@ -699,7 +695,7 @@ export function ExpensesListPage() {
       {/* ── Mobile FAB ─────────────────────────────────── */}
       {isMobile && canSubmit && (
         <Button
-          className="fixed bottom-20 right-4 h-14 w-14 rounded-full shadow-lg"
+          className="fixed bottom-20 end-4 h-14 w-14 rounded-full shadow-lg"
           size="icon"
           onClick={() => setDrawer({ type: "create" })}
         >

@@ -1,6 +1,7 @@
 import { TrendingUp } from "lucide-react"
 
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useFormatters } from "@/lib/format"
 import { useGetBranches } from "@/hooks/useBranches"
 import { useSalesRecords, useSalesSummary } from "@/hooks/useSales"
 import { getMissingDays } from "@/lib/sales"
@@ -59,6 +60,7 @@ export function SalesManagementView({
   canTreasuryRead,
 }: SalesManagementViewProps) {
   const { t } = useLanguage()
+  const fmt = useFormatters()
 
   const { data: allBranches, isLoading: branchesLoading } = useGetBranches()
 
@@ -117,7 +119,7 @@ export function SalesManagementView({
           <SummaryCard
             icon={<TrendingUp className="h-4 w-4" />}
             label={t("Total Revenue")}
-            value={`EGP ${summary.totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`}
+            value={fmt.egp(summary.totalRevenue)}
             sub={t("All branches")}
             loading={summaryLoading}
           />
@@ -129,11 +131,11 @@ export function SalesManagementView({
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Branch")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Days Filled")}</th>
-              {canTreasuryRead && <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Total Revenue")}</th>}
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Missing Days")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground">{t("Last Entry")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Branch")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Days Filled")}</th>
+              {canTreasuryRead && <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Total Revenue")}</th>}
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Missing Days")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground">{t("Last Entry")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -160,14 +162,14 @@ export function SalesManagementView({
                   className="group cursor-pointer hover:bg-muted/30"
                   onClick={() => onSelectBranch(row.id)}
                 >
-                  <td className="px-4 py-3 font-medium sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{row.name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums">{row.daysFilled}</td>
+                  <td className="px-4 py-3 font-medium text-start sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{row.name}</td>
+                  <td className="px-4 py-3 text-end tabular-nums">{row.daysFilled}</td>
                   {canTreasuryRead && (
-                    <td className="px-4 py-3 text-right tabular-nums">
-                      EGP {row.totalRevenue.toLocaleString()}
+                    <td className="px-4 py-3 text-end tabular-nums">
+                      {fmt.egp(row.totalRevenue)}
                     </td>
                   )}
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-end">
                     {row.missingDays > 0 ? (
                       <span className="text-destructive font-medium">
                         {row.missingDays}
@@ -176,7 +178,7 @@ export function SalesManagementView({
                       <span className="text-muted-foreground">0</span>
                     )}
                   </td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">
+                  <td className="px-4 py-3 text-end text-muted-foreground">
                     {row.lastEntry ?? "—"}
                   </td>
                 </tr>

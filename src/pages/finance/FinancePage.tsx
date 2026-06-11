@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { format, parseISO, isValid } from "date-fns"
+import { format } from "date-fns"
 import {
   TrendingUp,
   TrendingDown,
@@ -14,7 +14,6 @@ import {
   ChevronUp,
   Play,
   Pencil,
-  CalendarIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -32,6 +31,7 @@ import {
 import { usePayoutRuns, useDeletePayoutRun } from "@/hooks/usePayoutRuns"
 import { useGetOwners } from "@/hooks/useOwners"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useFormatters } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import type { Branch } from "@/types/branch"
 import type { PayoutRunFull, PayoutRunBranch } from "@/types/finance"
@@ -39,22 +39,13 @@ import { PayoutWizardSheet } from "@/components/finance/PayoutWizardSheet"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { MultiSelect } from "@/components/ui/multi-select"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -96,9 +87,6 @@ function generateMonthOptions() {
 
 const MONTH_OPTIONS = generateMonthOptions()
 
-function egp(n: number) {
-  return `EGP ${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-}
 
 function getInitials(name: string | null | undefined) {
   if (!name) return "?"
@@ -171,6 +159,7 @@ function AdjustSheet({
   year: number
 }) {
   const { t } = useLanguage()
+  const { sym } = useFormatters()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const create = useCreateFinanceRecord()
@@ -183,13 +172,11 @@ function AdjustSheet({
     "yyyy-MM-dd",
   )
 
-  const [branchId, setBranchId]       = useState(defaultBranchId ?? "")
-  const [type, setType]               = useState<"credit" | "debit">("credit")
-  const [amount, setAmount]           = useState("")
-  const [date, setDate]               = useState(defaultDate)
-  const [description, setDescription] = useState("")
-  const [isVisa, setIsVisa]           = useState(false)
-  const [isRent, setIsRent]           = useState(false)
+  const [branchId, setBranchId] = useState(defaultBranchId ?? "")
+  const [type, setType]         = useState<"credit" | "debit">("credit")
+  const [amount, setAmount]     = useState("")
+  const [isVisa, setIsVisa]     = useState(false)
+  const [isRent, setIsRent]     = useState(false)
 
   // Re-sync branch when sheet opens with new default
   const [lastDefault, setLastDefault] = useState(defaultBranchId)
@@ -200,11 +187,9 @@ function AdjustSheet({
 
   function reset() {
     setAmount("")
-    setDescription("")
     setIsVisa(false)
     setIsRent(false)
     setType("credit")
-    setDate(defaultDate)
     setBranchId(defaultBranchId ?? "")
   }
 
@@ -219,8 +204,8 @@ function AdjustSheet({
         type,
         is_visa:     type === "credit" ? isVisa : false,
         is_rent:     type === "debit"  ? isRent : false,
-        description: description.trim() || null,
-        date,
+        description: null,
+        date:        defaultDate,
         added_by:    profile?.id ?? null,
       })
       toast.success(type === "credit" ? t("Added") : t("Withdrawal saved"))
@@ -292,14 +277,14 @@ function AdjustSheet({
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("Amount")}</p>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">{sym("EGP")}</span>
               <Input
                 type="number"
                 inputMode="decimal"
                 min={0}
                 step="0.01"
                 placeholder="0.00"
-                className="pl-12"
+                className="ps-12"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
               />
@@ -333,38 +318,6 @@ function AdjustSheet({
             </div>
           )}
 
-          {/* Date */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("Date")}</p>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : t("Pick a date")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={date && isValid(parseISO(date)) ? parseISO(date) : undefined}
-                  onSelect={(d) => d && setDate(format(d, "yyyy-MM-dd"))}
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">
-              {t("Description")} <span className="font-normal text-muted-foreground">({t("optional")})</span>
-            </p>
-            <Textarea
-              placeholder={t("What is this for?")}
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-            />
-          </div>
         </div>
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
@@ -394,6 +347,7 @@ function PayoutRunDisplay({
   onDelete?:     () => void
 }) {
   const { t } = useLanguage()
+  const { egp } = useFormatters()
   const [addMgmtFees, setAddMgmtFees] = useState(false)
   const { data: allOwners = [] } = useGetOwners()
 
@@ -452,7 +406,7 @@ function PayoutRunDisplay({
       <div className="flex items-center justify-between">
         <p className="text-xs text-muted-foreground">
           {t("Saved")} {format(new Date(run.created_at), "d MMM yyyy, HH:mm")}
-          {run.notes && <span className="ml-2 italic">· {run.notes}</span>}
+          {run.notes && <span className="ms-2 italic">· {run.notes}</span>}
         </p>
         {(onEdit || onDelete) && (
           <div className="flex items-center gap-0.5">
@@ -507,20 +461,20 @@ function PayoutRunDisplay({
                         displayed >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive",
                       )}>{egp(displayed)}</p>
                     </div>
-                    <div className="pl-11 space-y-0.5">
+                    <div className="ps-11 space-y-0.5">
                       {o.branches.map((b, i) => (
                         <div key={i} className="flex items-center justify-between text-xs text-muted-foreground">
                           <span className="truncate">
                             {b.branchName}
-                            <span className="ml-1 text-muted-foreground/60">· {b.stocks}/{b.totalStocks} ({b.percentage.toFixed(1)}%)</span>
+                            <span className="ms-1 text-muted-foreground/60">· {b.stocks}/{b.totalStocks} ({b.percentage.toFixed(1)}%)</span>
                           </span>
-                          <span className="tabular-nums ml-2 shrink-0">{egp(b.payout)}</span>
+                          <span className="tabular-nums ms-2 shrink-0">{egp(b.payout)}</span>
                         </div>
                       ))}
                       {addMgmtFees && isFeeManager && (
                         <div className="flex items-center justify-between text-xs text-muted-foreground">
                           <span>{t("Management fee")}</span>
-                          <span className="tabular-nums ml-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{egp(mgmtFeePerOwner)}</span>
+                          <span className="tabular-nums ms-2 shrink-0 text-emerald-600 dark:text-emerald-400">+{egp(mgmtFeePerOwner)}</span>
                         </div>
                       )}
                     </div>
@@ -574,7 +528,7 @@ function PayoutRunDisplay({
               {branches.map((b) => (
                 <div key={b.id} className="space-y-1">
                   <p className="text-xs font-semibold truncate">{b.branch_name}</p>
-                  <div className="space-y-0.5 text-xs pl-1">
+                  <div className="space-y-0.5 text-xs ps-1">
                     <div className="flex justify-between text-muted-foreground">
                       <span>{t("Rent")}</span>
                       <span className="tabular-nums">{egp(Number(b.rent_amount))}</span>
@@ -635,6 +589,7 @@ function FinanceContent({
   canRunPayout: boolean
 }) {
   const { t } = useLanguage()
+  const { egp } = useFormatters()
   const { canCreate: canCreateFin, canDelete: canDeleteFin } = useUserPermissions()
   const canAdjust    = canCreateFin("finance")   // "Add credit / debit adjustments"
   const canDeleteRec = canDeleteFin("finance")   // "Delete finance adjustments"

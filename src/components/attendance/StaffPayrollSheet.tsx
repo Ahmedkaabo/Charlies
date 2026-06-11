@@ -5,8 +5,10 @@ import { toast } from "sonner"
 import { usePayrollAdjustments, useStaffMonthlyAttendance } from "@/hooks/usePayroll"
 import { useDeleteAdjustment } from "@/hooks/useAttendanceMutations"
 import { useUserPermissions } from "@/hooks/usePermissions"
+import { useLanguage } from "@/contexts/LanguageContext"
 import type { StaffPayrollRow, PayrollAdjustment } from "@/types/attendance"
 import { cn } from "@/lib/utils"
+import { useFormatters } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -32,10 +34,6 @@ import {
 import { useIsMobile } from "@/hooks/use-mobile"
 
 // ── Helpers ───────────────────────────────────────────────────
-
-function currency(n: number, curr = "EGP") {
-  return `${Number(n).toLocaleString("en-EG", { minimumFractionDigits: 0 })} ${curr}`
-}
 
 function initials(name: string | null) {
   if (!name) return "?"
@@ -78,6 +76,9 @@ function AdjustmentList({
   canDelete: boolean
   onDelete: (adj: PayrollAdjustment) => void
 }) {
+  const fmt = useFormatters()
+  const { t } = useLanguage()
+
   if (loading) {
     return (
       <div className="space-y-2">
@@ -106,7 +107,7 @@ function AdjustmentList({
               </p>
             </div>
             <span className={cn("shrink-0 font-semibold tabular-nums", typeColor(adj.type))}>
-              {typeSign(adj.type)}{currency(adj.amount, curr)}
+              {typeSign(adj.type)}{fmt.money(adj.amount, curr)}
             </span>
             {canDelete && (
               <Button
@@ -124,9 +125,9 @@ function AdjustmentList({
 
       {items.length > 1 && (
         <div className="flex items-center justify-between rounded-lg bg-muted/50 px-4 py-2.5 text-sm">
-          <span className="text-muted-foreground">Total · {items.length} items</span>
+          <span className="text-muted-foreground">{t("Total")} · {items.length} {t("items")}</span>
           <span className={cn("font-semibold tabular-nums", typeColor(items[0].type))}>
-            {typeSign(items[0].type)}{currency(total, curr)}
+            {typeSign(items[0].type)}{fmt.money(total, curr)}
           </span>
         </div>
       )}
@@ -149,12 +150,14 @@ interface Props {
 
 export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdjust }: Props) {
   const isMobile = useIsMobile()
+  const { t } = useLanguage()
   const { canUpdate, canDelete: canDeletePerm } = useUserPermissions()
   const canAdjust    = canUpdate("payroll")
   const canDeleteAdj = canDeletePerm("payroll")
 
   const [deleteTarget, setDeleteTarget] = useState<PayrollAdjustment | null>(null)
   const deleteAdjustment = useDeleteAdjustment()
+  const fmt = useFormatters()
 
   const { data: adjustments, isLoading: adjLoading } = usePayrollAdjustments(row.profile_id, month, year)
   const { data: attendance,  isLoading: attLoading  } = useStaffMonthlyAttendance(row.profile_id, row.branch_id, month, year)
@@ -175,9 +178,9 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
         current_days_present: row.days_present,
         current_paid_days_off: row.paid_days_off,
       })
-      toast.success("Adjustment deleted")
+      toast.success(t("Adjustment deleted"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete adjustment")
+      toast.error(err instanceof Error ? err.message : t("Failed to delete adjustment"))
     } finally {
       setDeleteTarget(null)
     }
@@ -186,7 +189,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
   function TabCount({ n }: { n: number }) {
     if (n === 0) return null
     return (
-      <span className="ml-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums leading-none">
+      <span className="ms-1.5 rounded-full bg-muted px-1.5 py-0.5 text-xs font-medium tabular-nums leading-none">
         {n}
       </span>
     )
@@ -210,10 +213,10 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
                 {initials(row.full_name)}
               </div>
               <div className="min-w-0">
-                <SheetTitle className="text-left text-base truncate">
+                <SheetTitle className="text-start text-base truncate">
                   {row.full_name ?? "—"}
                 </SheetTitle>
-                <SheetDescription className="text-left flex items-center gap-1.5 mt-0.5">
+                <SheetDescription className="text-start flex items-center gap-1.5 mt-0.5">
                   {row.role && (
                     <span className="capitalize">{row.role.name.replace(/_/g, " ")}</span>
                   )}
@@ -231,17 +234,17 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
           {/* Tab bar */}
           <div className="shrink-0 px-6 pt-4">
             <TabsList>
-              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="overview">{t("Overview")}</TabsTrigger>
               <TabsTrigger value="bonus">
-                Bonus
+                {t("Bonus")}
                 <TabCount n={bonuses.length} />
               </TabsTrigger>
               <TabsTrigger value="deductions">
-                Deductions
+                {t("Deductions")}
                 <TabCount n={deductions.length} />
               </TabsTrigger>
               <TabsTrigger value="debts">
-                Debts
+                {t("Debts")}
                 <TabCount n={debts.length} />
               </TabsTrigger>
             </TabsList>
@@ -253,12 +256,12 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
             {/* Salary grid */}
             <div className="grid grid-cols-2 gap-3">
               {[
-                { label: "Base Salary", value: currency(row.base_salary ?? 0, row.currency) },
-                { label: "Earned",      value: currency(row.earned_salary,    row.currency) },
-                { label: "Bonuses",     value: row.total_bonuses    > 0 ? `+${currency(row.total_bonuses,    row.currency)}` : "—" },
-                { label: "Deductions",  value: row.total_deductions > 0 ? `−${currency(row.total_deductions, row.currency)}` : "—" },
-                { label: "Debts",       value: row.total_debts      > 0 ?    currency(row.total_debts,       row.currency)   : "—" },
-                { label: "Net Salary",  value: currency(row.net_salary, row.currency), bold: true },
+                { label: t("Base Salary"), value: fmt.money(row.base_salary ?? 0, row.currency) },
+                { label: t("Earned"),      value: fmt.money(row.earned_salary,    row.currency) },
+                { label: t("Bonuses"),     value: row.total_bonuses    > 0 ? `+${fmt.money(row.total_bonuses,    row.currency)}` : "—" },
+                { label: t("Deductions"),  value: row.total_deductions > 0 ? `−${fmt.money(row.total_deductions, row.currency)}` : "—" },
+                { label: t("Debts"),       value: row.total_debts      > 0 ?    fmt.money(row.total_debts,       row.currency)   : "—" },
+                { label: t("Net Salary"),  value: fmt.money(row.net_salary, row.currency), bold: true },
               ].map(({ label, value, bold }) => (
                 <div key={label} className="rounded-lg bg-muted/50 px-3 py-2.5">
                   <p className="text-xs text-muted-foreground">{label}</p>
@@ -269,7 +272,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
 
             {/* Attendance table */}
             <div className="space-y-2">
-              <p className="text-sm font-semibold">Attendance</p>
+              <p className="text-sm font-semibold">{t("Attendance")}</p>
 
               {attLoading && (
                 <div className="space-y-2">
@@ -278,16 +281,16 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               )}
 
               {!attLoading && (!attendance || attendance.length === 0) && (
-                <p className="text-sm text-muted-foreground py-2">No attendance records this month.</p>
+                <p className="text-sm text-muted-foreground py-2">{t("No attendance records this month.")}</p>
               )}
 
               {!attLoading && attendance && attendance.length > 0 && (
                 <div className="divide-y rounded-lg border text-xs">
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 bg-muted/40 px-3 py-2 font-medium text-muted-foreground">
-                    <span>Date</span>
-                    <span className="text-right">Hours</span>
-                    <span className="text-right">Day</span>
-                    <span className="text-right">Status</span>
+                    <span>{t("Date")}</span>
+                    <span className="text-end">{t("Hours")}</span>
+                    <span className="text-end">{t("Day")}</span>
+                    <span className="text-end">{t("Status")}</span>
                   </div>
                   {attendance.map((log) => (
                     <div key={log.id} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center px-3 py-2.5">
@@ -298,32 +301,32 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
                             {format(parseISO(log.check_in_at), "h:mm a")}
                             {log.check_out_at && ` – ${format(parseISO(log.check_out_at), "h:mm a")}`}
                             {log.is_late && log.late_minutes > 0 && (
-                              <span className="ml-1 text-amber-600 dark:text-amber-400">
+                              <span className="ms-1 text-amber-600 dark:text-amber-400">
                                 +{log.late_minutes}m
                               </span>
                             )}
                           </p>
                         )}
                       </div>
-                      <span className="tabular-nums text-right text-muted-foreground">
+                      <span className="tabular-nums text-end text-muted-foreground">
                         {log.total_hours != null ? `${log.total_hours.toFixed(1)}h` : "—"}
                       </span>
-                      <span className="tabular-nums text-right font-medium">
+                      <span className="tabular-nums text-end font-medium">
                         {log.day_value != null ? log.day_value.toFixed(2) : "—"}
                       </span>
                       <div className="flex justify-end">
                         <Badge variant={statusVariant(log.status)} className="capitalize">
-                          {log.status}
+                          {t(log.status)}
                         </Badge>
                       </div>
                     </div>
                   ))}
                   <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center bg-muted/40 px-3 py-2 font-semibold">
-                    <span>{attendance.length} days</span>
-                    <span className="text-right tabular-nums">
+                    <span>{attendance.length} {t("days")}</span>
+                    <span className="text-end tabular-nums">
                       {attendance.reduce((s, l) => s + (l.total_hours ?? 0), 0).toFixed(1)}h
                     </span>
-                    <span className="text-right tabular-nums">
+                    <span className="text-end tabular-nums">
                       {attendance.reduce((s, l) => s + (l.day_value ?? 0), 0).toFixed(2)}
                     </span>
                     <span />
@@ -339,7 +342,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               items={bonuses}
               loading={adjLoading}
               currency={row.currency}
-              emptyText="No bonuses this month."
+              emptyText={t("No bonuses this month.")}
               canDelete={canDeleteAdj}
               onDelete={setDeleteTarget}
             />
@@ -351,7 +354,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               items={deductions}
               loading={adjLoading}
               currency={row.currency}
-              emptyText="No deductions this month."
+              emptyText={t("No deductions this month.")}
               canDelete={canDeleteAdj}
               onDelete={setDeleteTarget}
             />
@@ -363,7 +366,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
               items={debts}
               loading={adjLoading}
               currency={row.currency}
-              emptyText="No debts this month."
+              emptyText={t("No debts this month.")}
               canDelete={canDeleteAdj}
               onDelete={setDeleteTarget}
             />
@@ -376,7 +379,7 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
           <div className="shrink-0 border-t bg-background px-6 py-4">
             <Button className="w-full" onClick={onAdjust}>
               <SlidersHorizontal className="h-4 w-4" />
-              Add Adjustment
+              {t("Add Adjustment")}
             </Button>
           </div>
         )}
@@ -386,20 +389,20 @@ export function StaffPayrollSheet({ open, onOpenChange, row, month, year, onAdju
     <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete adjustment?</AlertDialogTitle>
+          <AlertDialogTitle>{t("Delete adjustment?")}</AlertDialogTitle>
           <AlertDialogDescription>
             {deleteTarget?.reason
-              ? `"${deleteTarget.reason}" will be permanently removed and payroll totals recalculated.`
-              : "This adjustment will be permanently removed and payroll totals recalculated."}
+              ? `"${deleteTarget.reason}" ${t("will be permanently removed and payroll totals recalculated.")}`
+              : t("This adjustment will be permanently removed and payroll totals recalculated.")}
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel>{t("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             onClick={confirmDeleteAdjustment}
           >
-            Delete
+            {t("Delete")}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

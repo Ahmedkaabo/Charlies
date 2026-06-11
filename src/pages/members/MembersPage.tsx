@@ -35,6 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useFormatters } from "@/lib/format"
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -60,14 +61,14 @@ function TableSkeleton() {
         <thead className="border-b bg-muted/40">
           <tr>
             {[t("Staff"), t("Status"), t("Branches"), t("Role"), t("Salary"), t("Since"), t("Last Login"), ""].map((h, i) => (
-              <th key={i} className={`px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap${i === 0 ? " sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : ""}`}>{h}</th>
+              <th key={i} className={`px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap${i === 0 ? " sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']" : ""}`}>{h}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y">
           {Array.from({ length: 5 }).map((_, i) => (
             <tr key={i}>
-              <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+              <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                 <div className="flex items-center gap-2">
                   <Skeleton className="h-8 w-8 rounded-full shrink-0" />
                   <Skeleton className="h-4 w-28" />
@@ -117,6 +118,7 @@ function EmptyState({ canAdd, onAdd }: { canAdd: boolean; onAdd: () => void }) {
 
 export function MembersPage() {
   const { t } = useLanguage()
+  const fmt = useFormatters()
   const { isAdmin, profile } = useAuth()
   const { canCreate, canUpdate, canDelete: canDeletePerm, isOwner } = useUserPermissions()
   const { data: allRolesRaw = [] } = useGetRoles()
@@ -235,13 +237,13 @@ export function MembersPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Status")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branches")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Role")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Salary")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Since")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Last Login")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap w-52 sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Status")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Branches")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Role")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Salary")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Since")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Last Login")}</th>
                 {hasActions && <th className="px-4 py-3 w-10" />}
               </tr>
             </thead>
@@ -258,7 +260,7 @@ export function MembersPage() {
                   return (
                     <tr key={gm.profile_id} className={`hover:bg-muted/30 group${hasActions ? " cursor-pointer" : ""}`} onClick={canEdit ? () => setSheet({ type: "edit", groupedMember: gm }) : undefined}>
                       {/* Member */}
-                      <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         <div className="flex items-center gap-2.5">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                             {getInitials(gm.full_name)}
@@ -314,8 +316,7 @@ export function MembersPage() {
                       <td className="px-4 py-3 whitespace-nowrap">
                         {primarySalary?.monthly_salary ? (
                           <span className="text-sm tabular-nums">
-                            {primarySalary.currency}{" "}
-                            {primarySalary.monthly_salary.toLocaleString("en-EG")}
+                            {fmt.money(primarySalary.monthly_salary, primarySalary.currency)}
                           </span>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>

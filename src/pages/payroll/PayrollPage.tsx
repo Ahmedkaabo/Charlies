@@ -38,13 +38,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { MultiSelect } from "@/components/ui/multi-select"
+import { useFormatters } from "@/lib/format"
 
 // ── Helpers ───────────────────────────────────────────────────
-
-function currency(amount: number | null, curr = "EGP") {
-  if (amount == null) return "—"
-  return `${Number(amount).toLocaleString("en-EG", { minimumFractionDigits: 0 })} ${curr}`
-}
 
 function initials(name: string | null) {
   if (!name) return "?"
@@ -97,6 +93,9 @@ function AttendanceBreakdown({
   paidDaysOff: number
 }) {
   const { t } = useLanguage()
+  const fmt = useFormatters()
+  const currency = (amount: number | null, curr = "EGP") =>
+    amount == null ? "—" : fmt.money(amount, curr)
   const { data: logs, isLoading } = useStaffMonthlyAttendance(profileId, branchId, month, year)
 
   if (isLoading) {
@@ -128,11 +127,11 @@ function AttendanceBreakdown({
         {/* Header */}
         <div className="grid grid-cols-[1fr_80px_80px_60px_60px_80px] bg-muted/50 px-3 py-2 font-medium text-muted-foreground">
           <span>{t("Date")}</span>
-          <span className="text-right">{t("Check-in")}</span>
-          <span className="text-right">{t("Check-out")}</span>
-          <span className="text-right">{t("Hours")}</span>
-          <span className="text-right">{t("Day")}</span>
-          <span className="text-right">{t("Status")}</span>
+          <span className="text-end">{t("Check-in")}</span>
+          <span className="text-end">{t("Check-out")}</span>
+          <span className="text-end">{t("Hours")}</span>
+          <span className="text-end">{t("Day")}</span>
+          <span className="text-end">{t("Status")}</span>
         </div>
 
         {/* Log rows */}
@@ -148,16 +147,16 @@ function AttendanceBreakdown({
                   <span className="text-amber-600 dark:text-amber-400">+{log.late_minutes}m</span>
                 )}
               </div>
-              <span className="tabular-nums text-right text-muted-foreground">
+              <span className="tabular-nums text-end text-muted-foreground">
                 {log.check_in_at ? format(parseISO(log.check_in_at), "h:mm a") : "—"}
               </span>
-              <span className="tabular-nums text-right text-muted-foreground">
+              <span className="tabular-nums text-end text-muted-foreground">
                 {log.check_out_at ? format(parseISO(log.check_out_at), "h:mm a") : "—"}
               </span>
-              <span className="tabular-nums text-right">
+              <span className="tabular-nums text-end">
                 {log.total_hours != null ? `${log.total_hours.toFixed(1)}h` : "—"}
               </span>
-              <span className="tabular-nums text-right font-medium">
+              <span className="tabular-nums text-end font-medium">
                 {log.day_value != null ? log.day_value.toFixed(2) : "—"}
               </span>
               <div className="flex justify-end">
@@ -174,8 +173,8 @@ function AttendanceBreakdown({
           <span>{logs.length} {t("days attended")}</span>
           <span />
           <span />
-          <span className="tabular-nums text-right">{totalHours.toFixed(1)}h</span>
-          <span className="tabular-nums text-right">{totalDayValue.toFixed(2)}</span>
+          <span className="tabular-nums text-end">{totalHours.toFixed(1)}h</span>
+          <span className="tabular-nums text-end">{totalDayValue.toFixed(2)}</span>
           <span />
         </div>
       </div>
@@ -234,6 +233,9 @@ function SummaryCard({
 
 export function PayrollPage() {
   const { t } = useLanguage()
+  const fmt = useFormatters()
+  const currency = (amount: number | null, curr = "EGP") =>
+    amount == null ? "—" : fmt.money(amount, curr)
   const { profile } = useAuth()
   const { canCreate, canUpdate } = useUserPermissions()
 
@@ -331,12 +333,12 @@ export function PayrollPage() {
         {/* ── Filter bar ─────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative w-full sm:w-[160px]">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder={t("Search staff…")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="pl-8"
+              className="ps-8"
             />
           </div>
 
@@ -434,16 +436,16 @@ export function PayrollPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="sticky left-0 z-10 bg-muted/40 px-4 py-3 text-left font-medium text-muted-foreground relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Base")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Attendance")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Leave")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Earned")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Bonus")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Deduction")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Debt")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Net")}</th>
-              <th className="px-4 py-3 text-right font-medium text-muted-foreground whitespace-nowrap">{t("Actions")}</th>
+              <th className="sticky start-0 z-10 bg-muted/40 px-4 py-3 text-start font-medium text-muted-foreground relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Staff")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Base")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Attendance")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Leave")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Earned")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Bonus")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Deduction")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Debt")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Net")}</th>
+              <th className="px-4 py-3 text-end font-medium text-muted-foreground whitespace-nowrap">{t("Actions")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
@@ -451,7 +453,7 @@ export function PayrollPage() {
               Array.from({ length: 4 }).map((_, i) => (
                 <tr key={i}>
                   {Array.from({ length: 10 }).map((_, j) => (
-                    <td key={j} className={j === 0 ? "sticky left-0 z-10 bg-background px-4 py-3" : "px-4 py-3"}>
+                    <td key={j} className={j === 0 ? "sticky start-0 z-10 bg-background px-4 py-3 text-start" : "px-4 py-3"}>
                       <Skeleton className="h-3 w-full" />
                     </td>
                   ))}
@@ -477,7 +479,7 @@ export function PayrollPage() {
                     className="hover:bg-muted/30 cursor-pointer group"
                     onClick={() => setDetailRow(row)}
                   >
-                    <td className="sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 px-4 py-3 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                    <td className="sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 px-4 py-3 text-start relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                       <div className="flex items-center gap-2">
                         {/* Expand toggle */}
                         <Button
@@ -501,31 +503,31 @@ export function PayrollPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-end tabular-nums text-muted-foreground">
                       {currency(row.base_salary, row.currency)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td className="px-4 py-3 text-end tabular-nums">
                       {row.days_present.toFixed(2)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-end tabular-nums text-muted-foreground">
                       {row.paid_days_off > 0 ? row.paid_days_off.toFixed(1) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums">
+                    <td className="px-4 py-3 text-end tabular-nums">
                       {currency(row.earned_salary, row.currency)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400">
+                    <td className="px-4 py-3 text-end tabular-nums text-emerald-600 dark:text-emerald-400">
                       {row.total_bonuses > 0 ? `+${currency(row.total_bonuses, row.currency)}` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-destructive">
+                    <td className="px-4 py-3 text-end tabular-nums text-destructive">
                       {row.total_deductions > 0 ? `−${currency(row.total_deductions, row.currency)}` : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="px-4 py-3 text-end tabular-nums text-muted-foreground">
                       {row.total_debts > 0 ? currency(row.total_debts, row.currency) : "—"}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums font-semibold">
+                    <td className="px-4 py-3 text-end tabular-nums font-semibold">
                       {currency(row.net_salary, row.currency)}
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-end">
                       {canAdjust && (
                         <Button
                           variant="outline"

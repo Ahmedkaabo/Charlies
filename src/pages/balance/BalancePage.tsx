@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react"
-import { format, parseISO, isValid } from "date-fns"
+import { format } from "date-fns"
 import {
   TrendingUp,
   TrendingDown,
@@ -12,7 +12,6 @@ import {
   Plus,
   Pencil,
   Trash2,
-  CalendarIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
@@ -36,6 +35,7 @@ import {
   useDeletePoolTransfer,
 } from "@/hooks/useBalance"
 import { useLanguage } from "@/contexts/LanguageContext"
+import { useFormatters } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { MultiSelect } from "@/components/ui/multi-select"
 import type { Branch } from "@/types/branch"
@@ -43,19 +43,10 @@ import type { TreasuryTransfer, PoolTransfer, BalanceSummary, BranchBalance } fr
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Separator } from "@/components/ui/separator"
-import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   Sheet,
   SheetContent,
@@ -97,9 +88,6 @@ function generateMonthOptions() {
 
 const MONTH_OPTIONS = generateMonthOptions()
 
-function egp(n: number) {
-  return `EGP ${n.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`
-}
 
 // ── Balance overview cards ────────────────────────────────────
 
@@ -123,6 +111,7 @@ function OverviewCard({
   rows: OverviewRow[]
   loading: boolean
 }) {
+  const { egp } = useFormatters()
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -226,6 +215,7 @@ function TransferSheet({
   editTransfer: TreasuryTransfer | null
 }) {
   const { t } = useLanguage()
+  const { egp, sym } = useFormatters()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const create = useCreateTreasuryTransfer()
@@ -241,8 +231,6 @@ function TransferSheet({
   const [branchId,  setBranchId]  = useState(selectedBranchId ?? "")
   const [direction, setDirection] = useState<"outflow" | "inflow">("outflow")
   const [amount,    setAmount]    = useState("")
-  const [date,      setDate]      = useState(defaultDate)
-  const [notes,     setNotes]     = useState("")
 
   const { summary: branchSummary } = useBalanceSummary(branchId || undefined, month, year)
 
@@ -251,8 +239,6 @@ function TransferSheet({
     setLastEditId(editTransfer?.id)
     if (editTransfer) {
       setAmount(String(editTransfer.amount))
-      setDate(editTransfer.date)
-      setNotes(editTransfer.notes ?? "")
       setDirection(editTransfer.direction ?? "outflow")
       setBranchId((editTransfer.branch as { id: string } | null)?.id ?? editTransfer.branch_id)
     }
@@ -265,7 +251,7 @@ function TransferSheet({
   }
 
   function reset() {
-    setAmount(""); setNotes(""); setDate(defaultDate)
+    setAmount("")
     setBranchId(selectedBranchId ?? ""); setDirection("outflow")
   }
 
@@ -275,10 +261,10 @@ function TransferSheet({
     if (!amt || amt <= 0) { toast.error(t("Enter a valid amount")); return }
     try {
       if (isEditing && editTransfer) {
-        await update.mutateAsync({ id: editTransfer.id, amount: amt, direction, date, notes: notes.trim() || null })
+        await update.mutateAsync({ id: editTransfer.id, amount: amt, direction, date: editTransfer.date, notes: null })
         toast.success(t("Transfer updated"))
       } else {
-        await create.mutateAsync({ branch_id: branchId, amount: amt, direction, date, notes: notes.trim() || null, added_by: profile?.id ?? null })
+        await create.mutateAsync({ branch_id: branchId, amount: amt, direction, date: defaultDate, notes: null, added_by: profile?.id ?? null })
         toast.success(t("Transfer added"))
       }
       reset(); onOpenChange(false)
@@ -324,18 +310,8 @@ function TransferSheet({
             <Select value={direction} onValueChange={(v) => setDirection(v as "outflow" | "inflow")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="outflow">
-                  <span className="flex items-center gap-2">
-                    <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600" />
-                    {t("Branch → Treasury (outflow)")}
-                  </span>
-                </SelectItem>
-                <SelectItem value="inflow">
-                  <span className="flex items-center gap-2">
-                    <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" />
-                    {t("Treasury → Branch (inflow)")}
-                  </span>
-                </SelectItem>
+                <SelectItem value="outflow">{t("Branch → Treasury (outflow)")}</SelectItem>
+                <SelectItem value="inflow">{t("Treasury → Branch (inflow)")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -344,37 +320,16 @@ function TransferSheet({
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("Amount")}</p>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
-              <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">{sym("EGP")}</span>
+              <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="ps-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             {branchId && direction === "outflow" && (
-              <p className={cn("text-xs pl-1", branchSummary.totalRemaining <= 0 ? "text-destructive" : "text-muted-foreground")}>
+              <p className={cn("text-xs ps-1", branchSummary.totalRemaining <= 0 ? "text-destructive" : "text-muted-foreground")}>
                 {t("Branch balance")}: <span className="font-medium">{egp(branchSummary.totalRemaining)}</span>
               </p>
             )}
           </div>
 
-          {/* Date */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("Date")}</p>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : t("Pick a date")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={date && isValid(parseISO(date)) ? parseISO(date) : undefined} onSelect={(d) => d && setDate(format(d, "yyyy-MM-dd"))} />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("Notes")} <span className="font-normal text-muted-foreground">({t("optional")})</span></p>
-            <Textarea placeholder={direction === "outflow" ? t("Why was this transferred?") : t("What is this money for?")} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
         </div>
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
@@ -408,6 +363,7 @@ function PoolTransferSheet({
   editTransfer: PoolTransfer | null
 }) {
   const { t } = useLanguage()
+  const { egp, sym } = useFormatters()
   const isMobile = useIsMobile()
   const { profile } = useAuth()
   const create = useCreatePoolTransfer()
@@ -423,8 +379,6 @@ function PoolTransferSheet({
   const [branchId,  setBranchId]  = useState(selectedBranchId ?? "")
   const [direction, setDirection] = useState<"sales_to_expenses" | "expenses_to_sales">("sales_to_expenses")
   const [amount,    setAmount]    = useState("")
-  const [date,      setDate]      = useState(defaultDate)
-  const [notes,     setNotes]     = useState("")
 
   const from = format(new Date(year, month - 1, 1), "yyyy-MM-dd")
   const to   = format(new Date(year, month, 0), "yyyy-MM-dd")
@@ -436,8 +390,6 @@ function PoolTransferSheet({
     setLastEditId(editTransfer?.id)
     if (editTransfer) {
       setAmount(String(editTransfer.amount))
-      setDate(editTransfer.date)
-      setNotes(editTransfer.notes ?? "")
       setBranchId((editTransfer.branch as { id: string } | null)?.id ?? editTransfer.branch_id)
       setDirection(editTransfer.from_pool === "sales" ? "sales_to_expenses" : "expenses_to_sales")
     }
@@ -450,7 +402,7 @@ function PoolTransferSheet({
   }
 
   function reset() {
-    setAmount(""); setNotes(""); setDate(defaultDate)
+    setAmount("")
     setBranchId(selectedBranchId ?? ""); setDirection("sales_to_expenses")
   }
 
@@ -475,10 +427,10 @@ function PoolTransferSheet({
     const to_pool:   "sales" | "expenses" = direction === "sales_to_expenses" ? "expenses" : "sales"
     try {
       if (isEditing && editTransfer) {
-        await update.mutateAsync({ id: editTransfer.id, amount: amt, from_pool, to_pool, date, notes: notes.trim() || null })
+        await update.mutateAsync({ id: editTransfer.id, amount: amt, from_pool, to_pool, date: editTransfer.date, notes: null })
         toast.success(t("Pool transfer updated"))
       } else {
-        await create.mutateAsync({ branch_id: branchId, amount: amt, from_pool, to_pool, date, notes: notes.trim() || null, added_by: profile?.id ?? null })
+        await create.mutateAsync({ branch_id: branchId, amount: amt, from_pool, to_pool, date: defaultDate, notes: null, added_by: profile?.id ?? null })
         toast.success(t("Pool transfer added"))
       }
       reset(); onOpenChange(false)
@@ -529,18 +481,8 @@ function PoolTransferSheet({
             <Select value={direction} onValueChange={(v) => setDirection(v as "sales_to_expenses" | "expenses_to_sales")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="sales_to_expenses">
-                  <span className="flex items-center gap-2">
-                    <ArrowRight className="h-3.5 w-3.5 text-indigo-500" />
-                    {t("Sales → Expenses (allocate)")}
-                  </span>
-                </SelectItem>
-                <SelectItem value="expenses_to_sales">
-                  <span className="flex items-center gap-2">
-                    <ArrowLeft className="h-3.5 w-3.5 text-amber-500" />
-                    {t("Expenses → Sales (return)")}
-                  </span>
-                </SelectItem>
+                <SelectItem value="sales_to_expenses">{t("Sales → Expenses (allocate)")}</SelectItem>
+                <SelectItem value="expenses_to_sales">{t("Expenses → Sales (return)")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -549,38 +491,17 @@ function PoolTransferSheet({
           <div className="space-y-2">
             <p className="text-sm font-medium">{t("Amount")}</p>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">EGP</span>
-              <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="pl-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
+              <span className="absolute start-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground pointer-events-none">{sym("EGP")}</span>
+              <Input type="number" inputMode="decimal" min={0} step="0.01" placeholder="0.00" className="ps-12" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             {branchId && (
-              <p className={cn("text-xs pl-1", exceedsLimit ? "text-destructive" : availableBalance <= 0 ? "text-destructive" : "text-muted-foreground")}>
+              <p className={cn("text-xs ps-1", exceedsLimit ? "text-destructive" : availableBalance <= 0 ? "text-destructive" : "text-muted-foreground")}>
                 {availableLabel}: <span className="font-medium">{egp(availableBalance)}</span>
-                {exceedsLimit && <span className="ml-1 font-semibold"> — {t("exceeds limit")}</span>}
+                {exceedsLimit && <span className="ms-1 font-semibold"> — {t("exceeds limit")}</span>}
               </p>
             )}
           </div>
 
-          {/* Date */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("Date")}</p>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal">
-                  <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
-                  {date && isValid(parseISO(date)) ? format(parseISO(date), "d MMM yyyy") : t("Pick a date")}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={date && isValid(parseISO(date)) ? parseISO(date) : undefined} onSelect={(d) => d && setDate(format(d, "yyyy-MM-dd"))} />
-              </PopoverContent>
-            </Popover>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{t("Notes")} <span className="font-normal text-muted-foreground">({t("optional")})</span></p>
-            <Textarea placeholder={t("Reason for this transfer…")} rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
-          </div>
         </div>
 
         <div className="shrink-0 border-t bg-background px-6 py-4 flex items-center justify-between gap-2">
@@ -594,9 +515,9 @@ function PoolTransferSheet({
 
 // ── Shared table sticky-column classes ───────────────────────
 
-const STICKY_HEAD = "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
-const STICKY_CELL = "px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
-const TH = "px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap"
+const STICKY_HEAD = "px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
+const STICKY_CELL = "px-4 py-3 text-start sticky start-0 z-10 bg-background relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"
+const TH = "px-4 py-3 font-medium text-muted-foreground whitespace-nowrap"
 
 // ── Branch breakdown section ──────────────────────────────────
 
@@ -613,6 +534,7 @@ function BranchBreakdownSection({
   canPoolRead: boolean
 }) {
   const { t } = useLanguage()
+  const { egp } = useFormatters()
 
   if (isLoading) {
     return (
@@ -621,22 +543,22 @@ function BranchBreakdownSection({
           <thead className="border-b bg-muted/40">
             <tr>
               <th className={STICKY_HEAD}>{t("Branch")}</th>
-              <th className={`${TH} text-right`}>{t("Sales")}</th>
-              <th className={`${TH} text-right`}>{t("Expenses")}</th>
-              <th className={`${TH} text-right`}>{t("Transferred")}</th>
-              {canPoolRead && <th className={`${TH} text-right`}>{t("Pool Credit")}</th>}
-              <th className={`${TH} text-right`}>{t("Remaining")}</th>
+              <th className={cn(TH, "text-start")}>{t("Sales")}</th>
+              <th className={cn(TH, "text-start")}>{t("Expenses")}</th>
+              <th className={cn(TH, "text-start")}>{t("Transferred")}</th>
+              {canPoolRead && <th className={cn(TH, "text-start")}>{t("Pool Credit")}</th>}
+              <th className={cn(TH, "text-start")}>{t("Remaining")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {Array.from({ length: 4 }).map((_, i) => (
               <tr key={i}>
                 <td className={STICKY_CELL}><Skeleton className="h-4 w-28" /></td>
-                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
-                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
-                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
-                {canPoolRead && <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>}
-                <td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+                <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td>
+                <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td>
+                <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td>
+                {canPoolRead && <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td>}
+                <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td>
               </tr>
             ))}
           </tbody>
@@ -658,31 +580,31 @@ function BranchBreakdownSection({
           <thead className="border-b bg-muted/40">
             <tr>
               <th className={STICKY_HEAD}>{t("Branch")}</th>
-              <th className={`${TH} text-right`}>{t("Sales")}</th>
-              <th className={`${TH} text-right`}>{t("Expenses")}</th>
-              <th className={`${TH} text-right`}>{t("Transferred")}</th>
-              {canPoolRead && <th className={`${TH} text-right`}>{t("Pool Credit")}</th>}
-              <th className={`${TH} text-right`}>{t("Remaining")}</th>
+              <th className={cn(TH, "text-start")}>{t("Sales")}</th>
+              <th className={cn(TH, "text-start")}>{t("Expenses")}</th>
+              <th className={cn(TH, "text-start")}>{t("Transferred")}</th>
+              {canPoolRead && <th className={cn(TH, "text-start")}>{t("Pool Credit")}</th>}
+              <th className={cn(TH, "text-start")}>{t("Remaining")}</th>
             </tr>
           </thead>
           <tbody className="divide-y">
             {balances.map((b) => (
               <tr key={b.branchId}>
                 <td className={cn(STICKY_CELL, "font-medium whitespace-nowrap")}>{b.branchName}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{egp(b.sales)}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-destructive">{egp(b.expenses)}</td>
-                <td className="px-4 py-3 text-right tabular-nums">{egp(b.transferred)}</td>
-                {canPoolRead && <td className="px-4 py-3 text-right tabular-nums">{egp(b.poolCredit)}</td>}
-                <td className={cn("px-4 py-3 text-right tabular-nums font-semibold", b.remaining < 0 && "text-destructive")}>{egp(b.remaining)}</td>
+                <td className="px-4 py-3 text-start tabular-nums">{egp(b.sales)}</td>
+                <td className="px-4 py-3 text-start tabular-nums text-destructive">{egp(b.expenses)}</td>
+                <td className="px-4 py-3 text-start tabular-nums">{egp(b.transferred)}</td>
+                {canPoolRead && <td className="px-4 py-3 text-start tabular-nums">{egp(b.poolCredit)}</td>}
+                <td className={cn("px-4 py-3 text-start tabular-nums font-semibold", b.remaining < 0 && "text-destructive")}>{egp(b.remaining)}</td>
               </tr>
             ))}
             <tr className="border-t-2 bg-muted/20">
               <td className={cn(STICKY_CELL, "font-bold bg-muted/20")}>{t("Total")}</td>
-              <td className="px-4 py-3 text-right tabular-nums font-bold">{egp(summary.totalSales)}</td>
-              <td className="px-4 py-3 text-right tabular-nums font-bold text-destructive">{egp(summary.totalExpenses)}</td>
-              <td className="px-4 py-3 text-right tabular-nums font-bold">{egp(summary.totalTransferred)}</td>
-              {canPoolRead && <td className="px-4 py-3 text-right tabular-nums font-bold">—</td>}
-              <td className={cn("px-4 py-3 text-right tabular-nums font-bold", summary.totalRemaining < 0 && "text-destructive")}>{egp(summary.totalRemaining)}</td>
+              <td className="px-4 py-3 text-start tabular-nums font-bold">{egp(summary.totalSales)}</td>
+              <td className="px-4 py-3 text-start tabular-nums font-bold text-destructive">{egp(summary.totalExpenses)}</td>
+              <td className="px-4 py-3 text-start tabular-nums font-bold">{egp(summary.totalTransferred)}</td>
+              {canPoolRead && <td className="px-4 py-3 text-start tabular-nums font-bold">—</td>}
+              <td className={cn("px-4 py-3 text-start tabular-nums font-bold", summary.totalRemaining < 0 && "text-destructive")}>{egp(summary.totalRemaining)}</td>
             </tr>
           </tbody>
         </table>
@@ -727,6 +649,7 @@ function BalanceContent({
   canBreakdownRead: boolean
 }) {
   const { t } = useLanguage()
+  const { egp } = useFormatters()
   const [transferOpen,  setTransferOpen]  = useState(false)
   const [editTransfer,  setEditTransfer]  = useState<TreasuryTransfer | null>(null)
   const [delTransferId, setDelTransferId] = useState<string | null>(null)
@@ -802,8 +725,8 @@ function BalanceContent({
             {transfersLoading ? (
               <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>{t("Date")}</th>{isAllBranches && <th className={TH}>{t("Branch")}</th>}<th className={`${TH} text-right`}>{t("Amount")}</th><th className={TH}>{t("Notes")}</th><th className={TH}>{t("Added by")}</th></tr></thead>
-                  <tbody className="divide-y">{Array.from({ length: 4 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
+                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>{t("Date")}</th>{isAllBranches && <th className={cn(TH, "text-start")}>{t("Branch")}</th>}<th className={cn(TH, "text-start")}>{t("Amount")}</th><th className={cn(TH, "text-start")}>{t("Notes")}</th><th className={cn(TH, "text-start")}>{t("Added by")}</th></tr></thead>
+                  <tbody className="divide-y">{Array.from({ length: 4 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td><td className="px-4 py-3 text-start"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3 text-start"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
                 </table>
               </div>
             ) : transfers.length === 0 ? (
@@ -825,10 +748,10 @@ function BalanceContent({
                   <thead className="border-b bg-muted/40">
                     <tr>
                       <th className={STICKY_HEAD}>{t("Date")}</th>
-                      {isAllBranches && <th className={TH}>{t("Branch")}</th>}
-                      <th className={`${TH} text-right`}>{t("Amount")}</th>
-                      <th className={TH}>{t("Notes")}</th>
-                      <th className={TH}>{t("Added by")}</th>
+                      {isAllBranches && <th className={cn(TH, "text-start")}>{t("Branch")}</th>}
+                      <th className={cn(TH, "text-start")}>{t("Amount")}</th>
+                      <th className={cn(TH, "text-start")}>{t("Notes")}</th>
+                      <th className={cn(TH, "text-start")}>{t("Added by")}</th>
                       {(canTreasuryUpdate || canTreasuryDelete) && <th className="px-4 py-3 w-10" />}
                     </tr>
                   </thead>
@@ -840,15 +763,15 @@ function BalanceContent({
                       return (
                         <tr key={t.id} className="hover:bg-muted/30">
                           <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(t.date), "MMM d, yyyy")}</td>
-                          {isAllBranches && <td className="px-4 py-3 font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
-                          <td className="px-4 py-3 text-right whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1">
+                          {isAllBranches && <td className="px-4 py-3 text-start font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
+                          <td className="px-4 py-3 text-start whitespace-nowrap">
+                            <div className="flex items-center justify-start gap-1">
                               {isInflow ? <ArrowDownToLine className="h-3.5 w-3.5 text-blue-500" /> : <ArrowUpFromLine className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />}
                               <span className={cn("tabular-nums font-medium", isInflow ? "text-blue-600 dark:text-blue-400" : "text-emerald-600 dark:text-emerald-400")}>{egp(t.amount)}</span>
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{t.notes || "—"}</td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
+                          <td className="px-4 py-3 text-start text-muted-foreground max-w-xs truncate">{t.notes || "—"}</td>
+                          <td className="px-4 py-3 text-start text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
                           {(canTreasuryUpdate || canTreasuryDelete) && (
                             <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-1">
@@ -888,8 +811,8 @@ function BalanceContent({
             {poolTransfersLoading ? (
               <div className="rounded-lg border overflow-x-auto">
                 <table className="w-full text-sm">
-                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>{t("Date")}</th>{isAllBranches && <th className={TH}>{t("Branch")}</th>}<th className={TH}>{t("Type")}</th><th className={`${TH} text-right`}>{t("Amount")}</th><th className={TH}>{t("Notes")}</th><th className={TH}>{t("Added by")}</th></tr></thead>
-                  <tbody className="divide-y">{Array.from({ length: 3 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3"><Skeleton className="h-5 w-28 rounded-full" /></td><td className="px-4 py-3 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
+                  <thead className="border-b bg-muted/40"><tr><th className={STICKY_HEAD}>{t("Date")}</th>{isAllBranches && <th className={cn(TH, "text-start")}>{t("Branch")}</th>}<th className={cn(TH, "text-start")}>{t("Type")}</th><th className={cn(TH, "text-start")}>{t("Amount")}</th><th className={cn(TH, "text-start")}>{t("Notes")}</th><th className={cn(TH, "text-start")}>{t("Added by")}</th></tr></thead>
+                  <tbody className="divide-y">{Array.from({ length: 3 }).map((_, i) => <tr key={i}><td className={STICKY_CELL}><Skeleton className="h-4 w-24" /></td>{isAllBranches && <td className="px-4 py-3 text-start"><Skeleton className="h-4 w-24" /></td>}<td className="px-4 py-3 text-start"><Skeleton className="h-5 w-28 rounded-full" /></td><td className="px-4 py-3 text-start"><Skeleton className="h-4 w-20" /></td><td className="px-4 py-3 text-start"><Skeleton className="h-4 w-32" /></td><td className="px-4 py-3 text-start"><Skeleton className="h-4 w-24" /></td></tr>)}</tbody>
                 </table>
               </div>
             ) : poolTransfers.length === 0 ? (
@@ -911,11 +834,11 @@ function BalanceContent({
                   <thead className="border-b bg-muted/40">
                     <tr>
                       <th className={STICKY_HEAD}>{t("Date")}</th>
-                      {isAllBranches && <th className={TH}>{t("Branch")}</th>}
-                      <th className={TH}>{t("Type")}</th>
-                      <th className={`${TH} text-right`}>{t("Amount")}</th>
-                      <th className={TH}>{t("Notes")}</th>
-                      <th className={TH}>{t("Added by")}</th>
+                      {isAllBranches && <th className={cn(TH, "text-start")}>{t("Branch")}</th>}
+                      <th className={cn(TH, "text-start")}>{t("Type")}</th>
+                      <th className={cn(TH, "text-start")}>{t("Amount")}</th>
+                      <th className={cn(TH, "text-start")}>{t("Notes")}</th>
+                      <th className={cn(TH, "text-start")}>{t("Added by")}</th>
                       {(canPoolUpdate || canPoolDelete) && <th className="px-4 py-3 w-10" />}
                     </tr>
                   </thead>
@@ -927,8 +850,8 @@ function BalanceContent({
                       return (
                         <tr key={pt.id} className="hover:bg-muted/30">
                           <td className={cn(STICKY_CELL, "whitespace-nowrap text-muted-foreground")}>{format(new Date(pt.date), "MMM d, yyyy")}</td>
-                          {isAllBranches && <td className="px-4 py-3 font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
-                          <td className="px-4 py-3">
+                          {isAllBranches && <td className="px-4 py-3 text-start font-medium whitespace-nowrap">{branchObj?.name ?? "—"}</td>}
+                          <td className="px-4 py-3 text-start">
                             <span className={cn(
                               "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
                               toExpenses ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400" : "bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400",
@@ -936,9 +859,9 @@ function BalanceContent({
                               {toExpenses ? <><ArrowRight className="h-3 w-3" />{t("Sales → Exp.")}</> : <><ArrowLeft className="h-3 w-3" />{t("Exp. → Sales")}</>}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums font-medium whitespace-nowrap">{egp(pt.amount)}</td>
-                          <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{pt.notes || "—"}</td>
-                          <td className="px-4 py-3 text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
+                          <td className="px-4 py-3 text-start tabular-nums font-medium whitespace-nowrap">{egp(pt.amount)}</td>
+                          <td className="px-4 py-3 text-start text-muted-foreground max-w-xs truncate">{pt.notes || "—"}</td>
+                          <td className="px-4 py-3 text-start text-muted-foreground whitespace-nowrap">{adderObj?.full_name ?? "—"}</td>
                           {(canPoolUpdate || canPoolDelete) && (
                             <td className="px-4 py-3">
                               <div className="flex items-center justify-end gap-1">
@@ -1061,7 +984,7 @@ export function BalancePage() {
     <div className="p-4 md:p-6 space-y-6">
       {/* ── Header ──────────────────────────────────────── */}
       <div className="flex flex-wrap items-center gap-2">
-        <h1 className="text-xl font-semibold mr-1">{t("Balance")}</h1>
+        <h1 className="text-xl font-semibold me-1">{t("Balance")}</h1>
 
         <Select value={selectedMonth} onValueChange={setSelectedMonth}>
           <SelectTrigger className="w-[150px] h-8 text-sm"><SelectValue /></SelectTrigger>

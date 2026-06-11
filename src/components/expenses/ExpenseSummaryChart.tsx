@@ -9,6 +9,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useFormatters } from "@/lib/format"
 
 // ── Helpers ────────────────────────────────────────────────
 
@@ -25,10 +26,6 @@ const CHART_COLORS = [
   "var(--chart-5)",
 ]
 
-function fmtAmount(v: number) {
-  return `EGP ${v.toLocaleString("en-US", { maximumFractionDigits: 0 })}`
-}
-
 // ── Props ──────────────────────────────────────────────────
 
 interface ExpenseSummaryChartProps {
@@ -41,6 +38,7 @@ interface ExpenseSummaryChartProps {
 
 export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryChartProps) {
   const { data, isLoading } = useGetExpenseSummaryByCategory(month, year, branchId)
+  const fmt = useFormatters()
 
   const pieData = useMemo(
     () =>
@@ -99,8 +97,8 @@ export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryCha
               style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
             />
             <span className="text-muted-foreground truncate">{item.name}</span>
-            <span className="ml-auto font-semibold tabular-nums shrink-0">
-              {fmtAmount(item.total)}
+            <span className="ms-auto font-semibold tabular-nums shrink-0">
+              {fmt.egp(item.total)}
             </span>
           </div>
         ))}
@@ -114,7 +112,7 @@ export function ExpenseSummaryChart({ month, year, branchId }: ExpenseSummaryCha
               <ChartTooltipContent
                 nameKey="key"
                 labelKey="key"
-                formatter={(value) => fmtAmount(Number(value))}
+                formatter={(value) => fmt.egp(Number(value))}
               />
             }
           />

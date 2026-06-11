@@ -11,6 +11,14 @@
   --font-heading: 'IBM Plex Sans Arabic', sans-serif;
 }
 
+/* Direct font-family override for Arabic — needed because @theme inline statically compiles
+   font utility classes, so changing the CSS variable alone does not affect rendered text. */
+html[lang="ar"],
+html[lang="ar"] .font-sans,
+html[lang="ar"] .font-heading {
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}
+
 @theme inline {
     --font-heading: var(--font-sans);
     --font-sans: 'Inter Variable', sans-serif;
@@ -135,5 +143,8 @@
     }
   html {
     @apply font-sans;
+    }
+  td {
+    text-align: start;
     }
 }

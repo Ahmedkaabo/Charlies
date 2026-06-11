@@ -269,12 +269,12 @@ export function BranchesListPage() {
           <table className="w-full text-sm">
             <thead className="border-b bg-muted/40">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Branch")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Location")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Shifts")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Owners")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Staff")}</th>
-                <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Status")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Branch")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Location")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Shifts")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Owners")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Staff")}</th>
+                <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Status")}</th>
                 {hasActions && <th className="px-4 py-3 w-10" />}
               </tr>
             </thead>
@@ -282,7 +282,7 @@ export function BranchesListPage() {
               {isLoading
                 ? Array.from({ length: 4 }).map((_, i) => (
                     <tr key={i}>
-                      <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-36" /></td>
+                      <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><Skeleton className="h-4 w-36" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-20" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
                       <td className="px-4 py-3"><Skeleton className="h-4 w-8" /></td>
@@ -313,7 +313,7 @@ export function BranchesListPage() {
                       className="hover:bg-muted/30 cursor-pointer group"
                       onClick={() => setDrawer({ type: "view", id: branch.id })}
                     >
-                      <td className="px-4 py-3 font-medium sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                      <td className="px-4 py-3 font-medium text-start sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                         {branch.name}
                         {branch.name_ar && (
                           <span className="ml-2 text-xs text-muted-foreground" dir="rtl">

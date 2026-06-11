@@ -40,6 +40,7 @@ import { useGetCategorySuppliers } from "@/hooks/useSuppliers"
 import { uploadReceipt } from "@/lib/storage"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
+import { useFormatters } from "@/lib/format"
 import type { Expense } from "@/types/expense"
 
 import { Button } from "@/components/ui/button"
@@ -61,13 +62,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Category icon lookup ───────────────────────────────────
 
@@ -130,10 +125,6 @@ export function getCategoryIcon(icon: string | null): LucideIcon {
 
 // ── Helpers ────────────────────────────────────────────────
 
-function fmt(amount: number) {
-  return `EGP ${amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
-
 // ── Zod schema ─────────────────────────────────────────────
 
 const schema = z.object({
@@ -163,6 +154,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
   const isMobile   = useIsMobile()
   const { user }   = useAuth()
   const qc         = useQueryClient()
+  const fmt        = useFormatters()
 
   const [receiptFile, setReceiptFile]   = useState<File | null>(null)
   const [receiptError, setReceiptError] = useState<string | null>(null)
@@ -365,7 +357,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
         const changes: Record<string, { from: string; to: string }> = {}
 
         if (values.amount !== expense.amount)
-          changes["Amount"] = { from: fmt(expense.amount), to: fmt(values.amount) }
+          changes["Amount"] = { from: fmt.egp(expense.amount, 2), to: fmt.egp(values.amount, 2) }
         if (values.branch_id !== expense.branch_id) {
           const fromName = branches.find(b => b.id === expense.branch_id)?.name ?? expense.branch_id
           const toName   = branches.find(b => b.id === values.branch_id)?.name  ?? values.branch_id
@@ -560,7 +552,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                       <FormItem>
                         <FormLabel>
                           Staff
-                          <span className="text-destructive ml-0.5">*</span>
+                          <span className="text-destructive ms-0.5">*</span>
                         </FormLabel>
                         <Select
                           value={field.value ?? ""}
@@ -607,7 +599,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Amount (EGP)</FormLabel>
+                    <FormLabel>Amount ({fmt.sym("EGP")})</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -669,7 +661,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                   <div className="space-y-2">
                     <FormLabel>
                       Receipt Image
-                      {!isEditMode && <span className="text-destructive ml-0.5">*</span>}
+                      {!isEditMode && <span className="text-destructive ms-0.5">*</span>}
                     </FormLabel>
 
                     {isEditMode && expense?.receipt_url && !receiptFile && (

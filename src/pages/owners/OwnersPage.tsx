@@ -733,10 +733,10 @@ export function OwnersPage() {
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-52 sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Owner")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">{t("Branches")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-36">{t("Role")}</th>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap w-32">
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap w-52 sticky start-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{t("Owner")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap">{t("Branches")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap w-36">{t("Role")}</th>
+              <th className="px-4 py-3 text-start font-medium text-muted-foreground whitespace-nowrap w-32">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   {t("Manager")}
@@ -749,7 +749,7 @@ export function OwnersPage() {
             {/* Loading */}
             {isLoading && Array.from({ length: 4 }).map((_, i) => (
               <tr key={i}>
-                <td className="px-4 py-3 sticky left-0 z-10 bg-background relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-28" /></div></td>
+                <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']"><div className="flex items-center gap-2"><Skeleton className="h-8 w-8 rounded-full" /><Skeleton className="h-4 w-28" /></div></td>
                 <td className="px-4 py-3"><Skeleton className="h-4 w-40" /></td>
                 <td className="px-4 py-3"><Skeleton className="h-5 w-20" /></td>
                 <td className="px-4 py-3"><Skeleton className="h-5 w-9 rounded-full" /></td>
@@ -785,7 +785,7 @@ export function OwnersPage() {
               return (
                 <tr key={user.profile_id} className="hover:bg-muted/30 cursor-pointer group" onClick={() => setEditTarget(user)}>
                   {/* User */}
-                  <td className="px-4 py-3 sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
+                  <td className="px-4 py-3 text-start sticky start-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:end-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">
                     <div className="flex items-center gap-2.5">
                       <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold">
                         {getInitials(user.full_name)}

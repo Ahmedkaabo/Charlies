@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/hooks/useAuth"
+import { useFormatters } from "@/lib/format"
 import { useIsMobile } from "@/hooks/use-mobile"
 import { useAddAdjustment, useUpsertPayrollRecord } from "@/hooks/useAttendanceMutations"
 import { supabase } from "@/lib/supabase"
@@ -33,13 +34,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -50,7 +45,7 @@ import { Separator } from "@/components/ui/separator"
 const schema = z.object({
   type:   z.enum(["bonus", "deduction", "debt"]),
   amount: z.string().min(1, "Amount is required"),
-  reason: z.string().min(1, "Reason is required"),
+  reason: z.string().optional(),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -98,6 +93,7 @@ export function PayrollAdjustmentDialog({
 }: PayrollAdjustmentDialogProps) {
   const { profile } = useAuth()
   const isMobile    = useIsMobile()
+  const fmt         = useFormatters()
   const addAdjustment = useAddAdjustment()
   const upsertPayroll = useUpsertPayrollRecord()
   const qc = useQueryClient()
@@ -149,7 +145,7 @@ export function PayrollAdjustmentDialog({
         profile_id:           profileId,
         type:                 values.type,
         amount:               Number(values.amount),
-        reason:               values.reason,
+        reason:               values.reason ?? null,
         month,
         year,
         created_by:           profile.id,
@@ -243,7 +239,7 @@ export function PayrollAdjustmentDialog({
       {(watchedType === "bonus" || watchedType === "deduction") && dailyRate && (
         <div className="space-y-1.5">
           <p className="text-xs text-muted-foreground">
-            Quick amounts <span className="opacity-60">· daily rate {Math.round(dailyRate).toLocaleString()} {currency}</span>
+            Quick amounts <span className="opacity-60">· daily rate {fmt.money(Math.round(dailyRate), currency)}</span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             {SHORTCUTS.map(({ label, factor }) => {
@@ -256,7 +252,7 @@ export function PayrollAdjustmentDialog({
                   className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2.5 py-1 text-xs transition-colors hover:bg-muted hover:border-foreground/20"
                 >
                   <span className="font-medium">{label}</span>
-                  <span className="text-muted-foreground">{value.toLocaleString()}</span>
+                  <span className="text-muted-foreground">{fmt.num(value)}</span>
                 </button>
               )
             })}
@@ -270,7 +266,7 @@ export function PayrollAdjustmentDialog({
         name="amount"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Amount ({currency})</FormLabel>
+            <FormLabel>Amount ({fmt.sym(currency)})</FormLabel>
             <FormControl>
               <Input
                 type="number"
@@ -288,16 +284,16 @@ export function PayrollAdjustmentDialog({
         )}
       />
 
-      {/* Reason */}
+      {/* Notes */}
       <FormField
         control={form.control}
         name="reason"
         render={({ field }) => (
           <FormItem>
-            <FormLabel>Reason</FormLabel>
+            <FormLabel>Notes <span className="font-normal text-muted-foreground">(optional)</span></FormLabel>
             <FormControl>
               <Textarea
-                placeholder="Explain this adjustment…"
+                placeholder="Add a note for this adjustment…"
                 className="resize-none"
                 rows={3}
                 {...field}
@@ -320,8 +316,8 @@ export function PayrollAdjustmentDialog({
           className="h-[90svh] rounded-t-2xl flex flex-col gap-0 overflow-hidden p-0"
         >
           <SheetHeader className="shrink-0 border-b px-6 py-4">
-            <SheetTitle className="text-left">Add Adjustment</SheetTitle>
-            <SheetDescription className="text-left">
+            <SheetTitle className="text-start">Add Adjustment</SheetTitle>
+            <SheetDescription className="text-start">
               {staffName ?? "Staff member"} · {month}/{year}
             </SheetDescription>
           </SheetHeader>

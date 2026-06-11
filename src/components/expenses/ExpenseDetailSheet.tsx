@@ -8,6 +8,7 @@ import { supabase } from "@/lib/supabase"
 import { getCategoryIcon } from "@/components/expenses/AddExpenseSheet"
 import { cn } from "@/lib/utils"
 import type { Expense, ExpenseEdit } from "@/types/expense"
+import { useFormatters } from "@/lib/format"
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -22,9 +23,6 @@ import {
 
 // ── Helpers ────────────────────────────────────────────────
 
-function fmtAmount(n: number) {
-  return `EGP ${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-}
 
 function fmtDate(s: string) {
   return format(parseISO(s), "MMM d, yyyy")
@@ -79,6 +77,7 @@ export function ExpenseDetailSheet({
   onClose,
 }: ExpenseDetailSheetProps) {
   const isMobile = useIsMobile()
+  const fmt = useFormatters()
 
   const { data: edits = [], isLoading: editsLoading } = useGetExpenseEdits(
     expense?.id ?? "",
@@ -130,7 +129,7 @@ export function ExpenseDetailSheet({
           {/* Amount */}
           <div>
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-1">Amount</p>
-            <p className="text-3xl font-bold tabular-nums">{fmtAmount(expense.amount)}</p>
+            <p className="text-3xl font-bold tabular-nums">{fmt.egp(expense.amount, 2)}</p>
           </div>
 
           <Separator />
@@ -173,7 +172,7 @@ export function ExpenseDetailSheet({
                     href={expense.receipt_url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
+                    className="absolute top-2 end-2 flex h-7 w-7 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors"
                     title="Open full size"
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
@@ -245,7 +244,7 @@ export function ExpenseDetailSheet({
                     {edits.map((edit: ExpenseEdit) => (
                       <div
                         key={edit.id}
-                        className="border-l-2 border-amber-400 pl-3 space-y-1.5"
+                        className="border-s-2 border-amber-400 ps-3 space-y-1.5"
                       >
                         <div className="flex items-center gap-1.5">
                           <Pencil className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
@@ -258,7 +257,7 @@ export function ExpenseDetailSheet({
                           </p>
                         </div>
                         {Object.entries(edit.changes).map(([field, change]) => (
-                          <div key={field} className="text-xs pl-4">
+                          <div key={field} className="text-xs ps-4">
                             <span className="font-medium text-muted-foreground">{field}: </span>
                             <span className="line-through text-muted-foreground/50">{change.from || "—"}</span>
                             <span className="text-muted-foreground mx-1">→</span>
@@ -288,7 +287,7 @@ export function ExpenseDetailSheet({
               </Button>
             )}
             {onEdit && (
-              <Button onClick={() => onEdit(expense)} className="ml-auto">
+              <Button onClick={() => onEdit(expense)} className="ms-auto">
                 <Pencil className="h-4 w-4" />
                 Edit
               </Button>

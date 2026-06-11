@@ -7,10 +7,12 @@ import {
   type DayButton,
   type Locale,
 } from "react-day-picker"
+import { arEG } from "date-fns/locale/ar-EG"
 
 import { cn } from "@/lib/utils"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from "lucide-react"
+import { useLanguage } from "@/contexts/LanguageContext"
 
 function Calendar({
   className,
@@ -18,13 +20,15 @@ function Calendar({
   showOutsideDays = true,
   captionLayout = "label",
   buttonVariant = "ghost",
-  locale,
+  locale: localeProp,
   formatters,
   components,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"]
 }) {
+  const { language } = useLanguage()
+  const locale = localeProp ?? (language === "ar" ? arEG : undefined)
   const defaultClassNames = getDefaultClassNames()
 
   return (
@@ -41,6 +45,10 @@ function Calendar({
       formatters={{
         formatMonthDropdown: (date) =>
           date.toLocaleString(locale?.code, { month: "short" }),
+        formatDay: (date) =>
+          language === "ar"
+            ? date.getDate().toLocaleString("ar-EG")
+            : String(date.getDate()),
         ...formatters,
       }}
       classNames={{

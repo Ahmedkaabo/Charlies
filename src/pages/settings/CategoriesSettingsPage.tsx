@@ -55,13 +55,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 // ── Add Category Dialog ────────────────────────────────────────
 
@@ -479,7 +473,7 @@ function CategoryCard({
   const { t } = useLanguage()
   const Icon = getCategoryIcon(category.icon)
   return (
-    <button onClick={onClick} className="group block w-full text-left">
+    <button onClick={onClick} className="group block w-full text-start">
       <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-3.5 transition-shadow group-hover:shadow-md">
         <div className="flex h-8 w-8 items-center justify-center rounded bg-muted shrink-0">
           <Icon className="h-4 w-4 text-muted-foreground" />
@@ -503,7 +497,7 @@ function ListSkeleton() {
         <div key={i} className="flex items-center gap-3 rounded-lg border px-4 py-3.5">
           <Skeleton className="h-8 w-8 rounded shrink-0" />
           <Skeleton className="h-4 flex-1 max-w-[160px]" />
-          <Skeleton className="h-4 w-4 ml-auto" />
+          <Skeleton className="h-4 w-4 ms-auto" />
         </div>
       ))}
     </div>
