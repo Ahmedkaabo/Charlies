@@ -105,6 +105,7 @@ function CategoryForm({
 }) {
   const [name, setName] = useState(category?.name ?? "")
   const [icon, setIcon] = useState(category?.icon ?? "more-horizontal")
+  const [isCogs, setIsCogs] = useState(category?.is_cogs ?? false)
 
   const create = useCreateExpenseCategory()
   const update = useUpdateExpenseCategory()
@@ -115,10 +116,10 @@ function CategoryForm({
     if (!trimmed) { toast.error("Name is required"); return }
     try {
       if (category) {
-        await update.mutateAsync({ id: category.id, name: trimmed, icon })
+        await update.mutateAsync({ id: category.id, name: trimmed, icon, is_cogs: isCogs })
         toast.success("Category updated")
       } else {
-        await create.mutateAsync({ name: trimmed, icon })
+        await create.mutateAsync({ name: trimmed, icon, is_cogs: isCogs })
         toast.success("Category added")
       }
       onBack()

@@ -226,7 +226,7 @@ function formatRoleName(name: string) {
 
 const roleSchema = z.object({
   name: z.string().min(1, "Required").regex(/^[a-z_]+$/, "Lowercase & underscores only"),
-  hidden_from_assignment: z.boolean().default(false),
+  hidden_from_assignment: z.boolean(),
 })
 type RoleFormValues = z.infer<typeof roleSchema>
 
