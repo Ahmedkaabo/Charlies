@@ -126,7 +126,7 @@ export function SalesManagementView({
         <table className="w-full text-sm">
           <thead className="border-b bg-muted/40">
             <tr>
-              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap">Branch</th>
+              <th className="px-4 py-3 text-left font-medium text-muted-foreground whitespace-nowrap sticky left-0 z-10 bg-muted/40 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">Branch</th>
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Days Filled</th>
               {canTreasuryRead && <th className="px-4 py-3 text-right font-medium text-muted-foreground">Total Revenue</th>}
               <th className="px-4 py-3 text-right font-medium text-muted-foreground">Missing Days</th>
@@ -154,10 +154,10 @@ export function SalesManagementView({
               branchRows.map((row) => (
                 <tr
                   key={row.id}
-                  className="cursor-pointer hover:bg-muted/30"
+                  className="group cursor-pointer hover:bg-muted/30"
                   onClick={() => onSelectBranch(row.id)}
                 >
-                  <td className="px-4 py-3 font-medium">{row.name}</td>
+                  <td className="px-4 py-3 font-medium sticky left-0 z-10 bg-background sm:group-hover:bg-muted/30 relative after:pointer-events-none after:absolute after:right-0 after:top-0 after:h-full after:w-px after:bg-border after:content-['']">{row.name}</td>
                   <td className="px-4 py-3 text-right tabular-nums">{row.daysFilled}</td>
                   {canTreasuryRead && (
                     <td className="px-4 py-3 text-right tabular-nums">

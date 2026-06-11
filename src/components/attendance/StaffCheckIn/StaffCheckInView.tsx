@@ -54,6 +54,9 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
     resetFlow,
     handleSelfieCapture,
     handleConfirm,
+    precheckStep,
+    precheckError,
+    retryPrecheck,
   } = useCheckInFlow(profileId)
 
   const [now, setNow] = useState(() => new Date())
@@ -207,8 +210,27 @@ export function StaffCheckInView({ profileId }: { profileId: string | undefined 
       {/* Idle: action cards */}
       {step === "idle" && (
         <>
-          {/* Not checked in */}
-          {!checkedIn && (
+          {/* Not checked in — gate behind location pre-check */}
+          {!checkedIn && precheckStep === "pending" && (
+            <Card className="py-0">
+              <CardContent className="flex flex-col items-center gap-3 py-10">
+                <MapPin className="h-8 w-8 animate-pulse text-primary" />
+                <p className="text-sm text-muted-foreground">Verifying your location…</p>
+              </CardContent>
+            </Card>
+          )}
+
+          {!checkedIn && precheckStep === "error" && (
+            <Card className="py-0">
+              <CardContent className="flex flex-col items-center gap-4 py-8 text-center">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+                <p className="text-sm text-destructive">{precheckError}</p>
+                <Button variant="outline" onClick={retryPrecheck}>Try Again</Button>
+              </CardContent>
+            </Card>
+          )}
+
+          {!checkedIn && precheckStep === "ok" && (
             <Card className="py-0">
               <CardContent className="flex flex-col items-center gap-5 py-8 text-center">
                 <div className={cn(

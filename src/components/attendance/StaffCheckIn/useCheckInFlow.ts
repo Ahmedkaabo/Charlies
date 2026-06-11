@@ -1,4 +1,4 @@
-import { useState, useRef } from "react"
+import { useState, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { useMyAttendance, useMyBranch } from "@/hooks/useAttendance"
 import { useCheckIn, useCheckOut } from "@/hooks/useAttendanceMutations"
@@ -23,6 +23,11 @@ export function useCheckInFlow(profileId: string | undefined) {
   const [step, setStep] = useState<FlowStep>("idle")
   const [locationError, setLocationError] = useState("")
   const [locationPending, setLocationPending] = useState(false)
+
+  // Pre-check location before showing the check-in card
+  type PrecheckStep = "pending" | "ok" | "error"
+  const [precheckStep, setPrecheckStep] = useState<PrecheckStep>("pending")
+  const [precheckError, setPrecheckError] = useState("")
   const [position, setPosition] = useState<GeolocationPosition | null>(null)
   const [distanceM, setDistanceM] = useState(0)
   const [selfieFile, setSelfieFile] = useState<File | null>(null)
@@ -51,6 +56,44 @@ export function useCheckInFlow(profileId: string | undefined) {
       ? findMatchingShift(now, activeShifts) !== null
       : !legacyStartTime || isWithinCheckInWindow(now, legacyStartTime, legacyWindowMins)
   }
+
+  async function runPrecheck() {
+    if (!branch) return
+    // No location configured → skip precheck
+    if (branch.latitude == null || branch.longitude == null) {
+      setPrecheckStep("ok")
+      return
+    }
+    setPrecheckStep("pending")
+    setPrecheckError("")
+    try {
+      const pos = await getGeoPosition()
+      const dist = calculateDistance(
+        pos.coords.latitude,
+        pos.coords.longitude,
+        branch.latitude,
+        branch.longitude
+      )
+      const rounded = Math.round(dist)
+      if (dist > branch.location_radius_meters) {
+        setPrecheckError(
+          `You are ${rounded} m away from the branch. Check-in requires being within ${branch.location_radius_meters} m.`
+        )
+        setPrecheckStep("error")
+      } else {
+        setPrecheckStep("ok")
+      }
+    } catch {
+      setPrecheckError("Could not get your location. Enable location access and try again.")
+      setPrecheckStep("error")
+    }
+  }
+
+  useEffect(() => {
+    if (branchLoading || attendanceLoading || checkedIn) return
+    runPrecheck()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branch, branchLoading, attendanceLoading, checkedIn])
 
   function resetFlow() {
     setStep("idle")
@@ -252,5 +295,9 @@ export function useCheckInFlow(profileId: string | undefined) {
     resetFlow,
     handleSelfieCapture,
     handleConfirm,
+    // Location pre-check
+    precheckStep,
+    precheckError,
+    retryPrecheck: runPrecheck,
   }
 }
