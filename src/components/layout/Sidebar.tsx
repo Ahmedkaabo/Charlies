@@ -1,6 +1,6 @@
 import * as React from "react"
 import { NavLink, useLocation, useNavigate } from "react-router-dom"
-import { EllipsisVertical, LogOut, KeyRound, Crown, Store, UserPlus, Tag } from "lucide-react"
+import { EllipsisVertical, LogOut, KeyRound, Crown, Store, UserPlus, Tag, Truck } from "lucide-react"
 import logo from "@/assets/logo.svg"
 import { toast } from "sonner"
 
@@ -178,6 +178,16 @@ async function handleSignOut() {
                         <NavLink to="/categories">
                           <Tag />
                           <span>Categories</span>
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {(isAdmin || permsLoading) && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton asChild tooltip="Suppliers" isActive={isPathActive("/suppliers", pathname)}>
+                        <NavLink to="/suppliers">
+                          <Truck />
+                          <span>Suppliers</span>
                         </NavLink>
                       </SidebarMenuButton>
                     </SidebarMenuItem>

@@ -56,12 +56,15 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 // ── Helpers ───────────────────────────────────────────────────
 
 async function checkUserActive(userId: string): Promise<boolean> {
-  const { data: profileRow } = await supabase
+  const { data: profileRow, error: profileErr } = await supabase
     .from("profiles")
     .select("id, is_admin")
     .eq("id", userId)
     .maybeSingle()
 
+  // Network/RLS error — can't determine status, assume active to avoid spurious sign-out
+  if (profileErr) return true
+  // Profile genuinely not found
   if (!profileRow) return false
   if (profileRow.is_admin) return true
 
@@ -301,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     staleTime: 60_000,
   })
 
-  const loading = authLoading || (!!profile && (permsLoading || rolesLoading))
+  const loading = authLoading || (!!user && (!profile || permsLoading || rolesLoading))
 
   const perms = useMemo(
     () => computePerms(isAdmin, branchRoles, permissions),
@@ -349,7 +352,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
 
           if (event === "TOKEN_REFRESHED" && newSession.user) {
-            profileLoadedForRef.current = null
             verifyActiveOrSignOut(newSession.user.id)
           }
         }

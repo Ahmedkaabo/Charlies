@@ -36,6 +36,7 @@ import { useAuth } from "@/hooks/useAuth"
 import { useGetBranches, useGetBranchMembers } from "@/hooks/useBranches"
 import { useGetExpenseCategories } from "@/hooks/useExpenses"
 import { useCreateExpense, useUpdateExpense } from "@/hooks/useExpenseMutations"
+import { useGetCategorySuppliers } from "@/hooks/useSuppliers"
 import { uploadReceipt } from "@/lib/storage"
 import { supabase } from "@/lib/supabase"
 import { cn } from "@/lib/utils"
@@ -138,6 +139,7 @@ function fmt(amount: number) {
 const schema = z.object({
   branch_id:   z.string().min(1, "Branch is required"),
   category_id: z.string().min(1, "Category is required"),
+  supplier_id: z.string().nullable(),
   amount:      z.number().positive("Amount is required"),
   description: z.string().min(1, "Description is required"),
   member_id:   z.string().nullable(),
@@ -176,6 +178,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
     defaultValues: {
       branch_id:   defaultBranchId ?? "",
       category_id: "",
+      supplier_id: null,
       amount:      0,
       description: "",
       member_id:   null,
@@ -187,6 +190,15 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
 
   const selectedCategory = categories.find((c) => c.id === watchedCategoryId)
   const isDebtCategory   = selectedCategory?.name.toLowerCase() === "employee debt"
+
+  // Suppliers: only show suppliers linked to the selected category
+  const { data: visibleSuppliers = [] } = useGetCategorySuppliers(watchedCategoryId || null)
+
+  // Reset supplier when category changes
+  useEffect(() => {
+    form.setValue("supplier_id", null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedCategoryId])
 
   // Load branch members only when debt category is selected and branch is set
   const { data: rawMembers = [] } = useGetBranchMembers(
@@ -212,6 +224,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
           ? {
               branch_id:   expense.branch_id,
               category_id: expense.category_id ?? "",
+              supplier_id: expense.supplier_id ?? null,
               amount:      expense.amount,
               description: expense.description ?? "",
               member_id:   null,
@@ -219,6 +232,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
           : {
               branch_id:   defaultBranchId ?? "",
               category_id: "",
+              supplier_id: null,
               amount:      0,
               description: "",
               member_id:   null,
@@ -323,6 +337,12 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
   // ── Submit ──────────────────────────────────────────────
 
   async function onSubmit(values: FormValues) {
+    // Supplier required when the selected category has linked suppliers
+    if (visibleSuppliers.length > 0 && !isDebtCategory && !values.supplier_id) {
+      form.setError("supplier_id", { message: "Supplier is required for this category" })
+      return
+    }
+
     // Debt category requires a member
     if (isDebtCategory && !values.member_id) {
       form.setError("member_id", { message: "Select a staff member for employee debt expenses" })
@@ -361,11 +381,18 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
         if (receiptFile)
           changes["Receipt"] = { from: "Previous image", to: "New image" }
 
+        if (values.supplier_id !== (expense.supplier_id ?? null)) {
+          const fromName = expense.supplier?.name ?? "None"
+          const toName   = visibleSuppliers.find(s => s.id === values.supplier_id)?.name ?? "None"
+          changes["Supplier"] = { from: fromName, to: toName }
+        }
+
         await updateExpense.mutateAsync({
           id: expense.id,
           data: {
             branch_id:   values.branch_id,
             category_id: values.category_id || null,
+            supplier_id: values.supplier_id || null,
             amount:      values.amount,
             description: values.description,
             receipt_url,
@@ -378,6 +405,7 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
         await createExpense.mutateAsync({
           branch_id:   values.branch_id,
           category_id: values.category_id || null,
+          supplier_id: values.supplier_id || null,
           amount:      values.amount,
           currency:    "EGP",
           description: values.description,
@@ -493,6 +521,35 @@ export function AddExpenseSheet({ open, onOpenChange, defaultBranchId, expense }
                     </FormItem>
                   )}
                 />
+
+                {/* Supplier — shown when the selected category has linked suppliers, or all suppliers exist */}
+                {visibleSuppliers.length > 0 && !isDebtCategory && (
+                  <FormField
+                    control={form.control}
+                    name="supplier_id"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Supplier</FormLabel>
+                        <Select
+                          value={field.value ?? ""}
+                          onValueChange={(v) => field.onChange(v || null)}
+                        >
+                          <FormControl>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a supplier" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {visibleSuppliers.map((s) => (
+                              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
 
                 {/* Member — only shown for Salary category */}
                 {isDebtCategory && (

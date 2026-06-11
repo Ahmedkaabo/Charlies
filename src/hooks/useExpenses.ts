@@ -36,10 +36,11 @@ export function useGetExpenses(filters: ExpenseFilters) {
       let query = supabase
         .from("expenses")
         .select(`
-          id, branch_id, category_id, amount, currency, description, date,
+          id, branch_id, category_id, supplier_id, amount, currency, description, date,
           added_by, receipt_url, created_at, edited_at, edited_by,
           branch:branches(id, name),
-          category:expense_categories(id, name, icon)
+          category:expense_categories(id, name, icon),
+          supplier:suppliers(id, name)
         `)
         .eq("account_id", accountId!)
         .gte("date", from)

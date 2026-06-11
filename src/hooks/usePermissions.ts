@@ -197,10 +197,13 @@ export function useUserPermissions(): UserPermissions {
   const { data: branchRoles, isLoading: roleLoading } = useQuery({
     queryKey: ["my-branch-roles", profile?.id],
     queryFn: async () => {
-      // NOTE: AuthContext registers this same queryKey with fetchBranchRoles (which
-      // handles admin users via the "Admin" system role). Since AuthContext mounts
-      // first, its queryFn is canonical — this queryFn only runs if no cached data
-      // exists yet (e.g. this hook is used outside the AuthProvider tree).
+      // Admin users always get the full-access sentinel — same as fetchBranchRoles
+      // in AuthContext. This queryFn may become canonical after staleTime expires
+      // (React Query uses the last-registered queryFn), so it must handle admins.
+      if (profile?.is_admin) {
+        return [{ role_id: null as string | null, role: { level: -1 }, isOwner: false }]
+      }
+
       const [staffRes, ownerRes] = await Promise.all([
         supabase.from("staff").select("role_id, role_ids").eq("profile_id", profile!.id).eq("is_active", true),
         supabase.from("owners").select("role_id, role_ids").eq("profile_id", profile!.id).eq("is_active", true),

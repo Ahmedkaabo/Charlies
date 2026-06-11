@@ -9,6 +9,7 @@ export interface UpdateExpenseInput {
   data: {
     branch_id: string
     category_id: string | null
+    supplier_id?: string | null
     amount: number
     description: string
     receipt_url: string | null
@@ -44,6 +45,7 @@ export function useUpdateExpense() {
 export interface ExpenseInput {
   branch_id: string
   category_id: string | null
+  supplier_id?: string | null
   amount: number
   currency: string
   description: string | null

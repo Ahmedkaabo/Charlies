@@ -59,6 +59,7 @@ export const ROUTE_TITLES: Record<string, string> = {
   "/balance":     "Balance",
   "/settings":    "Settings",
   "/categories":  "Expense Categories",
+  "/suppliers":   "Suppliers",
   "/permissions": "Roles & Permissions",
   "/admin":       "Admin Panel",
 }

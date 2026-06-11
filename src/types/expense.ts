@@ -1,3 +1,14 @@
+export interface Supplier {
+  id: string
+  account_id: string
+  name: string
+  contact_person: string | null
+  phone: string | null
+  email: string | null
+  notes: string | null
+  created_at: string
+}
+
 export interface ExpenseCategory {
   id: string
   name: string
@@ -9,6 +20,7 @@ export interface Expense {
   id: string
   branch_id: string
   category_id: string | null
+  supplier_id: string | null
   amount: number
   currency: string
   description: string | null
@@ -20,6 +32,7 @@ export interface Expense {
   edited_by: string | null
   branch: { id: string; name: string } | null
   category: ExpenseCategory | null
+  supplier: { id: string; name: string } | null
 }
 
 export interface ExpenseEdit {
